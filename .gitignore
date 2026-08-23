@@ -5,3 +5,6 @@
 *.dwarf
 doom.h
 *.DS_Store
+/raylib/
+/libADLMIDI/
+*.dylib

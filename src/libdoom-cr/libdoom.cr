@@ -2443,15 +2443,14 @@ module LibDoom
   c_array((CDoom.checkcoord.to_unsafe + 10).value, 2, 1, 3, 0)
   c_array((CDoom.checkcoord.to_unsafe + 11).value, 0, 0, 0, 0)
 
-
   c_array(CDoom.fuzzoffset,
-  CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,
-    CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,
-    CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,-CDoom::FUZZOFF,-CDoom::FUZZOFF,-CDoom::FUZZOFF,
-    CDoom::FUZZOFF,-CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,
-    CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF,
-    CDoom::FUZZOFF,-CDoom::FUZZOFF,-CDoom::FUZZOFF,-CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,
-    CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF,CDoom::FUZZOFF,-CDoom::FUZZOFF,CDoom::FUZZOFF
+    CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF,
+    CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF,
+    CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF, -CDoom::FUZZOFF, -CDoom::FUZZOFF, -CDoom::FUZZOFF,
+    CDoom::FUZZOFF, -CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF,
+    CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF,
+    CDoom::FUZZOFF, -CDoom::FUZZOFF, -CDoom::FUZZOFF, -CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF,
+    CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF, CDoom::FUZZOFF, -CDoom::FUZZOFF, CDoom::FUZZOFF
   )
 
   CDoom.fuzzpos = 0
@@ -2459,7 +2458,6 @@ module LibDoom
   CDoom.validcount = 1
 
   CDoom.finecosine = CDoom.finesine.to_unsafe + CDoom::FINEANGLES // 4
-
 
   def self.doom_print_impl(str : UInt8*)
     print String.new(str)
@@ -12591,7 +12589,7 @@ module LibDoom
         target.value.x,
         target.value.y)
 
-      thrust = damage*(CDoom::FRACUNIT >> 3)&*100//target.value.info.value.mass
+      thrust = damage*(CDoom::FRACUNIT >> 3) &* 100//target.value.info.value.mass
 
       # make fall forwards sometimes
       if damage < 40 &&
@@ -16753,7 +16751,7 @@ module LibDoom
       if num >= CDoom.numsubsectors
         CDoom.doom_strcpy(CDoom.error_buf, "Error: p_cross_subsector: ss ")
         CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(num, 10))
-        CDoom.doom_strcpy(CDoom.error_buf, " with numss = ")
+        CDoom.doom_concat(CDoom.error_buf, " with numss = ")
         CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.numsubsectors, 10))
         CDoom.i_error(CDoom.error_buf)
       end
@@ -18891,7 +18889,7 @@ module LibDoom
       if num >= CDoom.numsubsectors
         CDoom.doom_strcpy(CDoom.error_buf, "Error: r_subsector: ss ")
         CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(num, 10))
-        CDoom.doom_strcpy(CDoom.error_buf, " with numss = ")
+        CDoom.doom_concat(CDoom.error_buf, " with numss = ")
         CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.numsubsectors, 10))
         CDoom.i_error(CDoom.error_buf)
       end
@@ -19485,12 +19483,12 @@ module LibDoom
   #
 
   #
-# A column is a vertical slice/span from a wall texture that,
-# given the DOOM style restrictions on the view orientation,
-# will always have constant z depth.
-# Thus a special case loop for very fast rendering can
-# be used. It has also been used with Wolfenstein 3D.
-# 
+  # A column is a vertical slice/span from a wall texture that,
+  # given the DOOM style restrictions on the view orientation,
+  # will always have constant z depth.
+  # Thus a special case loop for very fast rendering can
+  # be used. It has also been used with Wolfenstein 3D.
+  #
   def self.r_draw_column
     count = CDoom.dc_yh - CDoom.dc_yl
 
@@ -19498,23 +19496,21 @@ module LibDoom
     return if count < 0
 
     {% if @top_level.has_constant?("RANGECHECK") %}
-    if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
-      CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
-
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_column: ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10));
-        CDoom.doom_concat(CDoom.error_buf, " to ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10));
-        CDoom.doom_concat(CDoom.error_buf, " at ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10));
+      if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
+         CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_column: ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10))
+        CDoom.doom_concat(CDoom.error_buf, " to ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10))
+        CDoom.doom_concat(CDoom.error_buf, " at ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10))
         CDoom.i_error(CDoom.error_buf)
-    end
+      end
     {% end %}
-
 
     # Framebuffer destination address.
     # Use ylookup LUT to avoid multiply with ScreenWidth.
-    # Use columnofs LUT for subwindows? 
+    # Use columnofs LUT for subwindows?
     dest = CDoom.ylookup[CDoom.dc_yl] + CDoom.columnofs[CDoom.dc_x]
 
     # Determine scaling,
@@ -19527,54 +19523,52 @@ module LibDoom
     # This is as fast as it gets.
     loop do
       # Re-map color indices from wall texture column
-        #  using a lighting/special effects LUT.
-        dest.value = CDoom.dc_colormap[CDoom.dc_source[(frac >> CDoom::FRACBITS) & 127]]
+      #  using a lighting/special effects LUT.
+      dest.value = CDoom.dc_colormap[CDoom.dc_source[(frac >> CDoom::FRACBITS) & 127]]
 
-        dest += CDoom::SCREENWIDTH
-        frac += fracstep
+      dest += CDoom::SCREENWIDTH
+      frac += fracstep
 
       break unless count != 0
       count -= 1
     end
   end
 
+  #
+  # Spectre/Invisibility.
+  #
 
-#
-# Spectre/Invisibility.
-#
+  #
+  # Framebuffer postprocessing.
+  # Creates a fuzzy image by copying pixels
+  #  from adjacent ones to left and right.
+  # Used with an all black colormap, this
+  #  could create the SHADOW effect,
+  #  i.e. spectres and invisible players.
+  #
+  def self.r_draw_fuzz_column
+    # Adjust borders. Low...
+    CDoom.dc_yl = 1 if CDoom.dc_yl == 0
 
-#
-# Framebuffer postprocessing.
-# Creates a fuzzy image by copying pixels
-#  from adjacent ones to left and right.
-# Used with an all black colormap, this
-#  could create the SHADOW effect,
-#  i.e. spectres and invisible players.
-#
-def self.r_draw_fuzz_column
-  # Adjust borders. Low...
-  CDoom.dc_yl = 1 if CDoom.dc_yl == 0
+    # .. and high.
+    CDoom.dc_yh = CDoom.viewheight - 2 if CDoom.dc_yh == CDoom.viewheight - 1
 
-  # .. and high.
-  CDoom.dc_yh = CDoom.viewheight - 2 if CDoom.dc_yh == CDoom.viewheight - 1
+    count = CDoom.dc_yh - CDoom.dc_yl
 
-  count = CDoom.dc_yh - CDoom.dc_yl
+    # Zero length.
+    return if count < 0
 
-  # Zero length.
-  return if count < 0
-
-  {% if @top_level.has_constant?("RANGECHECK") %}
-    if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
-      CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
-
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_fuzz_column: ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10));
-        CDoom.doom_concat(CDoom.error_buf, " to ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10));
-        CDoom.doom_concat(CDoom.error_buf, " at ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10));
+    {% if @top_level.has_constant?("RANGECHECK") %}
+      if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
+         CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_fuzz_column: ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10))
+        CDoom.doom_concat(CDoom.error_buf, " to ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10))
+        CDoom.doom_concat(CDoom.error_buf, " at ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10))
         CDoom.i_error(CDoom.error_buf)
-    end
+      end
     {% end %}
 
     # Does not work with blocky mode.
@@ -19589,49 +19583,46 @@ def self.r_draw_fuzz_column
     #  brighter than average).
     loop do
       # Lookup framebuffer, and retrieve
-        #  a pixel that is either one column
-        #  left or right of the current one.
-        # Add index from colormap to index.
-        dest.value = CDoom.colormaps[6 * 256 + dest[CDoom.fuzzoffset[CDoom.fuzzpos]]]
+      #  a pixel that is either one column
+      #  left or right of the current one.
+      # Add index from colormap to index.
+      dest.value = CDoom.colormaps[6 * 256 + dest[CDoom.fuzzoffset[CDoom.fuzzpos]]]
 
-        # Clamp table lookup index.
-        CDoom.fuzzpos += 1
-        CDoom.fuzzpos = 0 if CDoom.fuzzpos == CDoom::FUZZTABLE
+      # Clamp table lookup index.
+      CDoom.fuzzpos += 1
+      CDoom.fuzzpos = 0 if CDoom.fuzzpos == CDoom::FUZZTABLE
 
-        dest += CDoom::SCREENWIDTH
+      dest += CDoom::SCREENWIDTH
 
-        frac += fracstep
+      frac += fracstep
       break unless count != 0
       count -= 1
     end
-end
+  end
 
-
-#
-# Used to draw player sprites
-#  with the green colorramp mapped to others.
-# Could be used with different translation
-#  tables, e.g. the lighter colored version
-#  of the BaronOfHell, the HellKnight, uses
-#  identical sprites, kinda brightened up.
-#
-def self.r_draw_translated_column
-  count = CDoom.dc_yh - CDoom.dc_yl
-  return if count < 0
-  {% if @top_level.has_constant?("RANGECHECK") %}
-    if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
-      CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
-
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_column: ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10));
-        CDoom.doom_concat(CDoom.error_buf, " to ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10));
-        CDoom.doom_concat(CDoom.error_buf, " at ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10));
+  #
+  # Used to draw player sprites
+  #  with the green colorramp mapped to others.
+  # Could be used with different translation
+  #  tables, e.g. the lighter colored version
+  #  of the BaronOfHell, the HellKnight, uses
+  #  identical sprites, kinda brightened up.
+  #
+  def self.r_draw_translated_column
+    count = CDoom.dc_yh - CDoom.dc_yl
+    return if count < 0
+    {% if @top_level.has_constant?("RANGECHECK") %}
+      if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
+         CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_column: ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10))
+        CDoom.doom_concat(CDoom.error_buf, " to ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10))
+        CDoom.doom_concat(CDoom.error_buf, " at ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10))
         CDoom.i_error(CDoom.error_buf)
-    end
+      end
     {% end %}
-
 
     # FIXME. As above.
     dest = CDoom.ylookup[CDoom.dc_yl] + CDoom.columnofs[CDoom.dc_x]
@@ -19643,77 +19634,74 @@ def self.r_draw_translated_column
     # Here we do an additional index re-mapping.
     loop do
       # Translation tables are used
-        #  to map certain colorramps to other ones,
-        #  used with PLAY sprites.
-        # Thus the "green" ramp of the player 0 sprite
-        #  is mapped to gray, red, black/indigo. 
-        dest.value = CDoom.dc_colormap[CDoom.dc_translation[CDoom.dc_source[frac >> CDoom::FRACBITS]]]
-        dest += CDoom::SCREENWIDTH
+      #  to map certain colorramps to other ones,
+      #  used with PLAY sprites.
+      # Thus the "green" ramp of the player 0 sprite
+      #  is mapped to gray, red, black/indigo.
+      dest.value = CDoom.dc_colormap[CDoom.dc_translation[CDoom.dc_source[frac >> CDoom::FRACBITS]]]
+      dest += CDoom::SCREENWIDTH
 
-        frac += fracstep
+      frac += fracstep
       break unless count != 0
       count -= 1
     end
-end
+  end
 
+  #
+  # Creates the translation tables to map
+  # the green color ramp to gray, brown, red.
+  # Assumes a given structure of the PLAYPAL.
+  # Could be read from a lump instead.
+  #
+  def self.r_init_translation_tables
+    CDoom.translationtables = CDoom.z_malloc(256 * 3 + 255, CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Byte*)
+    CDoom.translationtables = Pointer(CDoom::Byte).new((CDoom.translationtables.address + 255) & ~255)
 
-#
-# Creates the translation tables to map
-# the green color ramp to gray, brown, red.
-# Assumes a given structure of the PLAYPAL.
-# Could be read from a lump instead.
-#
-def self.r_init_translation_tables
-  CDoom.translationtables = CDoom.z_malloc(256 * 3 + 255, CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Byte*)
-  CDoom.translationtables = Pointer(CDoom::Byte).new((CDoom.translationtables.address + 255) & ~255)
-
-  # translate just the 16 green colors
-  256.times do |i|
-    if i >= 0x70 && i <= 0x7f
-      # map green ramp to gray, brown, red
-      CDoom.translationtables[i] = 0x60_u8 + (i & 0xf)
-      CDoom.translationtables[i + 256] = 0x40_u8 + (i & 0xf)
-      CDoom.translationtables[i + 512] = 0x20_u8 + (i & 0xf)
-    else
-      # Keep all other colors as is.
-      CDoom.translationtables[i] = i.to_u8!
-      CDoom.translationtables[i + 256] = i.to_u8!
-      CDoom.translationtables[i + 512] = i.to_u8!
+    # translate just the 16 green colors
+    256.times do |i|
+      if i >= 0x70 && i <= 0x7f
+        # map green ramp to gray, brown, red
+        CDoom.translationtables[i] = 0x60_u8 + (i & 0xf)
+        CDoom.translationtables[i + 256] = 0x40_u8 + (i & 0xf)
+        CDoom.translationtables[i + 512] = 0x20_u8 + (i & 0xf)
+      else
+        # Keep all other colors as is.
+        CDoom.translationtables[i] = i.to_u8!
+        CDoom.translationtables[i + 256] = i.to_u8!
+        CDoom.translationtables[i + 512] = i.to_u8!
+      end
     end
   end
-      
-end
 
+  #
+  # With DOOM style restrictions on view orientation,
+  # the floors and ceilings consist of horizontal slices
+  # or spans with constant z depth.
+  # However, rotation around the world z axis is possible,
+  # thus this mapping, while simpler and faster than
+  # perspective correct texture mapping, has to traverse
+  # the texture at an angle in all but a few cases.
+  # In consequence, flats are not stored by column (like walls),
+  # and the inner loop has to step in texture space u and v.
+  #
 
-#
-# With DOOM style restrictions on view orientation,
-# the floors and ceilings consist of horizontal slices
-# or spans with constant z depth.
-# However, rotation around the world z axis is possible,
-# thus this mapping, while simpler and faster than
-# perspective correct texture mapping, has to traverse
-# the texture at an angle in all but a few cases.
-# In consequence, flats are not stored by column (like walls),
-# and the inner loop has to step in texture space u and v.
-#
-
-#
-# Draws the actual span.
-#
-def self.r_draw_span
-  {% if @top_level.has_constant?("RANGECHECK") %}
-    if CDoom.ds_x2 < CDoom.ds_x1 || 
-      CDoom.ds_x1 < 0 ||
-      CDoom.ds_x2 >= CDoom::SCREENWIDTH ||
-      CDoom.ds_y.to_u32! > CDoom::SCREENHEIGHT
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_span: ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_x1, 10));
-        CDoom.doom_concat(CDoom.error_buf, " to ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_x2, 10));
-        CDoom.doom_concat(CDoom.error_buf, " at ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_y, 10));
+  #
+  # Draws the actual span.
+  #
+  def self.r_draw_span
+    {% if @top_level.has_constant?("RANGECHECK") %}
+      if CDoom.ds_x2 < CDoom.ds_x1 ||
+         CDoom.ds_x1 < 0 ||
+         CDoom.ds_x2 >= CDoom::SCREENWIDTH ||
+         CDoom.ds_y.to_u32! > CDoom::SCREENHEIGHT
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_span: ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_x1, 10))
+        CDoom.doom_concat(CDoom.error_buf, " to ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_x2, 10))
+        CDoom.doom_concat(CDoom.error_buf, " at ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_y, 10))
         CDoom.i_error(CDoom.error_buf)
-    end
+      end
     {% end %}
 
     xfrac = CDoom.ds_xfrac
@@ -19740,16 +19728,14 @@ def self.r_draw_span
       break unless count != 0
       count -= 1
     end
-    
-end
+  end
 
-
-#
-# Creats lookup tables that avoid
-#  multiplies and other hazzles
-#  for getting the framebuffer address
-#  of a pixel to draw.
-#
+  #
+  # Creats lookup tables that avoid
+  #  multiplies and other hazzles
+  #  for getting the framebuffer address
+  #  of a pixel to draw.
+  #
   def self.r_init_buffer(width : LibC::Int, height : LibC::Int)
     # Handle resize,
     #  e.g. smaller view windows
@@ -19765,16 +19751,15 @@ end
     else
       CDoom.viewwindowy = (CDoom::SCREENHEIGHT - CDoom::SBARHEIGHT - height) >> 1
     end
-      # Preclaculate all row offsets.
-      height.times { |i| CDoom.ylookup[i] = CDoom.screens[0] + (i + CDoom.viewwindowy) * CDoom::SCREENWIDTH }
-
+    # Preclaculate all row offsets.
+    height.times { |i| CDoom.ylookup[i] = CDoom.screens[0] + (i + CDoom.viewwindowy) * CDoom::SCREENWIDTH }
   end
 
-#
-# Fills the back screen with a pattern
-#  for variable screen sizes
-# Also draws a beveled edge.
-#
+  #
+  # Fills the back screen with a pattern
+  #  for variable screen sizes
+  # Also draws a beveled edge.
+  #
   def self.r_fill_back_screen
     # DOOM border patch.
     name1 = "FLOOR7_2"
@@ -19838,30 +19823,29 @@ end
 
     # Draw beveled edge.
     CDoom.v_draw_patch(CDoom.viewwindowx - 8,
-    CDoom.viewwindowy - 8,
-    1,
-    CDoom.w_cache_lump_name("brdr_tl", CDoom::PU_CACHE).as(CDoom::Patch*))
+      CDoom.viewwindowy - 8,
+      1,
+      CDoom.w_cache_lump_name("brdr_tl", CDoom::PU_CACHE).as(CDoom::Patch*))
 
     CDoom.v_draw_patch(CDoom.viewwindowx + CDoom.scaledviewwidth,
-    CDoom.viewwindowy - 8,
-    1,
-    CDoom.w_cache_lump_name("brdr_tr", CDoom::PU_CACHE).as(CDoom::Patch*))
-    
+      CDoom.viewwindowy - 8,
+      1,
+      CDoom.w_cache_lump_name("brdr_tr", CDoom::PU_CACHE).as(CDoom::Patch*))
+
     CDoom.v_draw_patch(CDoom.viewwindowx - 8,
-    CDoom.viewwindowy + CDoom.viewheight,
-    1,
-    CDoom.w_cache_lump_name("brdr_bl", CDoom::PU_CACHE).as(CDoom::Patch*))
+      CDoom.viewwindowy + CDoom.viewheight,
+      1,
+      CDoom.w_cache_lump_name("brdr_bl", CDoom::PU_CACHE).as(CDoom::Patch*))
 
     CDoom.v_draw_patch(CDoom.viewwindowx + CDoom.scaledviewwidth,
-    CDoom.viewwindowy + CDoom.viewheight,
-    1,
-    CDoom.w_cache_lump_name("brdr_br", CDoom::PU_CACHE).as(CDoom::Patch*))
+      CDoom.viewwindowy + CDoom.viewheight,
+      1,
+      CDoom.w_cache_lump_name("brdr_br", CDoom::PU_CACHE).as(CDoom::Patch*))
   end
 
-
-#
-# Copy a screen buffer.
-#
+  #
+  # Copy a screen buffer.
+  #
   def self.r_video_erase(ofs : LibC::UInt, count : LibC::Int)
     # LFB copy.
     # This might not be a good idea if memcpy
@@ -19871,11 +19855,10 @@ end
     CDoom.doom_memcpy(CDoom.screens[0] + ofs, CDoom.screens[1] + ofs, count)
   end
 
-
-#
-# Draws the border around the view
-#  for different size windows?
-#
+  #
+  # Draws the border around the view
+  #  for different size windows?
+  #
   def self.r_draw_view_border
     return if CDoom.scaledviewwidth == CDoom::SCREENWIDTH
 
@@ -19905,23 +19888,22 @@ end
     CDoom.v_mark_rect(0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT - CDoom::SBARHEIGHT)
   end
 
-#
-# Expand a given bbox
-# so that it encloses a given point.
-#
-def self.r_add_point_to_box(x : LibC::Int, y : LibC::Int, box : CDoom::Fixed*)
-  box[CDoom::BOXLEFT] = x if x < box[CDoom::BOXLEFT]
-  box[CDoom::BOXRIGHT] = x if x > box[CDoom::BOXRIGHT]
-  box[CDoom::BOXBOTTOM] = y if y < box[CDoom::BOXBOTTOM]
-  box[CDoom::BOXTOP] = y if y > box[CDoom::BOXTOP]
+  #
+  # Expand a given bbox
+  # so that it encloses a given point.
+  #
+  def self.r_add_point_to_box(x : LibC::Int, y : LibC::Int, box : CDoom::Fixed*)
+    box[CDoom::BOXLEFT] = x if x < box[CDoom::BOXLEFT]
+    box[CDoom::BOXRIGHT] = x if x > box[CDoom::BOXRIGHT]
+    box[CDoom::BOXBOTTOM] = y if y < box[CDoom::BOXBOTTOM]
+    box[CDoom::BOXTOP] = y if y > box[CDoom::BOXTOP]
+  end
 
-end
-
-#
-# Traverse BSP (sub) tree,
-#  check point against partition plane.
-# Returns side 0 (front) or 1 (back).
-#
+  #
+  # Traverse BSP (sub) tree,
+  #  check point against partition plane.
+  # Returns side 0 (front) or 1 (back).
+  #
   def self.r_point_on_side(x : CDoom::Fixed, y : CDoom::Fixed, node : CDoom::Node*) : LibC::Int
     if node.value.dx == 0
       return (node.value.dy > 0).to_unsafe if x <= node.value.x
@@ -19996,19 +19978,16 @@ end
     end
     # back side
     return 1
-
   end
-
-
 
   #
   # To get a global angle from cartesian coordinates,
-#  the coordinates are flipped until they are in
-#  the first octant of the coordinate system, then
-#  the y (<=x) is scaled and divided by x to get a
-#  tangent (slope) value which is looked up in the
-#  tantoangle[] table.
-#
+  #  the coordinates are flipped until they are in
+  #  the first octant of the coordinate system, then
+  #  the y (<=x) is scaled and divided by x to get a
+  #  tangent (slope) value which is looked up in the
+  #  tantoangle[] table.
+  #
   def self.r_point_to_angle(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Angle
     x -= CDoom.viewx
     y -= CDoom.viewy
@@ -20025,16 +20004,16 @@ end
           return (CDoom::ANG90 &- 1 &- CDoom.tantoangle[CDoom.slope_div(x, y)]).to_u32!
         end
       else
-         y = -y
+        y = -y
 
-         if x > y
+        if x > y
           # octant 8
           return (-(CDoom.tantoangle[CDoom.slope_div(y, x)].to_i32!)).to_u32!
-         else
+        else
           # octant 7
           return (CDoom::ANG270 &+ CDoom.tantoangle[CDoom.slope_div(x, y)]).to_u32!
-         end
         end
+      end
     else
       x = -x
 
@@ -20062,15 +20041,12 @@ end
     return 0_u32
   end
 
-
-
   def self.r_point_to_angle2(x1 : CDoom::Fixed, y1 : CDoom::Fixed, x2 : CDoom::Fixed, y2 : CDoom::Fixed) : CDoom::Angle
     CDoom.viewx = x1
     CDoom.viewy = y1
 
     return CDoom.r_point_to_angle(x2, y2)
   end
-
 
   def self.r_point_to_dist(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Fixed
     dx = doom_abs(x - CDoom.viewx)
@@ -20092,10 +20068,10 @@ end
 
   #
   # Returns the texture mapping scale
-#  for the current line (horizontal span)
-#  at the given angle.
-# rw_distance must be calculated first.
-#
+  #  for the current line (horizontal span)
+  #  at the given angle.
+  # rw_distance must be calculated first.
+  #
   def self.r_scale_from_global_angle(visangle : CDoom::Angle) : CDoom::Fixed
     anglea = CDoom::ANG90 &+ (visangle &- CDoom.viewangle)
     angleb = CDoom::ANG90 &+ (visangle &- CDoom.rw_normalangle)
@@ -20121,18 +20097,18 @@ end
     return scale
   end
 
-def self.r_init_tables
-end
+  def self.r_init_tables
+  end
 
-def self.r_init_texture_mapping
-  # Use tangent table to generate viewangletox:
+  def self.r_init_texture_mapping
+    # Use tangent table to generate viewangletox:
     # viewangletox will give the next greatest x
     # after the view angle.
     #
     # Calc focallength
     # so FIELDOFVIEW angles covers SCREENWIDTH.
     focallength = CDoom.fixed_div(CDoom.centerxfrac,
-    CDoom.finetangent[CDoom::FINEANGLES // 4 + CDoom::FIELDOFVIEW // 2])
+      CDoom.finetangent[CDoom::FINEANGLES // 4 + CDoom::FIELDOFVIEW // 2])
 
     (CDoom::FINEANGLES // 2).times do |i|
       if CDoom.finetangent[i] > CDoom::FRACUNIT * 2
@@ -20154,7 +20130,7 @@ def self.r_init_texture_mapping
 
     # Scan viewangletox[] to generate xtoviewangle[]:
     # xtoviewangle will give the smallest view angle
-    # that maps to x.    
+    # that maps to x.
     x = 0
     while x <= CDoom.viewwidth
       i = 0
@@ -20162,7 +20138,7 @@ def self.r_init_texture_mapping
         i += 1
       end
       CDoom.xtoviewangle[x] = (i.to_u32! << CDoom::ANGLETOFINESHIFT) &- CDoom::ANG90
-      
+
       x += 1
     end
 
@@ -20179,15 +20155,14 @@ def self.r_init_texture_mapping
     end
 
     CDoom.clipangle = CDoom.xtoviewangle[0]
-end
+  end
 
-
-#
-# Only inits the zlight table,
-# because the scalelight table changes with view size.
-#
-def self.r_init_light_tables
-  # Calculate the light levels to use
+  #
+  # Only inits the zlight table,
+  # because the scalelight table changes with view size.
+  #
+  def self.r_init_light_tables
+    # Calculate the light levels to use
     #  for each level / distance combination.
     CDoom::LIGHTLEVELS.times do |i|
       startmap = ((CDoom::LIGHTLEVELS - 1 - i) * 2) * CDoom::NUMCOLORMAPS // CDoom::LIGHTLEVELS
@@ -20200,16 +20175,16 @@ def self.r_init_light_tables
 
         level = CDoom::NUMCOLORMAPS - 1 if level >= CDoom::NUMCOLORMAPS
 
-        ((CDoom.zlight.to_unsafe + i).value.to_unsafe + j).value = CDoom.colormaps + level * 256        
+        ((CDoom.zlight.to_unsafe + i).value.to_unsafe + j).value = CDoom.colormaps + level * 256
       end
     end
-end
+  end
 
-#
-# Do not really change anything here,
-#  because it might be in the middle of a refresh.
-# The change will take effect next refresh.
-#
+  #
+  # Do not really change anything here,
+  #  because it might be in the middle of a refresh.
+  # The change will take effect next refresh.
+  #
   def self.r_set_view_size(blocks : LibC::Int, detail : LibC::Int)
     CDoom.setsizeneeded = 1
     CDoom.setblocks = blocks
@@ -20273,19 +20248,16 @@ end
         level = CDoom::NUMCOLORMAPS - 1 if level >= CDoom::NUMCOLORMAPS
 
         ((CDoom.scalelight.to_unsafe + i).value.to_unsafe + j).value = CDoom.colormaps + level * 256
-
       end
-
     end
   end
-
 
   def self.r_init
     CDoom.doom_print.call("\nr_init_data".to_unsafe)
     CDoom.r_init_data
 
     # viewwidth / viewheight / detailLevel are set by the defaults
-CDoom.doom_print.call("\nr_init_tables".to_unsafe)
+    CDoom.doom_print.call("\nr_init_tables".to_unsafe)
     CDoom.r_init_tables
 
     CDoom.r_set_view_size(CDoom.screenblocks, CDoom.detail_level)
@@ -20302,8 +20274,6 @@ CDoom.doom_print.call("\nr_init_tables".to_unsafe)
     CDoom.framecount = 0
   end
 
-
-
   def self.r_point_in_subsector(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Subsector*
     # single subsector is a special case
     return CDoom.subsectors if CDoom.numnodes == 0
@@ -20319,36 +20289,35 @@ CDoom.doom_print.call("\nr_init_tables".to_unsafe)
     return CDoom.subsectors + (nodenum & ~CDoom::NF_SUBSECTOR)
   end
 
-      def self.r_setup_frame(player : CDoom::Player*)
-        CDoom.viewplayer = player
-        CDoom.viewx = player.value.mo.value.x
-        CDoom.viewy = player.value.mo.value.y
-        CDoom.viewangle = player.value.mo.value.angle &+ CDoom.viewangleoffset
-        CDoom.extralight = player.value.extralight
+  def self.r_setup_frame(player : CDoom::Player*)
+    CDoom.viewplayer = player
+    CDoom.viewx = player.value.mo.value.x
+    CDoom.viewy = player.value.mo.value.y
+    CDoom.viewangle = player.value.mo.value.angle &+ CDoom.viewangleoffset
+    CDoom.extralight = player.value.extralight
 
-        CDoom.viewz = player.value.viewz
+    CDoom.viewz = player.value.viewz
 
-        CDoom.viewsin = CDoom.finesine[CDoom.viewangle >> CDoom::ANGLETOFINESHIFT]
-        CDoom.viewcos = CDoom.finecosine[CDoom.viewangle >> CDoom::ANGLETOFINESHIFT]
+    CDoom.viewsin = CDoom.finesine[CDoom.viewangle >> CDoom::ANGLETOFINESHIFT]
+    CDoom.viewcos = CDoom.finecosine[CDoom.viewangle >> CDoom::ANGLETOFINESHIFT]
 
-        CDoom.sscount = 0
+    CDoom.sscount = 0
 
-        if player.value.fixedcolormap != 0
-          CDoom.fixedcolormap =
-            CDoom.colormaps + 
-            player.value.fixedcolormap * 256 * sizeof(CDoom::Lighttable)
+    if player.value.fixedcolormap != 0
+      CDoom.fixedcolormap =
+        CDoom.colormaps +
+          player.value.fixedcolormap * 256 * sizeof(CDoom::Lighttable)
 
-          CDoom.walllights = CDoom.scalelightfixed
+      CDoom.walllights = CDoom.scalelightfixed
 
-          CDoom::MAXLIGHTSCALE.times { |i| CDoom.scalelightfixed[i] = CDoom.fixedcolormap }
-        else
-          CDoom.fixedcolormap = Pointer(CDoom::Lighttable).null
-        end
+      CDoom::MAXLIGHTSCALE.times { |i| CDoom.scalelightfixed[i] = CDoom.fixedcolormap }
+    else
+      CDoom.fixedcolormap = Pointer(CDoom::Lighttable).null
+    end
 
-        CDoom.framecount += 1
-        CDoom.validcount += 1
-      end
-
+    CDoom.framecount += 1
+    CDoom.validcount += 1
+  end
 
   def self.r_render_player_view(player : CDoom::Player*)
     CDoom.r_setup_frame(player)
@@ -20379,33 +20348,31 @@ CDoom.doom_print.call("\nr_init_tables".to_unsafe)
     CDoom.net_update
   end
 
-
-
   #
   # Uses global vars:
-#  planeheight
-#  ds_source
-#  basexscale
-#  baseyscale
-#  viewx
-#  viewy
-#
-# BASIC PRIMITIVE
-#
+  #  planeheight
+  #  ds_source
+  #  basexscale
+  #  baseyscale
+  #  viewx
+  #  viewy
+  #
+  # BASIC PRIMITIVE
+  #
   def self.r_map_plane(y : LibC::Int, x1 : LibC::Int, x2 : LibC::Int)
     {% if @top_level.has_constant?("RANGECHECK") %}
-    if x2 < x1 || 
-      x1 < 0 ||
-      x2 >= CDoom.viewwidth ||
-      y.to_u32! > CDoom.viewheight.to_u32!
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_map_plane: ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(x1, 10));
-        CDoom.doom_concat(CDoom.error_buf, " to ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(x2, 10));
-        CDoom.doom_concat(CDoom.error_buf, " at ");
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(y, 10));
+      if x2 < x1 ||
+         x1 < 0 ||
+         x2 >= CDoom.viewwidth ||
+         y.to_u32! > CDoom.viewheight.to_u32!
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_map_plane: ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(x1, 10))
+        CDoom.doom_concat(CDoom.error_buf, " to ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(x2, 10))
+        CDoom.doom_concat(CDoom.error_buf, " at ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(y, 10))
         CDoom.i_error(CDoom.error_buf)
-    end
+      end
     {% end %}
 
     if CDoom.planeheight != CDoom.cachedheight[y]
@@ -20420,14 +20387,13 @@ CDoom.doom_print.call("\nr_init_tables".to_unsafe)
       distance = CDoom.cacheddistance[y]
       CDoom.ds_xstep = CDoom.cachedxstep[y]
       CDoom.ds_ystep = CDoom.cachedystep[y]
-
     end
 
-    length = CDoom.fixed_mul(distance, CDoom.distscale[x1] )
+    length = CDoom.fixed_mul(distance, CDoom.distscale[x1])
     angle = (CDoom.viewangle &+ CDoom.xtoviewangle[x1]) >> CDoom::ANGLETOFINESHIFT
     CDoom.ds_xfrac = CDoom.viewx &+ CDoom.fixed_mul(CDoom.finecosine[angle], length)
     CDoom.ds_yfrac = -CDoom.viewy &- CDoom.fixed_mul(CDoom.finesine[angle], length)
-    
+
     if !CDoom.fixedcolormap.null?
       CDoom.ds_colormap = CDoom.fixedcolormap
     else
@@ -20445,31 +20411,29 @@ CDoom.doom_print.call("\nr_init_tables".to_unsafe)
     CDoom.r_draw_span
   end
 
-
   #
   # At begining of frame.
   #
-def self.r_clear_planes
-  # opening / clipping determination
-  CDoom.viewwidth.times do |i|
-    CDoom.floorclip[i] = CDoom.viewheight.to_i16!
-CDoom.ceilingclip[i] = -1
+  def self.r_clear_planes
+    # opening / clipping determination
+    CDoom.viewwidth.times do |i|
+      CDoom.floorclip[i] = CDoom.viewheight.to_i16!
+      CDoom.ceilingclip[i] = -1
+    end
+
+    CDoom.lastvisplane = CDoom.visplanes
+    CDoom.lastopening = CDoom.openings
+
+    # texture calculation
+    CDoom.doom_memset(CDoom.cachedheight, 0, sizeof(typeof(CDoom.cachedheight)))
+
+    # left to right mapping
+    angle = (CDoom.viewangle &- CDoom::ANG90) >> CDoom::ANGLETOFINESHIFT
+
+    # scale will be unit scale at SCREENWIDTH/2 distance
+    CDoom.basexscale = CDoom.fixed_div(CDoom.finecosine[angle], CDoom.centerxfrac)
+    CDoom.baseyscale = -CDoom.fixed_div(CDoom.finesine[angle], CDoom.centerxfrac)
   end
-
-  CDoom.lastvisplane = CDoom.visplanes
-  CDoom.lastopening = CDoom.openings
-
-  # texture calculation
-  CDoom.doom_memset(CDoom.cachedheight, 0, sizeof(typeof(CDoom.cachedheight)))
-
-  # left to right mapping
-  angle = (CDoom.viewangle &- CDoom::ANG90) >> CDoom::ANGLETOFINESHIFT
-
-  # scale will be unit scale at SCREENWIDTH/2 distance
-  CDoom.basexscale = CDoom.fixed_div(CDoom.finecosine[angle], CDoom.centerxfrac)
-  CDoom.baseyscale = -CDoom.fixed_div(CDoom.finesine[angle], CDoom.centerxfrac)
-end 
-
 
   def self.r_find_plane(height : CDoom::Fixed, picnum : LibC::Int, lightlevel : LibC::Int) : CDoom::Visplane*
     if picnum == CDoom.skyflatnum
@@ -20480,8 +20444,8 @@ end
     check = CDoom.visplanes.to_unsafe
     while check < CDoom.lastvisplane
       if height == check.value.height &&
-        picnum == check.value.picnum &&
-        lightlevel == check.value.lightlevel
+         picnum == check.value.picnum &&
+         lightlevel == check.value.lightlevel
         break
       end
 
@@ -20503,9 +20467,7 @@ end
     CDoom.doom_memset(check.value.top, 0xff, sizeof(typeof(check.value.top)))
 
     return check
-
   end
-
 
   def self.r_check_plane(pl : CDoom::Visplane*, start : LibC::Int, stop : LibC::Int) : CDoom::Visplane*
     if start < pl.value.minx
@@ -20551,10 +20513,7 @@ end
     CDoom.doom_memset(pl.value.top, 0xff, sizeof(typeof(pl.value.top)))
 
     return pl
-    
   end
-
-
 
   def self.r_make_spans(x : LibC::Int, t1 : LibC::Int, b1 : LibC::Int, t2 : LibC::Int, b2 : LibC::Int)
     while t1 < t2 && t1 <= b1
@@ -20574,108 +20533,823 @@ end
       CDoom.spanstart[b2] = x
       b2 -= 1
     end
-
   end
-
 
   #
   # At the end of each frame.
   #
-def self.r_draw_planes
- {% if @top_level.has_constant?("RANGECHECK") %}
+  def self.r_draw_planes
+    {% if @top_level.has_constant?("RANGECHECK") %}
       if CDoom.ds_p - CDoom.drawsegs.to_unsafe > CDoom::MAXDRAWSEGS
         CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_planes: drawsegs overflow (")
         CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa((CDoom.ds_p - CDoom.drawsegs.to_unsafe), 10))
-        CDoom.doom_strcpy(CDoom.error_buf, ")")
+        CDoom.doom_concat(CDoom.error_buf, ")")
         CDoom.i_error(CDoom.error_buf)
       end
 
-   if CDoom.lastvisplane - CDoom.visplanes.to_unsafe > CDoom::MAXVISPLANES
-    CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_planes: visplane overflow (")
+      if CDoom.lastvisplane - CDoom.visplanes.to_unsafe > CDoom::MAXVISPLANES
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_planes: visplane overflow (")
         CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa((CDoom.lastvisplane - CDoom.visplanes.to_unsafe), 10))
-        CDoom.doom_strcpy(CDoom.error_buf, ")")
+        CDoom.doom_concat(CDoom.error_buf, ")")
         CDoom.i_error(CDoom.error_buf)
-   end
+      end
 
-   if CDoom.lastopening - CDoom.openings.to_unsafe > CDoom::MAXOPENINGS
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_planes: opening overflow (")
+      if CDoom.lastopening - CDoom.openings.to_unsafe > CDoom::MAXOPENINGS
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_planes: opening overflow (")
         CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa((CDoom.lastopening - CDoom.openings.to_unsafe), 10))
-        CDoom.doom_strcpy(CDoom.error_buf, ")")
+        CDoom.doom_concat(CDoom.error_buf, ")")
         CDoom.i_error(CDoom.error_buf)
-   end
-   {% end %}
+      end
+    {% end %}
 
-   pl = CDoom.visplanes.to_unsafe
-   while pl < CDoom.lastvisplane
-    if pl.value.minx > pl.value.maxx
-      pl += 1
-      next
-    end
+    pl = CDoom.visplanes.to_unsafe
+    while pl < CDoom.lastvisplane
+      if pl.value.minx > pl.value.maxx
+        pl += 1
+        next
+      end
 
-    # sky flat
-    if pl.value.picnum == CDoom.skyflatnum
-      CDoom.dc_iscale = CDoom.pspriteiscale
+      # sky flat
+      if pl.value.picnum == CDoom.skyflatnum
+        CDoom.dc_iscale = CDoom.pspriteiscale
 
-      # Sky is allways drawn full bright,
-            #  i.e. colormaps[0] is used.
-            # Because of this hack, sky is not affected
-            #  by INVUL inverse mapping.
-            CDoom.dc_colormap = CDoom.colormaps
-            CDoom.dc_texturemid = CDoom.skytexturemid
-      x = pl.value.minx
-      while x <= pl.value.maxx
-        CDoom.dc_yl = pl.value.top[x]
-        CDoom.dc_yh = pl.value.bottom[x]
+        # Sky is allways drawn full bright,
+        #  i.e. colormaps[0] is used.
+        # Because of this hack, sky is not affected
+        #  by INVUL inverse mapping.
+        CDoom.dc_colormap = CDoom.colormaps
+        CDoom.dc_texturemid = CDoom.skytexturemid
+        x = pl.value.minx
+        while x <= pl.value.maxx
+          CDoom.dc_yl = pl.value.top[x]
+          CDoom.dc_yh = pl.value.bottom[x]
 
-        if CDoom.dc_yl <= CDoom.dc_yh
-          angle = (CDoom.viewangle &+ CDoom.xtoviewangle[x]) >> CDoom::ANGLETOSKYSHIFT
-          CDoom.dc_x = x
-          CDoom.dc_source = CDoom.r_get_column(CDoom.skytexture, angle)
-          CDoom.colfunc.call
+          if CDoom.dc_yl <= CDoom.dc_yh
+            angle = (CDoom.viewangle &+ CDoom.xtoviewangle[x]) >> CDoom::ANGLETOSKYSHIFT
+            CDoom.dc_x = x
+            CDoom.dc_source = CDoom.r_get_column(CDoom.skytexture, angle)
+            CDoom.colfunc.call
+          end
+
+          x += 1
         end
+        pl += 1
+        next
+      end
+
+      # regular flat
+      CDoom.ds_source = CDoom.w_cache_lump_num(CDoom.firstflat +
+                                               CDoom.flattranslation[pl.value.picnum],
+        CDoom::PU_STATIC).as(CDoom::Byte*)
+
+      CDoom.planeheight = doom_abs(pl.value.height - CDoom.viewz)
+      light = (pl.value.lightlevel >> CDoom::LIGHTSEGSHIFT) + CDoom.extralight
+
+      light = CDoom::LIGHTLEVELS - 1 if light >= CDoom::LIGHTLEVELS
+
+      light = 0 if light < 0
+
+      CDoom.planezlight = CDoom.zlight[light]
+
+      (pl.value.top.to_unsafe + (pl.value.maxx + 1)).value = 0xff
+      (pl.value.top.to_unsafe + (pl.value.minx - 1)).value = 0xff
+
+      stop = pl.value.maxx + 1
+
+      x = pl.value.minx
+      while x <= stop
+        CDoom.r_make_spans(x, (pl.value.top.to_unsafe + (x - 1)).value,
+          (pl.value.bottom.to_unsafe + (x - 1)).value,
+          (pl.value.top.to_unsafe + x).value,
+          (pl.value.bottom.to_unsafe + x).value)
 
         x += 1
       end
+
       pl += 1
-      next
+      z_change_tag(CDoom.ds_source, CDoom::PU_CACHE)
+    end
+  end
+
+  def self.r_render_masked_seg_range(ds : CDoom::Drawseg*, x1 : LibC::Int, x2 : LibC::Int)
+    # Calculate light table.
+    # Use different light tables
+    #   for horizontal / vertical / diagonal. Diagonal?
+    # OPTIMIZE: get rid of LIGHTSEGSHIFT globally
+    CDoom.curline = ds.value.curline
+    CDoom.frontsector = CDoom.curline.value.frontsector
+    CDoom.backsector = CDoom.curline.value.backsector
+    texnum = CDoom.texturetranslation[CDoom.curline.value.sidedef.value.midtexture]
+
+    lightnum = (CDoom.frontsector.value.lightlevel >> CDoom::LIGHTSEGSHIFT) + CDoom.extralight
+
+    if CDoom.curline.value.v1.value.y == CDoom.curline.value.v2.value.y
+      lightnum -= 1
+    elsif CDoom.curline.value.v1.value.x == CDoom.curline.value.v2.value.x
+      lightnum += 1
     end
 
-    # regular flat
-    CDoom.ds_source = CDoom.w_cache_lump_num(CDoom.firstflat +
-    CDoom.flattranslation[pl.value.picnum],
-    CDoom::PU_STATIC).as(CDoom::Byte*)
-
-    CDoom.planeheight = doom_abs(pl.value.height - CDoom.viewz)
-    light = (pl.value.lightlevel >> CDoom::LIGHTSEGSHIFT) + CDoom.extralight
-
-    light = CDoom::LIGHTLEVELS - 1 if light >= CDoom::LIGHTLEVELS
-
-    light = 0 if light < 0
-
-    CDoom.planezlight = CDoom.zlight[light]
-
-    (pl.value.top.to_unsafe + (pl.value.maxx + 1)).value = 0xff
-    (pl.value.top.to_unsafe + (pl.value.minx - 1)).value = 0xff
-
-    stop = pl.value.maxx + 1
-
-    x = pl.value.minx
-    while x <= stop
-      CDoom.r_make_spans(x, (pl.value.top.to_unsafe + (x - 1)).value,
-      (pl.value.bottom.to_unsafe + (x - 1)).value,
-      (pl.value.top.to_unsafe + x).value,
-      (pl.value.bottom.to_unsafe + x).value)
-
-      x += 1
+    if lightnum < 0
+      CDoom.walllights = CDoom.scalelight[0]
+    elsif lightnum >= CDoom::LIGHTLEVELS
+      CDoom.walllights = CDoom.scalelight[CDoom::LIGHTLEVELS - 1]
+    else
+      CDoom.walllights = CDoom.scalelight[lightnum]
     end
 
-    pl += 1
-    z_change_tag(CDoom.ds_source, CDoom::PU_CACHE)
-   end
-   
-end
+    CDoom.maskedtexturecol = ds.value.maskedtexturecol
 
+    CDoom.rw_scalestep = ds.value.scalestep
+    CDoom.spryscale = ds.value.scale1 + (x1 - ds.value.x1) * CDoom.rw_scalestep
+    CDoom.mfloorclip = ds.value.sprbottomclip
+    CDoom.mceilingclip = ds.value.sprtopclip
 
-  
+    # find positioning
+    if CDoom.curline.value.linedef.value.flags & CDoom::ML_DONTPEGBOTTOM != 0
+      CDoom.dc_texturemid = CDoom.frontsector.value.floorheight > CDoom.backsector.value.floorheight ? CDoom.frontsector.value.floorheight : CDoom.backsector.value.floorheight
+      CDoom.dc_texturemid = CDoom.dc_texturemid + CDoom.textureheight[texnum] - CDoom.viewz
+    else
+      CDoom.dc_texturemid = CDoom.frontsector.value.ceilingheight < CDoom.backsector.value.ceilingheight ? CDoom.frontsector.value.ceilingheight : CDoom.backsector.value.ceilingheight
+      CDoom.dc_texturemid = CDoom.dc_texturemid - CDoom.viewz
+    end
+    CDoom.dc_texturemid += CDoom.curline.value.sidedef.value.rowoffset
 
+    CDoom.dc_colormap = CDoom.fixedcolormap if !CDoom.fixedcolormap.null?
+
+    # draw the columns
+    CDoom.dc_x = x1
+    while CDoom.dc_x <= x2
+      # calculate lighting
+      if CDoom.maskedtexturecol[CDoom.dc_x] != Int16::MAX
+        if CDoom.fixedcolormap.null?
+          index = CDoom.spryscale >> CDoom::LIGHTSCALESHIFT
+
+          index = CDoom::MAXLIGHTSCALE - 1 if index >= CDoom::MAXLIGHTSCALE
+
+          CDoom.dc_colormap = CDoom.walllights[index]
+        end
+
+        CDoom.sprtopscreen = CDoom.centeryfrac - CDoom.fixed_mul(CDoom.dc_texturemid, CDoom.spryscale)
+        CDoom.dc_iscale = 0xffffffff_u32 // CDoom.spryscale.to_u32!
+
+        # draw the texture
+        col = (CDoom.r_get_column(texnum, CDoom.maskedtexturecol[CDoom.dc_x]) - 3).as(CDoom::Column*)
+
+        CDoom.r_draw_masked_column(col)
+        CDoom.maskedtexturecol[CDoom.dc_x] = Int16::MAX
+      end
+      CDoom.spryscale += CDoom.rw_scalestep
+      CDoom.dc_x += 1
+    end
+  end
+
+  #
+  # Draws zero, one, or two textures (and possibly a masked
+  #  texture) for walls.
+  # Can draw or mark the starting pixel of floor and ceiling
+  #  textures.
+  # CALLED: CORE LOOPING ROUTINE.
+  #
+  def self.r_render_seg_loop
+    while CDoom.rw_x < CDoom.rw_stopx
+      # mark floor / ceiling areas
+      yl = (CDoom.topfrac + CDoom::HEIGHTUNIT - 1) >> CDoom::HEIGHTBITS
+
+      # no space above wall?
+      yl = CDoom.ceilingclip[CDoom.rw_x] + 1 if yl < CDoom.ceilingclip[CDoom.rw_x] + 1
+
+      if CDoom.markceiling != 0
+        top = CDoom.ceilingclip[CDoom.rw_x] + 1
+        bottom = yl - 1
+
+        bottom = CDoom.floorclip[CDoom.rw_x] - 1 if bottom >= CDoom.floorclip[CDoom.rw_x]
+
+        if top <= bottom
+          (CDoom.ceilingplane.value.top.to_unsafe + CDoom.rw_x).value = top.to_u8!
+          (CDoom.ceilingplane.value.bottom.to_unsafe + CDoom.rw_x).value = bottom.to_u8!
+        end
+      end
+
+      yh = CDoom.bottomfrac >> CDoom::HEIGHTBITS
+
+      yh = CDoom.floorclip[CDoom.rw_x] - 1 if yh >= CDoom.floorclip[CDoom.rw_x]
+
+      if CDoom.markfloor != 0
+        top = yh + 1
+        bottom = CDoom.floorclip[CDoom.rw_x] - 1
+        top = CDoom.ceilingclip[CDoom.rw_x] + 1 if top <= CDoom.ceilingclip[CDoom.rw_x]
+        if top <= bottom
+          (CDoom.floorplane.value.top.to_unsafe + CDoom.rw_x).value = top.to_u8!
+          (CDoom.floorplane.value.bottom.to_unsafe + CDoom.rw_x).value = bottom.to_u8!
+        end
+      end
+
+      texturecolumn = 0
+
+      # texturecolumn and lighting are independent of wall tiers
+      if CDoom.segtextured != 0
+        # calculate texture offset
+        angle = (CDoom.rw_centerangle &+ CDoom.xtoviewangle[CDoom.rw_x]) >> CDoom::ANGLETOFINESHIFT
+        texturecolumn = CDoom.rw_offset - CDoom.fixed_mul(CDoom.finetangent[angle], CDoom.rw_distance)
+        texturecolumn >>= CDoom::FRACBITS
+        # calculate lighting
+        index = CDoom.rw_scale >> CDoom::LIGHTSCALESHIFT
+
+        index = CDoom::MAXLIGHTSCALE - 1 if index >= CDoom::MAXLIGHTSCALE
+
+        CDoom.dc_colormap = CDoom.walllights[index]
+        CDoom.dc_x = CDoom.rw_x
+        CDoom.dc_iscale = 0xffffffff_u32 // CDoom.rw_scale.to_u32!
+      end
+
+      # draw the wall tiers
+      if CDoom.midtexture != 0
+        # single sided line
+        CDoom.dc_yl = yl
+        CDoom.dc_yh = yh
+        CDoom.dc_texturemid = CDoom.rw_midtexturemid
+        CDoom.dc_source = CDoom.r_get_column(CDoom.midtexture, texturecolumn)
+        CDoom.colfunc.call
+        CDoom.ceilingclip[CDoom.rw_x] = CDoom.viewheight.to_i16!
+        CDoom.floorclip[CDoom.rw_x] = -1
+      else
+        # two sided line
+        if CDoom.toptexture != 0
+          # top wall
+          mid = CDoom.pixhigh >> CDoom::HEIGHTBITS
+          CDoom.pixhigh += CDoom.pixhighstep
+
+          mid = CDoom.floorclip[CDoom.rw_x] - 1 if mid >= CDoom.floorclip[CDoom.rw_x]
+
+          if mid >= yl
+            CDoom.dc_yl = yl
+            CDoom.dc_yh = mid
+            CDoom.dc_texturemid = CDoom.rw_toptexturemid
+            CDoom.dc_source = CDoom.r_get_column(CDoom.toptexture, texturecolumn)
+            CDoom.colfunc.call
+            CDoom.ceilingclip[CDoom.rw_x] = mid.to_i16!
+          else
+            CDoom.ceilingclip[CDoom.rw_x] = yl.to_i16! - 1
+          end
+        else
+          # no top wall
+          CDoom.ceilingclip[CDoom.rw_x] = yl.to_i16! - 1 if CDoom.markceiling != 0
+        end
+
+        if CDoom.bottomtexture != 0
+          # bottom wall
+          mid = (CDoom.pixlow + CDoom::HEIGHTUNIT - 1) >> CDoom::HEIGHTBITS
+          CDoom.pixlow += CDoom.pixlowstep
+
+          # no space above wall?
+          mid = CDoom.ceilingclip[CDoom.rw_x] + 1 if mid <= CDoom.ceilingclip[CDoom.rw_x]
+
+          if mid <= yh
+            CDoom.dc_yl = mid
+            CDoom.dc_yh = yh
+            CDoom.dc_texturemid = CDoom.rw_bottomtexturemid
+            CDoom.dc_source = CDoom.r_get_column(CDoom.bottomtexture,
+              texturecolumn)
+            CDoom.colfunc.call
+            CDoom.floorclip[CDoom.rw_x] = mid.to_i16!
+          else
+            CDoom.floorclip[CDoom.rw_x] = yh.to_i16! + 1
+          end
+        else
+          # no bottom wall
+          CDoom.floorclip[CDoom.rw_x] = yh.to_i16! + 1 if CDoom.markfloor != 0
+        end
+
+        if CDoom.maskedtexture != 0
+          # save texturecol
+          #  for backdrawing of masked mid texture
+          CDoom.maskedtexturecol[CDoom.rw_x] = texturecolumn.to_i16!
+        end
+      end
+
+      CDoom.rw_scale += CDoom.rw_scalestep
+      CDoom.topfrac += CDoom.topstep
+      CDoom.bottomfrac += CDoom.bottomstep
+
+      CDoom.rw_x += 1
+    end
+  end
+
+  #
+  # A wall segment will be drawn
+  #  between start and stop pixels (inclusive).
+  #
+  def self.r_store_wall_range(start : LibC::Int, stop : LibC::Int)
+    # don't overflow and crash
+    return if CDoom.ds_p == CDoom.drawsegs.to_unsafe + CDoom::MAXDRAWSEGS
+
+    {% if @top_level.has_constant?("RANGECHECK") %}
+      if start >= CDoom.viewwidth || start > stop
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: Bad r_render_wall_range: ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(start, 10))
+        CDoom.doom_concat(CDoom.error_buf, " to ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(stop, 10))
+        CDoom.i_error(CDoom.error_buf)
+      end
+    {% end %}
+
+    CDoom.sidedef = CDoom.curline.value.sidedef
+    CDoom.linedef = CDoom.curline.value.linedef
+
+    # mark the segment as visible for auto map
+    CDoom.linedef.value.flags = CDoom.linedef.value.flags | CDoom::ML_MAPPED
+
+    # calculate rw_distance for scale calculation
+    CDoom.rw_normalangle = CDoom.curline.value.angle &+ CDoom::ANG90
+    offsetangle = CDoom.rw_normalangle &- CDoom.rw_angle1
+    offsetangle = (-(offsetangle.to_i32!)).to_u32! if offsetangle > CDoom::ANG180
+
+    offsetangle = CDoom::ANG90 if offsetangle > CDoom::ANG90
+
+    distangle = CDoom::ANG90 &- offsetangle
+    hyp = CDoom.r_point_to_dist(CDoom.curline.value.v1.value.x, CDoom.curline.value.v1.value.y)
+    sineval = CDoom.finesine[distangle >> CDoom::ANGLETOFINESHIFT]
+    CDoom.rw_distance = CDoom.fixed_mul(hyp, sineval)
+
+    CDoom.ds_p.value.x1 = start
+    CDoom.rw_x = start
+    CDoom.ds_p.value.x2 = stop
+    CDoom.ds_p.value.curline = CDoom.curline
+    CDoom.rw_stopx = stop + 1
+
+    # calculate scale at both ends and step
+    CDoom.ds_p.value.scale1 = CDoom.r_scale_from_global_angle(CDoom.viewangle &+ CDoom.xtoviewangle[start])
+    CDoom.rw_scale = CDoom.ds_p.value.scale1
+
+    if stop > start
+      CDoom.ds_p.value.scale2 = CDoom.r_scale_from_global_angle(CDoom.viewangle &+ CDoom.xtoviewangle[stop])
+      CDoom.ds_p.value.scalestep = (CDoom.ds_p.value.scale2 - CDoom.rw_scale).tdiv(stop - start)
+      CDoom.rw_scalestep = CDoom.ds_p.value.scalestep
+    else
+      CDoom.ds_p.value.scale2 = CDoom.ds_p.value.scale1
+    end
+
+    # calculate texture boundaries
+    #  and decide if floor / ceiling marks are needed
+    CDoom.worldtop = CDoom.frontsector.value.ceilingheight - CDoom.viewz
+    CDoom.worldbottom = CDoom.frontsector.value.floorheight - CDoom.viewz
+
+    CDoom.midtexture = 0
+    CDoom.toptexture = 0
+    CDoom.bottomtexture = 0
+    CDoom.maskedtexture = 0
+    CDoom.ds_p.value.maskedtexturecol = Pointer(Int16).null
+
+    if CDoom.backsector.null?
+      # single sided line
+      CDoom.midtexture = CDoom.texturetranslation[CDoom.sidedef.value.midtexture]
+      # a single sided line is terminal, so it must mark ends
+      CDoom.markfloor = 1
+      CDoom.markceiling = 1
+      if CDoom.linedef.value.flags & CDoom::ML_DONTPEGBOTTOM != 0
+        vtop = CDoom.frontsector.value.floorheight +
+               CDoom.textureheight[CDoom.sidedef.value.midtexture]
+        # bottom of texture at bottom
+        CDoom.rw_midtexturemid = vtop - CDoom.viewz
+      else
+        # top of texture at top
+        CDoom.rw_midtexturemid = CDoom.worldtop
+      end
+      CDoom.rw_midtexturemid += CDoom.sidedef.value.rowoffset
+
+      CDoom.ds_p.value.silhouette = CDoom::SIL_BOTH
+      CDoom.ds_p.value.sprtopclip = CDoom.screenheightarray
+      CDoom.ds_p.value.sprbottomclip = CDoom.negonearray
+      CDoom.ds_p.value.bsilheight = Int32::MAX
+      CDoom.ds_p.value.tsilheight = Int32::MIN
+    else
+      # two sided line
+      CDoom.ds_p.value.sprtopclip = Pointer(Int16).null
+      CDoom.ds_p.value.sprbottomclip = Pointer(Int16).null
+      CDoom.ds_p.value.silhouette = 0
+
+      if CDoom.frontsector.value.floorheight > CDoom.backsector.value.floorheight
+        CDoom.ds_p.value.silhouette = CDoom::SIL_BOTTOM
+        CDoom.ds_p.value.bsilheight = CDoom.frontsector.value.floorheight
+      elsif CDoom.backsector.value.floorheight > CDoom.viewz
+        CDoom.ds_p.value.silhouette = CDoom::SIL_BOTTOM
+        CDoom.ds_p.value.bsilheight = Int32::MAX
+      end
+
+      if CDoom.frontsector.value.ceilingheight < CDoom.backsector.value.ceilingheight
+        CDoom.ds_p.value.silhouette = CDoom.ds_p.value.silhouette | CDoom::SIL_TOP
+        CDoom.ds_p.value.tsilheight = CDoom.frontsector.value.ceilingheight
+      elsif CDoom.backsector.value.ceilingheight < CDoom.viewz
+        CDoom.ds_p.value.silhouette = CDoom.ds_p.value.silhouette | CDoom::SIL_TOP
+        CDoom.ds_p.value.tsilheight = Int32::MIN
+      end
+
+      if CDoom.backsector.value.ceilingheight <= CDoom.frontsector.value.floorheight
+        CDoom.ds_p.value.sprbottomclip = CDoom.negonearray
+        CDoom.ds_p.value.bsilheight = Int32::MAX
+        CDoom.ds_p.value.silhouette = CDoom.ds_p.value.silhouette | CDoom::SIL_BOTTOM
+      end
+
+      if CDoom.backsector.value.floorheight >= CDoom.frontsector.value.ceilingheight
+        CDoom.ds_p.value.sprtopclip = CDoom.screenheightarray
+        CDoom.ds_p.value.tsilheight = Int32::MIN
+        CDoom.ds_p.value.silhouette = CDoom.ds_p.value.silhouette | CDoom::SIL_TOP
+      end
+
+      CDoom.worldhigh = CDoom.backsector.value.ceilingheight - CDoom.viewz
+      CDoom.worldlow = CDoom.backsector.value.floorheight - CDoom.viewz
+
+      # hack to allow height changes in outdoor areas
+      if CDoom.frontsector.value.ceilingpic == CDoom.skyflatnum &&
+         CDoom.backsector.value.ceilingpic == CDoom.skyflatnum
+        CDoom.worldtop = CDoom.worldhigh
+      end
+
+      if CDoom.worldlow != CDoom.worldbottom ||
+         CDoom.backsector.value.floorpic != CDoom.frontsector.value.floorpic ||
+         CDoom.backsector.value.lightlevel != CDoom.frontsector.value.lightlevel
+        CDoom.markfloor = 1
+      else
+        # same plane on both sides
+        CDoom.markfloor = 0
+      end
+
+      if CDoom.worldhigh != CDoom.worldtop ||
+         CDoom.backsector.value.ceilingpic != CDoom.frontsector.value.ceilingpic ||
+         CDoom.backsector.value.lightlevel != CDoom.frontsector.value.lightlevel
+        CDoom.markceiling = 1
+      else
+        # same plane on both sides
+        CDoom.markceiling = 0
+      end
+
+      if CDoom.backsector.value.ceilingheight <= CDoom.frontsector.value.floorheight ||
+         CDoom.backsector.value.floorheight >= CDoom.frontsector.value.ceilingheight
+        # closed door
+        CDoom.markceiling = 1
+        CDoom.markfloor = 1
+      end
+
+      if CDoom.worldhigh < CDoom.worldtop
+        # top texture
+        CDoom.toptexture = CDoom.texturetranslation[CDoom.sidedef.value.toptexture]
+        if CDoom.linedef.value.flags & CDoom::ML_DONTPEGTOP != 0
+          # top of texture at top
+          CDoom.rw_toptexturemid = CDoom.worldtop
+        else
+          vtop = CDoom.backsector.value.ceilingheight + CDoom.textureheight[CDoom.sidedef.value.toptexture]
+          # bottom of texture
+          CDoom.rw_toptexturemid = vtop - CDoom.viewz
+        end
+      end
+      if CDoom.worldlow > CDoom.worldbottom
+        # bottom texture
+        CDoom.bottomtexture = CDoom.texturetranslation[CDoom.sidedef.value.bottomtexture]
+        if CDoom.linedef.value.flags & CDoom::ML_DONTPEGBOTTOM != 0
+          # bottom of texture at bottom
+          # top of texture at top
+          CDoom.rw_bottomtexturemid = CDoom.worldtop
+        else # top of texture at top
+          CDoom.rw_bottomtexturemid = CDoom.worldlow
+        end
+      end
+      CDoom.rw_toptexturemid &+= CDoom.sidedef.value.rowoffset
+      CDoom.rw_bottomtexturemid &+= CDoom.sidedef.value.rowoffset
+
+      # allocate space for masked texture tables
+      if CDoom.sidedef.value.midtexture != 0
+        CDoom.maskedtexture = 1
+        CDoom.ds_p.value.maskedtexturecol = CDoom.lastopening - CDoom.rw_x
+        CDoom.maskedtexturecol = CDoom.ds_p.value.maskedtexturecol
+        CDoom.lastopening += CDoom.rw_stopx - CDoom.rw_x
+      end
+    end
+
+    # calculate rw_offset (only needed for textured lines)
+    CDoom.segtextured = CDoom.midtexture | CDoom.toptexture | CDoom.bottomtexture | CDoom.maskedtexture
+
+    if CDoom.segtextured != 0
+      offsetangle = CDoom.rw_normalangle &- CDoom.rw_angle1
+
+      offsetangle = (-(offsetangle.to_i32!)).to_u32! if offsetangle > CDoom::ANG180
+
+      offsetangle = CDoom::ANG90 if offsetangle > CDoom::ANG90
+
+      sineval = CDoom.finesine[offsetangle >> CDoom::ANGLETOFINESHIFT]
+      CDoom.rw_offset = CDoom.fixed_mul(hyp, sineval)
+
+      CDoom.rw_offset = -CDoom.rw_offset if CDoom.rw_normalangle &- CDoom.rw_angle1 < CDoom::ANG180
+
+      CDoom.rw_offset += CDoom.sidedef.value.textureoffset + CDoom.curline.value.offset
+      CDoom.rw_centerangle = CDoom::ANG90 &+ CDoom.viewangle &- CDoom.rw_normalangle
+
+      # calculate light table
+      #  use different light tables
+      #  for horizontal / vertical / diagonal
+      # OPTIMIZE: get rid of LIGHTSEGSHIFT globally
+      if CDoom.fixedcolormap.null?
+        lightnum = (CDoom.frontsector.value.lightlevel >> CDoom::LIGHTSEGSHIFT) + CDoom.extralight
+
+        if CDoom.curline.value.v1.value.y == CDoom.curline.value.v2.value.y
+          lightnum -= 1
+        elsif CDoom.curline.value.v1.value.x == CDoom.curline.value.v2.value.x
+          lightnum += 1
+        end
+
+        if lightnum < 0
+          CDoom.walllights = CDoom.scalelight[0]
+        elsif lightnum >= CDoom::LIGHTLEVELS
+          CDoom.walllights = CDoom.scalelight[CDoom::LIGHTLEVELS - 1]
+        else
+          CDoom.walllights = CDoom.scalelight[lightnum]
+        end
+      end
+    end
+
+    # if a floor / ceiling plane is on the wrong side
+    #  of the view plane, it is definitely invisible
+    #  and doesn't need to be marked.
+
+    if CDoom.frontsector.value.floorheight >= CDoom.viewz
+      # above view plane
+      CDoom.markfloor = 0
+    end
+
+    if CDoom.frontsector.value.ceilingheight <= CDoom.viewz &&
+       CDoom.frontsector.value.ceilingpic != CDoom.skyflatnum
+      # below view plane
+      CDoom.markceiling = 0
+    end
+
+    # calculate incremental stepping values for texture edges
+    CDoom.worldtop >>= 4
+    CDoom.worldbottom >>= 4
+
+    CDoom.topstep = -CDoom.fixed_mul(CDoom.rw_scalestep, CDoom.worldtop)
+    CDoom.topfrac = (CDoom.centeryfrac >> 4) - CDoom.fixed_mul(CDoom.worldtop, CDoom.rw_scale)
+
+    CDoom.bottomstep = -CDoom.fixed_mul(CDoom.rw_scalestep, CDoom.worldbottom)
+    CDoom.bottomfrac = (CDoom.centeryfrac >> 4) - CDoom.fixed_mul(CDoom.worldbottom, CDoom.rw_scale)
+
+    if !CDoom.backsector.null?
+      CDoom.worldhigh >>= 4
+      CDoom.worldlow >>= 4
+
+      if CDoom.worldhigh < CDoom.worldtop
+        CDoom.pixhigh = (CDoom.centeryfrac >> 4) - CDoom.fixed_mul(CDoom.worldhigh, CDoom.rw_scale)
+        CDoom.pixhighstep = -CDoom.fixed_mul(CDoom.rw_scalestep, CDoom.worldhigh)
+      end
+
+      if CDoom.worldlow > CDoom.worldbottom
+        CDoom.pixlow = (CDoom.centeryfrac >> 4) - CDoom.fixed_mul(CDoom.worldlow, CDoom.rw_scale)
+        CDoom.pixlowstep = -CDoom.fixed_mul(CDoom.rw_scalestep, CDoom.worldlow)
+      end
+    end
+
+    # render it
+    CDoom.ceilingplane = CDoom.r_check_plane(CDoom.ceilingplane, CDoom.rw_x, CDoom.rw_stopx - 1) if CDoom.markceiling != 0
+
+    CDoom.floorplane = CDoom.r_check_plane(CDoom.floorplane, CDoom.rw_x, CDoom.rw_stopx - 1) if CDoom.markfloor != 0
+
+    CDoom.r_render_seg_loop
+
+    # save sprite clipping info
+    if ((CDoom.ds_p.value.silhouette & CDoom::SIL_TOP != 0) || CDoom.maskedtexture != 0) &&
+       CDoom.ds_p.value.sprtopclip.null?
+      CDoom.doom_memcpy(CDoom.lastopening, CDoom.ceilingclip.to_unsafe + start, 2 * (CDoom.rw_stopx - start))
+      CDoom.ds_p.value.sprtopclip = CDoom.lastopening - start
+      CDoom.lastopening += CDoom.rw_stopx - start
+    end
+
+    if ((CDoom.ds_p.value.silhouette & CDoom::SIL_BOTTOM != 0) || CDoom.maskedtexture != 0) &&
+       CDoom.ds_p.value.sprbottomclip.null?
+      CDoom.doom_memcpy(CDoom.lastopening, CDoom.floorclip.to_unsafe + start, 2 * (CDoom.rw_stopx - start))
+      CDoom.ds_p.value.sprbottomclip = CDoom.lastopening - start
+      CDoom.lastopening += CDoom.rw_stopx - start
+    end
+
+    if CDoom.maskedtexture != 0 && CDoom.ds_p.value.silhouette & CDoom::SIL_TOP == 0
+      CDoom.ds_p.value.silhouette = CDoom.ds_p.value.silhouette | CDoom::SIL_TOP
+      CDoom.ds_p.value.tsilheight = Int32::MIN
+    end
+    if CDoom.maskedtexture != 0 && CDoom.ds_p.value.silhouette & CDoom::SIL_BOTTOM == 0
+      CDoom.ds_p.value.silhouette = CDoom.ds_p.value.silhouette | CDoom::SIL_BOTTOM
+      CDoom.ds_p.value.bsilheight = Int32::MAX
+    end
+    CDoom.ds_p += 1
+  end
+
+  #
+  # Called whenever the view size changes.
+  #
+  def self.r_init_sky_map
+    CDoom.skytexturemid = 100 * CDoom::FRACUNIT
+  end
+
+  #
+  # INITIALIZATION FUNCTIONS
+  #
+
+  #
+  # Local function for R_InitSprites.
+  #
+  def self.r_install_sprite_lump(lump : LibC::Int, frame : LibC::UInt, rotation : LibC::UInt, flipped : CDoom::DoomBool)
+    if frame >= 29 || rotation > 8
+      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Bad frame characters in lump ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(lump, 10))
+      CDoom.i_error(CDoom.error_buf)
+    end
+
+    CDoom.maxframe = frame if frame.to_i32! > CDoom.maxframe
+
+    if rotation == 0
+      # the lump should be used for all rotations
+      if CDoom.sprtemp[frame].rotate == 0
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Sprite ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.spritename)
+        CDoom.doom_concat(CDoom.error_buf, " frame ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('A'.ord + frame))
+        CDoom.doom_concat(CDoom.error_buf, " has multip rot=0 lump")
+        CDoom.i_error(CDoom.error_buf)
+      end
+
+      if CDoom.sprtemp[frame].rotate == 1
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Sprite ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.spritename)
+        CDoom.doom_concat(CDoom.error_buf, " frame ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('A'.ord + frame))
+        CDoom.doom_concat(CDoom.error_buf, " has rotations ")
+        CDoom.i_error(CDoom.error_buf)
+      end
+
+      (CDoom.sprtemp.to_unsafe + frame).value.rotate = 0
+      8.times do |r|
+        ((CDoom.sprtemp.to_unsafe + frame).value.lump.to_unsafe + r).value = (lump - CDoom.firstspritelump).to_i16!
+        ((CDoom.sprtemp.to_unsafe + frame).value.flip.to_unsafe + r).value = flipped.to_u8!
+      end
+      return
+    end
+
+    # the lump is only used for one rotation
+    if CDoom.sprtemp[frame].rotate == 0
+      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Sprite ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.spritename)
+      CDoom.doom_concat(CDoom.error_buf, " frame ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('A'.ord + frame))
+      CDoom.doom_concat(CDoom.error_buf, " has rotations ")
+      CDoom.i_error(CDoom.error_buf)
+    end
+
+    (CDoom.sprtemp.to_unsafe + frame).value.rotate = 1
+
+    # make - based
+    rotation -= 1
+    if CDoom.sprtemp[frame].lump[rotation] != -1
+      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Sprite ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.spritename)
+      CDoom.doom_concat(CDoom.error_buf, " : ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('A'.ord + frame))
+      CDoom.doom_concat(CDoom.error_buf, " : ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('1'.ord + rotation))
+      CDoom.doom_concat(CDoom.error_buf, " ")
+      CDoom.i_error(CDoom.error_buf)
+    end
+
+    ((CDoom.sprtemp.to_unsafe + frame).value.lump.to_unsafe + rotation).value = (lump - CDoom.firstspritelump).to_i16!
+    ((CDoom.sprtemp.to_unsafe + frame).value.flip.to_unsafe + rotation).value = flipped.to_u8!
+  end
+
+  #
+  # Pass a null terminated list of sprite names
+  #  (4 chars exactly) to be used.
+  # Builds the sprite rotation matrixes to account
+  #  for horizontally flipped sprites.
+  # Will report an error if the lumps are inconsistant.
+  # Only called at startup.
+  #
+  # Sprite lump names are 4 characters for the actor,
+  #  a letter for the frame, and a number for the rotation.
+  # A sprite that is flippable will have an additional
+  #  letter/number appended.
+  # The rotation character can be 0 to signify no rotations.
+  #
+  def self.r_init_sprite_defs(namelist : LibC::Char**)
+    # count the number of sprite names
+    check = namelist
+
+    while !check.value.null?
+      check += 1
+    end
+    
+
+    CDoom.numsprites = check - namelist
+
+    return if CDoom.numsprites == 0
+
+    CDoom.sprites = CDoom.z_malloc(CDoom.numsprites * sizeof(CDoom::Spritedef), CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Spritedef*)
+
+    start = CDoom.firstspritelump - 1
+    endl = CDoom.lastspritelump + 1
+
+    # scan all the lump names for each of the names,
+    #  noting the highest frame letter.
+    # Just compare 4 characters as ints
+    CDoom.numsprites.times do |i|
+      CDoom.spritename = namelist[i]
+      CDoom.doom_memset(CDoom.sprtemp, -1, sizeof(typeof(CDoom.sprtemp)))
+      CDoom.maxframe = -1
+      intname = namelist[i].as(Int32*).value
+
+      # scan the lumps,
+      #  filling in the frames for whatever is found
+      l = start + 1
+      while l < endl
+        if CDoom.lumpinfo[l].name.to_unsafe.as(Int32*).value == intname
+          frame = CDoom.lumpinfo[l].name[4] - 'A'.ord
+          rotation = CDoom.lumpinfo[l].name[5] - '0'.ord
+
+          if CDoom.modifiedgame != 0
+            patched = CDoom.w_get_num_for_name(CDoom.lumpinfo[l].name)
+          else
+            patched = l
+          end
+
+          CDoom.r_install_sprite_lump(patched, frame, rotation, 0)
+
+          if CDoom.lumpinfo[l].name[6] != 0
+            frame = CDoom.lumpinfo[l].name[6] - 'A'.ord
+            rotation = CDoom.lumpinfo[l].name[7] - '0'.ord
+            CDoom.r_install_sprite_lump(l, frame, rotation, 1)
+          end
+        end
+
+        l += 1
+      end
+
+      # check the frames that were found for completeness
+      if CDoom.maxframe == -1
+        CDoom.sprites[i].numframes = 0
+        next
+      end
+
+      CDoom.maxframe += 1
+
+      CDoom.maxframe.times do |frame|
+        case CDoom.sprtemp[frame].rotate
+        when -1
+          CDoom.doom_strcpy(CDoom.error_buf, "Error: r_init_sprite_defs: No patches found for ")
+          CDoom.doom_concat(CDoom.error_buf, namelist[i])
+          CDoom.doom_concat(CDoom.error_buf, " frame ")
+          CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa(frame + 'A'.ord))
+          CDoom.i_error(CDoom.error_buf)
+        when 0
+          # only the first rotation is needed
+        when 1
+          # must have all 8 frames
+          8.times do |rotation|
+            if CDoom.sprtemp[frame].lump[rotation] == -1
+              CDoom.doom_strcpy(CDoom.error_buf, "Error: r_init_sprite_defs: Sprite ")
+              CDoom.doom_concat(CDoom.error_buf, namelist[i])
+              CDoom.doom_concat(CDoom.error_buf, " frame ")
+              CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa(frame + 'A'.ord))
+              CDoom.doom_concat(CDoom.error_buf, " is missing rotations")
+              CDoom.i_error(CDoom.error_buf)
+            end
+          end
+        end
+      end
+
+      # allocate space for the frames present and copy sprtemp to it
+      (CDoom.sprites + i).value.numframes = CDoom.maxframe
+      (CDoom.sprites + i).value.spriteframes =
+        CDoom.z_malloc(CDoom.maxframe * sizeof(CDoom::Spriteframe), CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Spriteframe*)
+      CDoom.doom_memcpy(CDoom.sprites[i].spriteframes, CDoom.sprtemp, CDoom.maxframe * sizeof(CDoom::Spriteframe))
+    end
+  end
+
+  #
+  # GAME FUNCTIONS
+  #
+
+  #
+  # Called at program start.
+  #
+  def self.r_init_sprites(namelist : LibC::Char**)
+    CDoom::SCREENWIDTH.times { |i| CDoom.negonearray[i] = -1 }
+    CDoom.r_init_sprite_defs(namelist)
+  end
+
+  #
+  # Called at frame start.
+  #
+  def self.r_clear_sprites
+    CDoom.vissprite_p = CDoom.vissprites.to_unsafe
+  end
+
+  def self.r_new_vis_sprite : CDoom::Vissprite*
+    return pointerof(CDoom.overflowsprite) if CDoom.vissprite_p == CDoom.vissprites.to_unsafe + CDoom::MAXVISSPRITES
+
+    CDoom.vissprite_p += 1
+    return CDoom.vissprite_p - 1
+  end
 end

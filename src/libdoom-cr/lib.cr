@@ -903,10 +903,10 @@ lib CDoom
     prev : Thinker*
     next : Thinker*
     function : Think
-    # padded so that Proc#closure_data doesn't overwrite 
-    # the 8 bytes after the function pointer (think) 
+    # padded so that Proc#closure_data doesn't overwrite
+    # the 8 bytes after the function pointer (think)
     # This is bullshit
-    pad : LibC::LongLong 
+    pad : LibC::LongLong
   end
 
   # __DOOM_CONFIG_H__
@@ -5166,6 +5166,11 @@ lib CDoom
   $markfloor : DoomBool
   $markceiling : DoomBool
 
+  $maskedtexture : DoomBool
+  $toptexture : LibC::Int
+  $bottomtexture : LibC::Int
+  $midtexture : LibC::Int
+
   $skymap : DoomBool
 
   $drawsegs : Drawseg[MAXDRAWSEGS]
@@ -5323,7 +5328,7 @@ lib CDoom
   $xtoviewangle : Angle[XTOVIEWANGLE_SIZE]
 
   $rw_distance : Fixed
-  $rw_normalangle : Fixed
+  $rw_normalangle : Angle
 
   # angle to line origin
   $rw_angle1 : LibC::Int
@@ -7739,7 +7744,7 @@ lib CDoom
   $viewimage : Byte*
   $ylookup : Byte*[MAXHEIGHT]
   $columnofs : LibC::Int[MAXWIDTH]
-  
+
   # just for profiling
   $dccount : LibC::Int
 
@@ -7750,7 +7755,7 @@ lib CDoom
   $dscount : LibC::Int
 
   FIELDOFVIEW = 2048 # Fineangles in the SCREENWIDTH wide window.
-  DISTMAP = 2
+  DISTMAP     =    2
 
   # just for profiling purposes
   $framecount : LibC::Int
@@ -7758,48 +7763,113 @@ lib CDoom
   $walllights : Lighttable**
 
   fun r_init_tables = R_InitTables
-    fun r_init_texture_mapping = R_InitTextureMapping
-      fun r_init_light_tables = R_InitLightTables
+  fun r_init_texture_mapping = R_InitTextureMapping
+  fun r_init_light_tables = R_InitLightTables
 
-      $colfunc : Proc(Nil)
-      fun r_setup_frame = R_SetupFrame(player : Player*)
+  $colfunc : Proc(Nil)
+  fun r_setup_frame = R_SetupFrame(player : Player*)
 
-        MAXVISPLANES = 128
-        MAXOPENINGS = SCREENWIDTH*64
+  MAXVISPLANES = 128
+  MAXOPENINGS  = SCREENWIDTH*64
 
-        #
-        # opening
-        #
+  #
+  # opening
+  #
 
-        # Here comes the obnoxious "visplane".
-        $lastvisplane : Visplane*
+  # Here comes the obnoxious "visplane".
+  $lastvisplane : Visplane*
 
-        $openings : LibC::Short[MAXOPENINGS]
-        
+  $openings : LibC::Short[MAXOPENINGS]
 
-        #
-        # spanstart holds the start of a plane span
-# initialized to 0 at start
-#
-        $spanstart : LibC::Int[SCREENHEIGHT]
-        $spanstop : LibC::Int[SCREENHEIGHT]
+  #
+  # spanstart holds the start of a plane span
+  # initialized to 0 at start
+  #
+  $spanstart : LibC::Int[SCREENHEIGHT]
+  $spanstop : LibC::Int[SCREENHEIGHT]
 
-        #
-        # texture mapping
-        #
-        $planezlight : Lighttable**
-        $planeheight : Fixed
+  #
+  # texture mapping
+  #
+  $planezlight : Lighttable**
+  $planeheight : Fixed
 
-        $basexscale : Fixed
-        $baseyscale : Fixed
+  $basexscale : Fixed
+  $baseyscale : Fixed
 
-        $cachedheight : Fixed[SCREENHEIGHT]
-        $cacheddistance : Fixed[SCREENHEIGHT]
-        $cachedxstep : Fixed[SCREENHEIGHT]
-        $cachedystep : Fixed[SCREENHEIGHT]
+  $cachedheight : Fixed[SCREENHEIGHT]
+  $cacheddistance : Fixed[SCREENHEIGHT]
+  $cachedxstep : Fixed[SCREENHEIGHT]
+  $cachedystep : Fixed[SCREENHEIGHT]
 
-        $visplanes : Visplane[MAXVISPLANES]
+  $visplanes : Visplane[MAXVISPLANES]
 
+  HEIGHTBITS = 12
+  HEIGHTUNIT = 1 << HEIGHTBITS
 
+  # OPTIMIZE: closed two sided lines as single sided
 
+  $masekdtexture : DoomBool
+  $rw_x : LibC::Int
+  $rw_centerangle : Angle
+  $rw_offset : Fixed
+  $rw_scale : Fixed
+  $rw_scalestep : Fixed
+  $rw_midtexturemid : Fixed
+  $rw_toptexturemid : Fixed
+  $rw_bottomtexturemid : Fixed
+
+  $worldtop : LibC::Int
+  $worldbottom : LibC::Int
+  $worldhigh : LibC::Int
+  $worldlow : LibC::Int
+
+  $pixhigh : Fixed
+  $pixlow : Fixed
+  $pixhighstep : Fixed
+  $pixlowstep : Fixed
+
+  $topfrac : Fixed
+  $topstep : Fixed
+
+  $bottomfrac : Fixed
+  $bottomstep : Fixed
+
+  $maskedtexturecol : LibC::Short*
+
+  fun r_render_seg_loop = R_RenderSegLoop
+
+  MINZ        = FRACUNIT * 4
+  BASEYCENTER = 100
+
+  struct Maskdraw
+    x1 : LibC::Int
+    x2 : LibC::Int
+
+    column : LibC::Int
+    topclip : LibC::Int
+    bottomclip : LibC::Int
+  end
+
+  #
+  # Sprite rotation 0 is facing the viewer,
+  #  rotation 1 is one angle turn CLOCKWISE around the axis.
+  # This is not the same as the angle,
+  #  which increases counter clockwise (protractor).
+  # There was a lot of stuff grabbed wrong, so I changed it...
+  #
+
+  $spritelights : Lighttable**
+
+  $sprtemp : Spriteframe[29]
+  $maxframe : LibC::Int
+  $spritename : LibC::Char*
+  $newvissprite : LibC::Int
+
+  fun r_install_sprite_lump = R_InstallSpriteLump(lump : LibC::Int, frame : LibC::UInt, rotation : LibC::UInt, flipped : DoomBool)
+  fun r_init_sprite_defs = R_InitSpriteDefs(namelist : LibC::Char**)
+
+  $overflowsprite : Vissprite
+
+  fun r_new_vis_sprite = R_NewVisSprite : Vissprite*
 end

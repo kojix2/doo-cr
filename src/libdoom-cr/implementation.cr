@@ -2361,126 +2361,162 @@ fun r_precache_level = R_PrecacheLevel
   LibDoom.r_precache_level
 end
 
-  fun r_draw_column = R_DrawColumn
-LibDoom.r_draw_column
-  end
+fun r_draw_column = R_DrawColumn
+  LibDoom.r_draw_column
+end
 
-  fun r_draw_fuzz_column = R_DrawFuzzColumn
-LibDoom.r_draw_fuzz_column
-  end
+fun r_draw_fuzz_column = R_DrawFuzzColumn
+  LibDoom.r_draw_fuzz_column
+end
 
-  fun r_draw_translated_column = R_DrawTranslatedColumn
-LibDoom.r_draw_translated_column
-  end
+fun r_draw_translated_column = R_DrawTranslatedColumn
+  LibDoom.r_draw_translated_column
+end
 
-  fun r_init_translation_tables = R_InitTranslationTables
-LibDoom.r_init_translation_tables
-  end
+fun r_init_translation_tables = R_InitTranslationTables
+  LibDoom.r_init_translation_tables
+end
 
-  fun r_draw_span = R_DrawSpan
-LibDoom.r_draw_span
-  end
+fun r_draw_span = R_DrawSpan
+  LibDoom.r_draw_span
+end
 
-  fun r_init_buffer = R_InitBuffer(width : LibC::Int, height : LibC::Int)
-LibDoom.r_init_buffer(width, height)
-  end
+fun r_init_buffer = R_InitBuffer(width : LibC::Int, height : LibC::Int)
+  LibDoom.r_init_buffer(width, height)
+end
 
-  fun r_fill_back_screen = R_FillBackScreen
-LibDoom.r_fill_back_screen
-  end
+fun r_fill_back_screen = R_FillBackScreen
+  LibDoom.r_fill_back_screen
+end
 
-  fun r_video_erase = R_VideoErase(ofs : LibC::UInt, count : LibC::Int)
-LibDoom.r_video_erase(ofs, count)
-  end
+fun r_video_erase = R_VideoErase(ofs : LibC::UInt, count : LibC::Int)
+  LibDoom.r_video_erase(ofs, count)
+end
 
-  fun r_draw_view_border = R_DrawViewBorder
-LibDoom.r_draw_view_border
-  end
+fun r_draw_view_border = R_DrawViewBorder
+  LibDoom.r_draw_view_border
+end
 
-  fun r_add_point_to_box = R_AddPointToBox(x : LibC::Int, y : LibC::Int, box : CDoom::Fixed*)
-LibDoom.r_add_point_to_box(x, y, box)
-  end
+fun r_add_point_to_box = R_AddPointToBox(x : LibC::Int, y : LibC::Int, box : CDoom::Fixed*)
+  LibDoom.r_add_point_to_box(x, y, box)
+end
 
-  fun r_point_on_side = R_PointOnSide(x : CDoom::Fixed, y : CDoom::Fixed, node : CDoom::Node*) : LibC::Int
-LibDoom.r_point_on_side(x, y, node)
-  end
+fun r_point_on_side = R_PointOnSide(x : CDoom::Fixed, y : CDoom::Fixed, node : CDoom::Node*) : LibC::Int
+  LibDoom.r_point_on_side(x, y, node)
+end
 
-  fun r_point_on_seg_side = R_PointOnSegSide(x : CDoom::Fixed, y : CDoom::Fixed, line : CDoom::Seg*) : LibC::Int
-LibDoom.r_point_on_seg_side(x, y, line)
-  end
+fun r_point_on_seg_side = R_PointOnSegSide(x : CDoom::Fixed, y : CDoom::Fixed, line : CDoom::Seg*) : LibC::Int
+  LibDoom.r_point_on_seg_side(x, y, line)
+end
 
-  fun r_point_to_angle = R_PointToAngle(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Angle
-LibDoom.r_point_to_angle(x, y)
-  end
+fun r_point_to_angle = R_PointToAngle(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Angle
+  LibDoom.r_point_to_angle(x, y)
+end
 
-  fun r_point_to_angle2 = R_PointToAngle2(x1 : CDoom::Fixed, y1 : CDoom::Fixed, x2 : CDoom::Fixed, y2 : CDoom::Fixed) : CDoom::Angle
-LibDoom.r_point_to_angle2(x1, y1, x2, y2)
-  end
+fun r_point_to_angle2 = R_PointToAngle2(x1 : CDoom::Fixed, y1 : CDoom::Fixed, x2 : CDoom::Fixed, y2 : CDoom::Fixed) : CDoom::Angle
+  LibDoom.r_point_to_angle2(x1, y1, x2, y2)
+end
 
-  fun r_point_to_dist = R_PointToDist(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Fixed
-LibDoom.r_point_to_dist(x, y)
-  end
+fun r_point_to_dist = R_PointToDist(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Fixed
+  LibDoom.r_point_to_dist(x, y)
+end
 
-  fun r_scale_from_global_angle = R_ScaleFromGlobalAngle(visangle : CDoom::Angle) : CDoom::Fixed
+fun r_scale_from_global_angle = R_ScaleFromGlobalAngle(visangle : CDoom::Angle) : CDoom::Fixed
   LibDoom.r_scale_from_global_angle(visangle)
+end
+
+fun r_init_tables = R_InitTables
+  LibDoom.r_init_tables
+end
+
+fun r_init_texture_mapping = R_InitTextureMapping
+  LibDoom.r_init_texture_mapping
+end
+
+fun r_init_light_tables = R_InitLightTables
+  LibDoom.r_init_light_tables
+end
+
+fun r_set_view_size = R_SetViewSize(blocks : LibC::Int, detail : LibC::Int)
+  LibDoom.r_set_view_size(blocks, detail)
+end
+
+fun r_execute_set_view_size = R_ExecuteSetViewSize
+  LibDoom.r_execute_set_view_size
+end
+
+fun r_init = R_Init
+  LibDoom.r_init
+end
+
+fun r_point_in_subsector = R_PointInSubsector(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Subsector*
+  LibDoom.r_point_in_subsector(x, y)
+end
+
+fun r_setup_frame = R_SetupFrame(player : CDoom::Player*)
+  LibDoom.r_setup_frame(player)
+end
+
+fun r_render_player_view = R_RenderPlayerView(player : CDoom::Player*)
+  LibDoom.r_render_player_view(player)
+end
+
+fun r_map_plane = R_MapPlane(y : LibC::Int, x1 : LibC::Int, x2 : LibC::Int)
+  LibDoom.r_map_plane(y, x1, x2)
+end
+
+fun r_clear_planes = R_ClearPlanes
+  LibDoom.r_clear_planes
+end
+
+fun r_find_plane = R_FindPlane(height : CDoom::Fixed, picnum : LibC::Int, lightlevel : LibC::Int) : CDoom::Visplane*
+  LibDoom.r_find_plane(height, picnum, lightlevel)
+end
+
+fun r_check_plane = R_CheckPlane(pl : CDoom::Visplane*, start : LibC::Int, stop : LibC::Int) : CDoom::Visplane*
+  LibDoom.r_check_plane(pl, start, stop)
+end
+
+fun r_make_spans = R_MakeSpans(x : LibC::Int, t1 : LibC::Int, b1 : LibC::Int, t2 : LibC::Int, b2 : LibC::Int)
+  LibDoom.r_make_spans(x, t1, b1, t2, b2)
+end
+
+fun r_draw_planes = R_DrawPlanes
+  LibDoom.r_draw_planes
+end
+
+fun r_render_masked_seg_range = R_RenderMaskedSegRange(ds : CDoom::Drawseg*, x1 : LibC::Int, x2 : LibC::Int)
+  LibDoom.r_render_masked_seg_range(ds, x1, x2)
+end
+
+fun r_render_seg_loop = R_RenderSegLoop
+  LibDoom.r_render_seg_loop
+end
+
+fun r_store_wall_range = R_StoreWallRange(start : LibC::Int, stop : LibC::Int)
+  LibDoom.r_store_wall_range(start, stop)
+end
+
+  fun r_init_sky_map = R_InitSkyMap
+LibDoom.r_init_sky_map
   end
 
-  fun r_init_tables = R_InitTables
-LibDoom.r_init_tables
+fun r_install_sprite_lump = R_InstallSpriteLump(lump : LibC::Int, frame : LibC::UInt, rotation : LibC::UInt, flipped : CDoom::DoomBool)
+LibDoom.r_install_sprite_lump(lump, frame, rotation, flipped)
+end
+
+fun r_init_sprite_defs = R_InitSpriteDefs(namelist : LibC::Char**)
+LibDoom.r_init_sprite_defs(namelist)
+end
+
+  fun r_init_sprites = R_InitSprites(namelist : LibC::Char**)
+LibDoom.r_init_sprites(namelist)
   end
 
-    fun r_init_texture_mapping = R_InitTextureMapping
-LibDoom.r_init_texture_mapping
-    end
-
-      fun r_init_light_tables = R_InitLightTables
-LibDoom.r_init_light_tables
-      end
-
-  fun r_set_view_size = R_SetViewSize(blocks : LibC::Int, detail : LibC::Int)
-LibDoom.r_set_view_size(blocks, detail)
+  fun r_clear_sprites = R_ClearSprites
+LibDoom.r_clear_sprites
   end
 
-  fun r_execute_set_view_size = R_ExecuteSetViewSize
-LibDoom.r_execute_set_view_size
-  end
-  
-  fun r_init = R_Init
-LibDoom.r_init
-  end
-
-  fun r_point_in_subsector = R_PointInSubsector(x : CDoom::Fixed, y : CDoom::Fixed) : CDoom::Subsector*
-LibDoom.r_point_in_subsector(x, y)
-  end
-  
-      fun r_setup_frame = R_SetupFrame(player : CDoom::Player*)
-LibDoom.r_setup_frame(player)
-      end
-
-  fun r_render_player_view = R_RenderPlayerView(player : CDoom::Player*)
-LibDoom.r_render_player_view(player)
-  end
-
-  fun r_map_plane = R_MapPlane(y : LibC::Int, x1 : LibC::Int, x2 : LibC::Int)
-LibDoom.r_map_plane(y, x1, x2)
-  end
-
-  fun r_clear_planes = R_ClearPlanes
-LibDoom.r_clear_planes
-  end
-
-  fun r_find_plane = R_FindPlane(height : CDoom::Fixed, picnum : LibC::Int, lightlevel : LibC::Int) : CDoom::Visplane*
-LibDoom.r_find_plane(height, picnum, lightlevel)
-  end
-
-  fun r_check_plane = R_CheckPlane(pl : CDoom::Visplane*, start : LibC::Int, stop : LibC::Int) : CDoom::Visplane*
-LibDoom.r_check_plane(pl, start, stop)
-  end
-
-  fun r_make_spans = R_MakeSpans(x : LibC::Int, t1 : LibC::Int, b1 : LibC::Int, t2 : LibC::Int, b2 : LibC::Int)
-LibDoom.r_make_spans(x, t1, b1, t2, b2)
-  end
-
-  fun r_draw_planes = R_DrawPlanes
-LibDoom.r_draw_planes
+  fun r_new_vis_sprite = R_NewVisSprite : CDoom::Vissprite*
+LibDoom.r_new_vis_sprite
   end
