@@ -16987,7 +16987,7 @@ extern void R_DrawViewBorder(void);
 int viewangleoffset;
 
 // increment every time a check is made
-int validcount;
+int validcount = 1;
 
 lighttable_t* fixedcolormap;
 
@@ -17035,7 +17035,7 @@ int viewangletox[FINEANGLES / 2];
 // from clipangle to -clipangle.
 angle_t xtoviewangle[SCREENWIDTH + 1];
 
-fixed_t* finecosine;
+fixed_t* finecosine = &finesine[FINEANGLES / 4];
 
 lighttable_t* scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_t* scalelightfixed[MAXLIGHTSCALE];
@@ -17078,63 +17078,7 @@ extern void R_AddPointToBox(int x, int y, fixed_t* box);
 extern int R_PointOnSide(fixed_t x, fixed_t y, node_t* node);
 
 
-int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t* line)
-{
-    fixed_t lx;
-    fixed_t ly;
-    fixed_t ldx;
-    fixed_t ldy;
-    fixed_t dx;
-    fixed_t dy;
-    fixed_t left;
-    fixed_t right;
-
-    lx = line->v1->x;
-    ly = line->v1->y;
-
-    ldx = line->v2->x - lx;
-    ldy = line->v2->y - ly;
-
-    if (!ldx)
-    {
-        if (x <= lx)
-            return ldy > 0;
-
-        return ldy < 0;
-    }
-    if (!ldy)
-    {
-        if (y <= ly)
-            return ldx < 0;
-
-        return ldx > 0;
-    }
-
-    dx = (x - lx);
-    dy = (y - ly);
-
-    // Try to quickly decide by looking at sign bits.
-    if ((ldy ^ ldx ^ dx ^ dy) & 0x80000000)
-    {
-        if ((ldy ^ dx) & 0x80000000)
-        {
-            // (left is negative)
-            return 1;
-        }
-        return 0;
-    }
-
-    left = FixedMul(ldy >> FRACBITS, dx);
-    right = FixedMul(dy, ldx >> FRACBITS);
-
-    if (right < left)
-    {
-        // front side
-        return 0;
-    }
-    // back side
-    return 1;
-}
+extern int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t* line);
 
 
 //
@@ -17146,126 +17090,13 @@ int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t* line)
 //  tangent (slope) value which is looked up in the
 //  tantoangle[] table.
 
-angle_t R_PointToAngle(fixed_t x, fixed_t y)
-{
-    x -= viewx;
-    y -= viewy;
-
-    if ((!x) && (!y))
-        return 0;
-
-    if (x >= 0)
-    {
-        // x >=0
-        if (y >= 0)
-        {
-            // y>= 0
-
-            if (x > y)
-            {
-                // octant 0
-                return tantoangle[SlopeDiv(y, x)];
-            }
-            else
-            {
-                // octant 1
-                return ANG90 - 1 - tantoangle[SlopeDiv(x, y)];
-            }
-        }
-        else
-        {
-            // y<0
-            y = -y;
-
-            if (x > y)
-            {
-                // octant 8
-#pragma warning(push)
-#pragma warning(disable : 4146)
-                return -tantoangle[SlopeDiv(y, x)];
-#pragma warning(pop)
-            }
-            else
-            {
-                // octant 7
-                return ANG270 + tantoangle[SlopeDiv(x, y)];
-            }
-        }
-    }
-    else
-    {
-        // x<0
-        x = -x;
-
-        if (y >= 0)
-        {
-            // y>= 0
-            if (x > y)
-            {
-                // octant 3
-                return ANG180 - 1 - tantoangle[SlopeDiv(y, x)];
-            }
-            else
-            {
-                // octant 2
-                return ANG90 + tantoangle[SlopeDiv(x, y)];
-            }
-        }
-        else
-        {
-            // y<0
-            y = -y;
-
-            if (x > y)
-            {
-                // octant 4
-                return ANG180 + tantoangle[SlopeDiv(y, x)];
-            }
-            else
-            {
-                // octant 5
-                return ANG270 - 1 - tantoangle[SlopeDiv(x, y)];
-            }
-        }
-    }
-    return 0;
-}
+extern angle_t R_PointToAngle(fixed_t x, fixed_t y);
 
 
-angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
-{
-    viewx = x1;
-    viewy = y1;
-
-    return R_PointToAngle(x2, y2);
-}
+extern angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
 
 
-fixed_t R_PointToDist(fixed_t x, fixed_t y)
-{
-    int     angle;
-    fixed_t dx;
-    fixed_t dy;
-    fixed_t temp;
-    fixed_t dist;
-
-    dx = doom_abs(x - viewx);
-    dy = doom_abs(y - viewy);
-
-    if (dy > dx)
-    {
-        temp = dx;
-        dx = dy;
-        dy = temp;
-    }
-
-    angle = (tantoangle[FixedDiv(dy, dx) >> DBITS] + ANG90) >> ANGLETOFINESHIFT;
-
-    // use as cosine
-    dist = FixedDiv(dx, finesine[angle]);
-
-    return dist;
-}
+extern fixed_t R_PointToDist(fixed_t x, fixed_t y);
 
 
 //
@@ -17283,39 +17114,7 @@ void R_InitPointToAngle(void)
 //  at the given angle.
 // rw_distance must be calculated first.
 //
-fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
-{
-    fixed_t scale;
-    int anglea;
-    int angleb;
-    int sinea;
-    int sineb;
-    fixed_t num;
-    int den;
-
-    anglea = ANG90 + (visangle - viewangle);
-    angleb = ANG90 + (visangle - rw_normalangle);
-
-    // both sines are allways positive
-    sinea = finesine[anglea >> ANGLETOFINESHIFT];
-    sineb = finesine[angleb >> ANGLETOFINESHIFT];
-    num = FixedMul(projection, sineb) << detailshift;
-    den = FixedMul(rw_distance, sinea);
-
-    if (den > num >> 16)
-    {
-        scale = FixedDiv(num, den);
-
-        if (scale > 64 * FRACUNIT)
-            scale = 64 * FRACUNIT;
-        else if (scale < 256)
-            scale = 256;
-    }
-    else
-        scale = 64 * FRACUNIT;
-
-    return scale;
-}
+extern fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 
 
 //
@@ -17329,66 +17128,7 @@ void R_InitTables(void)
 //
 // R_InitTextureMapping
 //
-void R_InitTextureMapping(void)
-{
-    int     i;
-    int     x;
-    int     t;
-    fixed_t focallength;
-
-    // Use tangent table to generate viewangletox:
-    // viewangletox will give the next greatest x
-    // after the view angle.
-    //
-    // Calc focallength
-    // so FIELDOFVIEW angles covers SCREENWIDTH.
-    focallength = FixedDiv(centerxfrac,
-                           finetangent[FINEANGLES / 4 + FIELDOFVIEW / 2]);
-
-    for (i = 0; i < FINEANGLES / 2; i++)
-    {
-        if (finetangent[i] > FRACUNIT * 2)
-            t = -1;
-        else if (finetangent[i] < -FRACUNIT * 2)
-            t = viewwidth + 1;
-        else
-        {
-            t = FixedMul(finetangent[i], focallength);
-            t = (centerxfrac - t + FRACUNIT - 1) >> FRACBITS;
-
-            if (t < -1)
-                t = -1;
-            else if (t > viewwidth + 1)
-                t = viewwidth + 1;
-        }
-        viewangletox[i] = t;
-    }
-
-    // Scan viewangletox[] to generate xtoviewangle[]:
-    // xtoviewangle will give the smallest view angle
-    // that maps to x.        
-    for (x = 0; x <= viewwidth; x++)
-    {
-        i = 0;
-        while (viewangletox[i] > x)
-            i++;
-        xtoviewangle[x] = (i << ANGLETOFINESHIFT) - ANG90;
-    }
-
-    // Take out the fencepost cases from viewangletox.
-    for (i = 0; i < FINEANGLES / 2; i++)
-    {
-        t = FixedMul(finetangent[i], focallength);
-        t = centerx - t;
-
-        if (viewangletox[i] == -1)
-            viewangletox[i] = 0;
-        else if (viewangletox[i] == viewwidth + 1)
-            viewangletox[i] = viewwidth;
-    }
-
-    clipangle = xtoviewangle[0];
-}
+extern void R_InitTextureMapping(void);
 
 
 //
@@ -17397,35 +17137,7 @@ void R_InitTextureMapping(void)
 // because the scalelight table changes with view size.
 //
 
-void R_InitLightTables(void)
-{
-    int i;
-    int j;
-    int level;
-    int startmap;
-    int scale;
-
-    // Calculate the light levels to use
-    //  for each level / distance combination.
-    for (i = 0; i < LIGHTLEVELS; i++)
-    {
-        startmap = ((LIGHTLEVELS - 1 - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
-        for (j = 0; j < MAXLIGHTZ; j++)
-        {
-            scale = FixedDiv((SCREENWIDTH / 2 * FRACUNIT), (j + 1) << LIGHTZSHIFT);
-            scale >>= LIGHTSCALESHIFT;
-            level = startmap - scale / DISTMAP;
-
-            if (level < 0)
-                level = 0;
-
-            if (level >= NUMCOLORMAPS)
-                level = NUMCOLORMAPS - 1;
-
-            zlight[i][j] = colormaps + level * 256;
-        }
-    }
-}
+extern void R_InitLightTables(void);
 
 
 //
@@ -17435,224 +17147,37 @@ void R_InitLightTables(void)
 // The change will take effect next refresh.
 //
 
-void R_SetViewSize(int blocks, int detail)
-{
-    setsizeneeded = true;
-    setblocks = blocks;
-    setdetail = detail;
-}
+extern void R_SetViewSize(int blocks, int detail);
 
 
 //
 // R_ExecuteSetViewSize
 //
-void R_ExecuteSetViewSize(void)
-{
-    fixed_t cosadj;
-    fixed_t dy;
-    int     i;
-    int     j;
-    int     level;
-    int     startmap;
-
-    setsizeneeded = false;
-
-    if (setblocks == 11)
-    {
-        scaledviewwidth = SCREENWIDTH;
-        viewheight = SCREENHEIGHT;
-    }
-    else
-    {
-        scaledviewwidth = setblocks * 32;
-        viewheight = (setblocks * 168 / 10) & ~7;
-    }
-
-    detailshift = setdetail;
-    viewwidth = scaledviewwidth >> detailshift;
-
-    centery = viewheight / 2;
-    centerx = viewwidth / 2;
-    centerxfrac = centerx << FRACBITS;
-    centeryfrac = centery << FRACBITS;
-    projection = centerxfrac;
-
-        colfunc = basecolfunc = R_DrawColumn;
-        fuzzcolfunc = R_DrawFuzzColumn;
-        transcolfunc = R_DrawTranslatedColumn;
-        spanfunc = R_DrawSpan;
-
-    R_InitBuffer(scaledviewwidth, viewheight);
-
-    R_InitTextureMapping();
-
-    // psprite scales
-    pspritescale = FRACUNIT * viewwidth / SCREENWIDTH;
-    pspriteiscale = FRACUNIT * SCREENWIDTH / viewwidth;
-
-    // thing clipping
-    for (i = 0; i < viewwidth; i++)
-        screenheightarray[i] = viewheight;
-
-    // planes
-    for (i = 0; i < viewheight; i++)
-    {
-        dy = ((i - viewheight / 2) << FRACBITS) + FRACUNIT / 2;
-        dy = doom_abs(dy);
-        yslope[i] = FixedDiv((viewwidth << detailshift) / 2 * FRACUNIT, dy);
-    }
-
-    for (i = 0; i < viewwidth; i++)
-    {
-        cosadj = doom_abs(finecosine[xtoviewangle[i] >> ANGLETOFINESHIFT]);
-        distscale[i] = FixedDiv(FRACUNIT, cosadj);
-    }
-
-    // Calculate the light levels to use
-    //  for each level / scale combination.
-    for (i = 0; i < LIGHTLEVELS; i++)
-    {
-        startmap = ((LIGHTLEVELS - 1 - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
-        for (j = 0; j < MAXLIGHTSCALE; j++)
-        {
-            level = startmap - j * SCREENWIDTH / (viewwidth << detailshift) / DISTMAP;
-
-            if (level < 0)
-                level = 0;
-
-            if (level >= NUMCOLORMAPS)
-                level = NUMCOLORMAPS - 1;
-
-            scalelight[i][j] = colormaps + level * 256;
-        }
-    }
-}
+extern void R_ExecuteSetViewSize(void);
 
 
 //
 // R_Init
 //
-void R_Init(void)
-{
-    R_InitData();
-    doom_print("\nR_InitData");
-    R_InitPointToAngle();
-    doom_print("\nR_InitPointToAngle");
-    R_InitTables();
-    // viewwidth / viewheight / detailLevel are set by the defaults
-    doom_print("\nR_InitTables");
-
-    R_SetViewSize(screenblocks, detailLevel);
-    R_InitPlanes();
-    doom_print("\nR_InitPlanes");
-    R_InitLightTables();
-    doom_print("\nR_InitLightTables");
-    R_InitSkyMap();
-    doom_print("\nR_InitSkyMap");
-    R_InitTranslationTables();
-    doom_print("\nR_InitTranslationsTables");
-
-    framecount = 0;
-}
+extern void R_Init(void);
 
 
 //
 // R_PointInSubsector
 //
-subsector_t* R_PointInSubsector(fixed_t x, fixed_t y)
-{
-    node_t* node;
-    int     side;
-    int     nodenum;
-
-    // single subsector is a special case
-    if (!numnodes)
-        return subsectors;
-
-    nodenum = numnodes - 1;
-
-    while (!(nodenum & NF_SUBSECTOR))
-    {
-        node = &nodes[nodenum];
-        side = R_PointOnSide(x, y, node);
-        nodenum = node->children[side];
-    }
-
-    return &subsectors[nodenum & ~NF_SUBSECTOR];
-}
+extern subsector_t* R_PointInSubsector(fixed_t x, fixed_t y);
 
 
 //
 // R_SetupFrame
 //
-void R_SetupFrame(player_t* player)
-{
-    int i;
-
-    viewplayer = player;
-    viewx = player->mo->x;
-    viewy = player->mo->y;
-    viewangle = player->mo->angle + viewangleoffset;
-    extralight = player->extralight;
-
-    viewz = player->viewz;
-
-    viewsin = finesine[viewangle >> ANGLETOFINESHIFT];
-    viewcos = finecosine[viewangle >> ANGLETOFINESHIFT];
-
-    sscount = 0;
-
-    if (player->fixedcolormap)
-    {
-        fixedcolormap =
-            colormaps
-            + player->fixedcolormap * 256 * sizeof(lighttable_t);
-
-        walllights = scalelightfixed;
-
-        for (i = 0; i < MAXLIGHTSCALE; i++)
-            scalelightfixed[i] = fixedcolormap;
-    }
-    else
-        fixedcolormap = 0;
-
-    framecount++;
-    validcount++;
-}
+extern void R_SetupFrame(player_t* player);
 
 
 //
 // R_RenderView
 //
-void R_RenderPlayerView(player_t* player)
-{
-    R_SetupFrame(player);
-
-    // Clear buffers.
-    R_ClearClipSegs();
-    R_ClearDrawSegs();
-    R_ClearPlanes();
-    R_ClearSprites();
-
-    // check for new console commands.
-    NetUpdate();
-
-    // The head node is the last node output.
-    R_RenderBSPNode(numnodes - 1);
-
-    // Check for new console commands.
-    NetUpdate();
-
-    R_DrawPlanes();
-
-    // Check for new console commands.
-    NetUpdate();
-
-    R_DrawMasked();
-
-    // Check for new console commands.
-    NetUpdate();
-}
+extern void R_RenderPlayerView(player_t* player);
 #define MAXVISPLANES        128
 #define MAXOPENINGS        SCREENWIDTH*64
 
@@ -17729,347 +17254,39 @@ void R_InitPlanes(void)
 //
 // BASIC PRIMITIVE
 //
-void R_MapPlane(int y, int x1, int x2)
-{
-    angle_t        angle;
-    fixed_t        distance;
-    fixed_t        length;
-    unsigned        index;
-
-#ifdef RANGECHECK
-    if (x2 < x1
-        || x1<0
-        || x2 >= viewwidth
-        || (unsigned)y>(unsigned)viewheight)
-    {
-        //I_Error("Error: R_MapPlane: %i, %i at %i", x1, x2, y);
-        
-        doom_strcpy(error_buf, "Error: R_MapPlane: ");
-        doom_concat(error_buf, doom_itoa(x1, 10));
-        doom_concat(error_buf, ", ");
-        doom_concat(error_buf, doom_itoa(x2, 10));
-        doom_concat(error_buf, " at ");
-        doom_concat(error_buf, doom_itoa(y, 10));
-        I_Error(error_buf);
-    }
-#endif
-
-    if (planeheight != cachedheight[y])
-    {
-        cachedheight[y] = planeheight;
-        distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
-        ds_xstep = cachedxstep[y] = FixedMul(distance, basexscale);
-        ds_ystep = cachedystep[y] = FixedMul(distance, baseyscale);
-    }
-    else
-    {
-        distance = cacheddistance[y];
-        ds_xstep = cachedxstep[y];
-        ds_ystep = cachedystep[y];
-    }
-
-    length = FixedMul(distance, distscale[x1]);
-    angle = (viewangle + xtoviewangle[x1]) >> ANGLETOFINESHIFT;
-    ds_xfrac = viewx + FixedMul(finecosine[angle], length);
-    ds_yfrac = -viewy - FixedMul(finesine[angle], length);
-
-    if (fixedcolormap)
-        ds_colormap = fixedcolormap;
-    else
-    {
-        index = distance >> LIGHTZSHIFT;
-
-        if (index >= MAXLIGHTZ)
-            index = MAXLIGHTZ - 1;
-
-        ds_colormap = planezlight[index];
-    }
-
-    ds_y = y;
-    ds_x1 = x1;
-    ds_x2 = x2;
-
-    // high or low detail
-    spanfunc();
-}
+extern void R_MapPlane(int y, int x1, int x2);
 
 
 //
 // R_ClearPlanes
 // At begining of frame.
 //
-void R_ClearPlanes(void)
-{
-    int i;
-    angle_t angle;
-
-    // opening / clipping determination
-    for (i = 0; i < viewwidth; i++)
-    {
-        floorclip[i] = viewheight;
-        ceilingclip[i] = -1;
-    }
-
-    lastvisplane = visplanes;
-    lastopening = openings;
-
-    // texture calculation
-    doom_memset(cachedheight, 0, sizeof(cachedheight));
-
-    // left to right mapping
-    angle = (viewangle - ANG90) >> ANGLETOFINESHIFT;
-
-    // scale will be unit scale at SCREENWIDTH/2 distance
-    basexscale = FixedDiv(finecosine[angle], centerxfrac);
-    baseyscale = -FixedDiv(finesine[angle], centerxfrac);
-}
+extern void R_ClearPlanes(void);
 
 
 //
 // R_FindPlane
 //
-visplane_t* R_FindPlane(fixed_t height, int picnum, int lightlevel)
-{
-    visplane_t* check;
-
-    if (picnum == skyflatnum)
-    {
-        height = 0; // all skys map together
-        lightlevel = 0;
-    }
-
-    for (check = visplanes; check < lastvisplane; check++)
-    {
-        if (height == check->height
-            && picnum == check->picnum
-            && lightlevel == check->lightlevel)
-        {
-            break;
-        }
-    }
-
-    if (check < lastvisplane)
-        return check;
-
-    if (lastvisplane - visplanes == MAXVISPLANES)
-        I_Error("Error: R_FindPlane: no more visplanes");
-
-    lastvisplane++;
-
-    check->height = height;
-    check->picnum = picnum;
-    check->lightlevel = lightlevel;
-    check->minx = SCREENWIDTH;
-    check->maxx = -1;
-
-    doom_memset(check->top, 0xff, sizeof(check->top));
-
-    return check;
-}
+extern visplane_t* R_FindPlane(fixed_t height, int picnum, int lightlevel);
 
 
 //
 // R_CheckPlane
 //
-visplane_t* R_CheckPlane(visplane_t* pl, int start, int stop)
-{
-    int intrl;
-    int intrh;
-    int unionl;
-    int unionh;
-    int x;
-
-    if (start < pl->minx)
-    {
-        intrl = pl->minx;
-        unionl = start;
-    }
-    else
-    {
-        unionl = pl->minx;
-        intrl = start;
-    }
-
-    if (stop > pl->maxx)
-    {
-        intrh = pl->maxx;
-        unionh = stop;
-    }
-    else
-    {
-        unionh = pl->maxx;
-        intrh = stop;
-    }
-
-    for (x = intrl; x <= intrh; x++)
-        if (pl->top[x] != 0xff)
-            break;
-
-    if (x > intrh)
-    {
-        pl->minx = unionl;
-        pl->maxx = unionh;
-
-        // use the same one
-        return pl;
-    }
-
-    // make a new visplane
-    lastvisplane->height = pl->height;
-    lastvisplane->picnum = pl->picnum;
-    lastvisplane->lightlevel = pl->lightlevel;
-
-    pl = lastvisplane++;
-    pl->minx = start;
-    pl->maxx = stop;
-
-    doom_memset(pl->top, 0xff, sizeof(pl->top));
-
-    return pl;
-}
+extern visplane_t* R_CheckPlane(visplane_t* pl, int start, int stop);
 
 
 //
 // R_MakeSpans
 //
-void R_MakeSpans(int x, int t1, int b1, int t2, int b2)
-{
-    while (t1 < t2 && t1 <= b1)
-    {
-        R_MapPlane(t1, spanstart[t1], x - 1);
-        t1++;
-    }
-    while (b1 > b2 && b1 >= t1)
-    {
-        R_MapPlane(b1, spanstart[b1], x - 1);
-        b1--;
-    }
-
-    while (t2 < t1 && t2 <= b2)
-    {
-        spanstart[t2] = x;
-        t2++;
-    }
-    while (b2 > b1 && b2 >= t2)
-    {
-        spanstart[b2] = x;
-        b2--;
-    }
-}
+extern void R_MakeSpans(int x, int t1, int b1, int t2, int b2);
 
 
 //
 // R_DrawPlanes
 // At the end of each frame.
 //
-void R_DrawPlanes(void)
-{
-    visplane_t* pl;
-    int light;
-    int x;
-    int stop;
-    int angle;
-
-#ifdef RANGECHECK
-    if (ds_p - drawsegs > MAXDRAWSEGS)
-    {
-        //I_Error("Error: R_DrawPlanes: drawsegs overflow (%i)",
-        //        ds_p - drawsegs);
-        
-        doom_strcpy(error_buf, "Error: R_DrawPlanes: drawsegs overflow (");
-        doom_concat(error_buf, doom_itoa((int)(ds_p - drawsegs), 10));
-        doom_concat(error_buf, ")");
-        I_Error(error_buf);
-    }
-
-    if (lastvisplane - visplanes > MAXVISPLANES)
-    {
-        //I_Error("Error: R_DrawPlanes: visplane overflow (%i)",
-        //        lastvisplane - visplanes);
-        
-        doom_strcpy(error_buf, "Error: R_DrawPlanes: visplane overflow (");
-        doom_concat(error_buf, doom_itoa((int)(lastvisplane - visplanes), 10));
-        doom_concat(error_buf, ")");
-        I_Error(error_buf);
-    }
-
-    if (lastopening - openings > MAXOPENINGS)
-    {
-        //I_Error("Error: R_DrawPlanes: opening overflow (%i)",
-        //        lastopening - openings);
-        
-        doom_strcpy(error_buf, "Error: R_DrawPlanes: opening overflow (");
-        doom_concat(error_buf, doom_itoa((int)(lastopening - openings), 10));
-        doom_concat(error_buf, ")");
-        I_Error(error_buf);
-    }
-#endif
-
-    for (pl = visplanes; pl < lastvisplane; pl++)
-    {
-        if (pl->minx > pl->maxx)
-            continue;
-
-
-        // sky flat
-        if (pl->picnum == skyflatnum)
-        {
-            dc_iscale = pspriteiscale >> detailshift;
-
-            // Sky is allways drawn full bright,
-            //  i.e. colormaps[0] is used.
-            // Because of this hack, sky is not affected
-            //  by INVUL inverse mapping.
-            dc_colormap = colormaps;
-            dc_texturemid = skytexturemid;
-            for (x = pl->minx; x <= pl->maxx; x++)
-            {
-                dc_yl = pl->top[x];
-                dc_yh = pl->bottom[x];
-
-                if (dc_yl <= dc_yh)
-                {
-                    angle = (viewangle + xtoviewangle[x]) >> ANGLETOSKYSHIFT;
-                    dc_x = x;
-                    dc_source = R_GetColumn(skytexture, angle);
-                    colfunc();
-                }
-            }
-            continue;
-        }
-
-        // regular flat
-        ds_source = W_CacheLumpNum(firstflat +
-                                   flattranslation[pl->picnum],
-                                   PU_STATIC);
-
-        planeheight = doom_abs(pl->height - viewz);
-        light = (pl->lightlevel >> LIGHTSEGSHIFT) + extralight;
-
-        if (light >= LIGHTLEVELS)
-            light = LIGHTLEVELS - 1;
-
-        if (light < 0)
-            light = 0;
-
-        planezlight = zlight[light];
-
-        pl->top[pl->maxx + 1] = 0xff;
-        pl->top[pl->minx - 1] = 0xff;
-
-        stop = pl->maxx + 1;
-
-        for (x = pl->minx; x <= stop; x++)
-        {
-            R_MakeSpans(x, pl->top[x - 1],
-                        pl->bottom[x - 1],
-                        pl->top[x],
-                        pl->bottom[x]);
-        }
-
-        Z_ChangeTag(ds_source, PU_CACHE);
-    }
-}
+extern void R_DrawPlanes(void);
 #define HEIGHTBITS 12
 #define HEIGHTUNIT (1<<HEIGHTBITS)
 
@@ -19155,6 +18372,7 @@ void R_DrawMaskedColumn(column_t* column)
 }
 
 
+
 //
 // R_DrawVisSprite
 //  mfloorclip and mceilingclip should also be set.
@@ -19173,7 +18391,7 @@ void R_DrawVisSprite(vissprite_t* vis, int x1, int x2)
     if (!dc_colormap)
     {
         // 0 colormap = shadow draw
-        colfunc = fuzzcolfunc;
+        colfunc = R_DrawFuzzColumn;
     }
     else if (vis->mobjflags & MF_TRANSLATION)
     {
@@ -19200,7 +18418,7 @@ void R_DrawVisSprite(vissprite_t* vis, int x1, int x2)
         R_DrawMaskedColumn(column);
     }
 
-    colfunc = basecolfunc;
+    colfunc = R_DrawColumn;
 }
 
 

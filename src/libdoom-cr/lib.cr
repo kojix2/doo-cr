@@ -7757,6 +7757,49 @@ lib CDoom
 
   $walllights : Lighttable**
 
+  fun r_init_tables = R_InitTables
+    fun r_init_texture_mapping = R_InitTextureMapping
+      fun r_init_light_tables = R_InitLightTables
+
+      $colfunc : Proc(Nil)
+      fun r_setup_frame = R_SetupFrame(player : Player*)
+
+        MAXVISPLANES = 128
+        MAXOPENINGS = SCREENWIDTH*64
+
+        #
+        # opening
+        #
+
+        # Here comes the obnoxious "visplane".
+        $lastvisplane : Visplane*
+
+        $openings : LibC::Short[MAXOPENINGS]
+        
+
+        #
+        # spanstart holds the start of a plane span
+# initialized to 0 at start
+#
+        $spanstart : LibC::Int[SCREENHEIGHT]
+        $spanstop : LibC::Int[SCREENHEIGHT]
+
+        #
+        # texture mapping
+        #
+        $planezlight : Lighttable**
+        $planeheight : Fixed
+
+        $basexscale : Fixed
+        $baseyscale : Fixed
+
+        $cachedheight : Fixed[SCREENHEIGHT]
+        $cacheddistance : Fixed[SCREENHEIGHT]
+        $cachedxstep : Fixed[SCREENHEIGHT]
+        $cachedystep : Fixed[SCREENHEIGHT]
+
+        $visplanes : Visplane[MAXVISPLANES]
+
 
 
 end
