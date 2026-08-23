@@ -2497,26 +2497,66 @@ fun r_store_wall_range = R_StoreWallRange(start : LibC::Int, stop : LibC::Int)
   LibDoom.r_store_wall_range(start, stop)
 end
 
-  fun r_init_sky_map = R_InitSkyMap
-LibDoom.r_init_sky_map
-  end
+fun r_init_sky_map = R_InitSkyMap
+  LibDoom.r_init_sky_map
+end
 
 fun r_install_sprite_lump = R_InstallSpriteLump(lump : LibC::Int, frame : LibC::UInt, rotation : LibC::UInt, flipped : CDoom::DoomBool)
-LibDoom.r_install_sprite_lump(lump, frame, rotation, flipped)
+  LibDoom.r_install_sprite_lump(lump, frame, rotation, flipped)
 end
 
 fun r_init_sprite_defs = R_InitSpriteDefs(namelist : LibC::Char**)
-LibDoom.r_init_sprite_defs(namelist)
+  LibDoom.r_init_sprite_defs(namelist)
 end
 
-  fun r_init_sprites = R_InitSprites(namelist : LibC::Char**)
-LibDoom.r_init_sprites(namelist)
-  end
+fun r_init_sprites = R_InitSprites(namelist : LibC::Char**)
+  LibDoom.r_init_sprites(namelist)
+end
 
-  fun r_clear_sprites = R_ClearSprites
-LibDoom.r_clear_sprites
-  end
+fun r_clear_sprites = R_ClearSprites
+  LibDoom.r_clear_sprites
+end
 
-  fun r_new_vis_sprite = R_NewVisSprite : CDoom::Vissprite*
-LibDoom.r_new_vis_sprite
-  end
+fun r_new_vis_sprite = R_NewVisSprite : CDoom::Vissprite*
+  LibDoom.r_new_vis_sprite
+end
+
+fun r_draw_masked_column = R_DrawMaskedColumn(column : CDoom::Column*)
+  LibDoom.r_draw_masked_column(column)
+end
+
+fun r_draw_vis_sprite = R_DrawVisSprite(vis : CDoom::Vissprite*, x1 : LibC::Int, x2 : LibC::Int)
+  LibDoom.r_draw_vis_sprite(vis, x1, x2)
+end
+
+fun r_project_sprite = R_ProjectSprite(thing : CDoom::Mobj*)
+  LibDoom.r_project_sprite(thing)
+end
+
+fun r_add_sprites = R_AddSprites(sec : CDoom::Sector*)
+  LibDoom.r_add_sprites(sec)
+end
+
+fun r_draw_psprite = R_DrawPSprite(psp : CDoom::Pspdef*)
+  LibDoom.r_draw_psprite(psp)
+end
+
+fun r_draw_player_sprites = R_DrawPlayerSprites
+  LibDoom.r_draw_player_sprites
+end
+
+fun r_sort_vis_sprites = R_SortVisSprites
+  LibDoom.r_sort_vis_sprites
+end
+
+fun r_draw_sprite = R_DrawSprite(spr : CDoom::Vissprite*)
+  LibDoom.r_draw_sprite(spr)
+end
+
+fun r_draw_masked = R_DrawMasked
+  LibDoom.r_draw_masked
+end
+
+fun s_init = S_Init(sfx_volume : LibC::Int, music_volume : LibC::Int)
+  LibDoom.s_init(sfx_volume, music_volume)
+end

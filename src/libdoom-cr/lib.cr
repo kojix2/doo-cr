@@ -7872,4 +7872,62 @@ lib CDoom
   $overflowsprite : Vissprite
 
   fun r_new_vis_sprite = R_NewVisSprite : Vissprite*
+  fun r_draw_vis_sprite = R_DrawVisSprite(vis : Vissprite*, x1 : LibC::Int, x2 : LibC::Int)
+  fun r_project_sprite = R_ProjectSprite(thing : Mobj*)
+  fun r_draw_psprite = R_DrawPSprite(psp : Pspdef*)
+  fun r_draw_player_sprites = R_DrawPlayerSprites
+  fun r_draw_sprite = R_DrawSprite(spr : Vissprite*)
+
+  S_MAX_VOLUME = 127
+
+  # when to clip out sounds
+  # Does not fit the large outdoor areas.
+  S_CLIPPING_DIST = (1200*0x10000)
+
+  # Distance tp origin when sounds should be maxed out.
+  # This should relate to movement clipping resolution
+  # (see BLOCKMAP handling).
+  # Originally: (200*0x10000).
+  S_CLOSE_DIST = (160*0x10000)
+
+  S_ATTENUATOR = ((S_CLIPPING_DIST - S_CLOSE_DIST) >> FRACBITS)
+
+  NORM_PITCH    = 128
+  NORM_PRIORITY =  64
+  NORM_SEP      = 128
+
+  S_PITCH_PERTURB = 1
+  S_STEREO_SWING  = (96*0x10000)
+
+  # percent attenuation from front to back
+  S_IFRACVOL = 30
+
+  NA            = 0
+  S_NUMCHANNELS = 2
+
+  struct Channel
+    # sound information (if null, channel avail.)
+    sfxinfo : Sfxinfo*
+
+    # origin of sound
+    origin : Void*
+
+    # handle of the sound being played
+    handle : LibC::Int
+  end
+
+  # the set of channels available
+  $channels_s_sound : Channel*
+
+  # whether songs are mus_paused
+  $mus_paused : DoomBool
+
+  # music currently being played
+  $mus_playing_s_sound : Musicinfo*
+
+  $nextcleanup : LibC::Int
+
+  fun s_get_channel = S_getChannel(origin : Void*, sfxinfo : Sfxinfo*) : LibC::Int
+  fun s_adjust_sound_params = S_AdjustSoundParams(listener : Mobj*, source : Mobj*, vol : LibC::Int*, sep : LibC::Int*, pitch : LibC::Int*) : LibC::Int
+  fun s_stop_channel = S_StopChannel(cnum : LibC::Int)
 end

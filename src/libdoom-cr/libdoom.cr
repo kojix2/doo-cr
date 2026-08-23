@@ -2459,6 +2459,12 @@ module LibDoom
 
   CDoom.finecosine = CDoom.finesine.to_unsafe + CDoom::FINEANGLES // 4
 
+  CDoom.mus_playing_s_sound = Pointer(CDoom::Musicinfo).null
+
+  CDoom.snd_sfx_volume = 15
+
+  CDoom.snd_music_volume = 15
+
   def self.doom_print_impl(str : UInt8*)
     print String.new(str)
   end
@@ -21240,7 +21246,6 @@ module LibDoom
     while !check.value.null?
       check += 1
     end
-    
 
     CDoom.numsprites = check - namelist
 
@@ -21351,5 +21356,540 @@ module LibDoom
 
     CDoom.vissprite_p += 1
     return CDoom.vissprite_p - 1
+  end
+
+  #
+  # Used for sprites and masked mid textures.
+  # Masked means: partly transparent, i.e. stored
+  #  in posts/runs of opaque pixels.
+  #
+  def self.r_draw_masked_column(column : CDoom::Column*)
+    basetexturemid = CDoom.dc_texturemid
+
+    until column.value.topdelta == 0xff
+      # calculate unclipped screen coordinates
+      #  for post
+      topscreen = CDoom.sprtopscreen + CDoom.spryscale * column.value.topdelta
+      bottomscreen = topscreen + CDoom.spryscale * column.value.length
+
+      CDoom.dc_yl = (topscreen + CDoom::FRACUNIT - 1) >> CDoom::FRACBITS
+      CDoom.dc_yh = (bottomscreen - 1) >> CDoom::FRACBITS
+
+      CDoom.dc_yh = CDoom.mfloorclip[CDoom.dc_x] - 1 if CDoom.dc_yh >= CDoom.mfloorclip[CDoom.dc_x]
+      CDoom.dc_yl = CDoom.mceilingclip[CDoom.dc_x] + 1 if CDoom.dc_yl <= CDoom.mceilingclip[CDoom.dc_x]
+
+      if CDoom.dc_yl <= CDoom.dc_yh
+        CDoom.dc_source = column.as(UInt8*) + 3
+        CDoom.dc_texturemid = basetexturemid - (column.value.topdelta.to_i32 << CDoom::FRACBITS)
+
+        # Drawn by either r_draw_column
+        #  or (SHADOW) r_draw_fuzz_column
+        CDoom.colfunc.call
+      end
+      column = (column.as(UInt8*) + column.value.length + 4).as(CDoom::Column*)
+    end
+    CDoom.dc_texturemid = basetexturemid
+  end
+
+  def self.r_draw_vis_sprite(vis : CDoom::Vissprite*, x1 : LibC::Int, x2 : LibC::Int)
+    patch = CDoom.w_cache_lump_num(vis.value.patch + CDoom.firstspritelump, CDoom::PU_CACHE).as(CDoom::Patch*)
+
+    CDoom.dc_colormap = vis.value.colormap
+
+    if CDoom.dc_colormap.null?
+      # 0 colormap = shadow draw
+      CDoom.colfunc = ->CDoom.r_draw_fuzz_column
+    elsif vis.value.mobjflags & CDoom::Mobjflag::MF_TRANSLATION.value != 0
+      CDoom.colfunc = ->CDoom.r_draw_translated_column
+      CDoom.dc_translation = CDoom.translationtables - 256 +
+                             ((vis.value.mobjflags & CDoom::Mobjflag::MF_TRANSLATION.value) >> (CDoom::Mobjflag::MF_TRANSSHIFT.value - 8))
+    end
+
+    CDoom.dc_iscale = doom_abs(vis.value.xiscale)
+    CDoom.dc_texturemid = vis.value.texturemid
+    frac = vis.value.startfrac
+    CDoom.spryscale = vis.value.scale
+    CDoom.sprtopscreen = CDoom.centeryfrac - CDoom.fixed_mul(CDoom.dc_texturemid, CDoom.spryscale)
+
+    CDoom.dc_x = vis.value.x1
+    while CDoom.dc_x <= vis.value.x2
+      texturecolumn = frac >> CDoom::FRACBITS
+      {% if @top_level.has_constant?("RANGECHECK") %}
+        if texturecolumn < 0 || texturecolumn >= patch.value.width
+          CDoom.i_error("Error: r_draw_vis_sprite: bad texturecolumn")
+        end
+      {% end %}
+      column = (patch.as(UInt8*) + (patch.value.columnofs.to_unsafe + texturecolumn).value).as(CDoom::Column*)
+      CDoom.r_draw_masked_column(column)
+
+      CDoom.dc_x += 1
+      frac += vis.value.xiscale
+    end
+
+    CDoom.colfunc = ->CDoom.r_draw_column
+  end
+
+  #
+  # Generates a vissprite for a thing
+  #  if it might be visible.
+  #
+  def self.r_project_sprite(thing : CDoom::Mobj*)
+    # transform the origin point
+    tr_x = thing.value.x - CDoom.viewx
+    tr_y = thing.value.y - CDoom.viewy
+
+    gxt = CDoom.fixed_mul(tr_x, CDoom.viewcos)
+    gyt = -CDoom.fixed_mul(tr_y, CDoom.viewsin)
+
+    tz = gxt - gyt
+
+    # thing is behind view plane?
+    return if tz < CDoom::MINZ
+
+    xscale = CDoom.fixed_div(CDoom.projection, tz)
+
+    gxt = -CDoom.fixed_mul(tr_x, CDoom.viewsin)
+    gyt = CDoom.fixed_mul(tr_y, CDoom.viewcos)
+    tx = -(gyt + gxt)
+
+    # too far off the side?
+    return if doom_abs(tx) > (tz << 2)
+
+    # decide which patch to use for sprite relative to player
+    {% if @top_level.has_constant?("RANGECHECK") %}
+      if thing.value.sprite.to_u32! >= CDoom.numsprites.to_u32!
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_project_sprite: invalid sprite number ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(thing.value.sprite.value, 10))
+        CDoom.doom_concat(CDoom.error_buf, " ")
+        CDoom.i_error(CDoom.error_buf)
+      end
+    {% end %}
+    sprdef = CDoom.sprites + thing.value.sprite.value
+    {% if @top_level.has_constant?("RANGECHECK") %}
+      if thing.value.frame & CDoom::FF_FRAMEMASK >= sprdef.value.numframes
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_project_sprite: invalid sprite frame ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(thing.value.sprite.value, 10))
+        CDoom.doom_concat(CDoom.error_buf, " : ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(thing.value.frame, 10))
+        CDoom.doom_concat(CDoom.error_buf, " ")
+        CDoom.i_error(CDoom.error_buf)
+      end
+    {% end %}
+    sprframe = sprdef.value.spriteframes + (thing.value.frame & CDoom::FF_FRAMEMASK)
+
+    if sprframe.value.rotate != 0
+      # choose a different rotation based on player view
+      ang = CDoom.r_point_to_angle(thing.value.x, thing.value.y)
+      rot = (ang &- thing.value.angle &+ (CDoom::ANG45 // 2).to_u32! * 9) >> 29
+      lump = sprframe.value.lump[rot]
+      flip = sprframe.value.flip[rot]
+    else
+      # use single rotation for all views
+      lump = sprframe.value.lump[0]
+      flip = sprframe.value.flip[0]
+    end
+
+    # calculate edges of the shape
+    tx -= CDoom.spriteoffset[lump]
+    x1 = (CDoom.centerxfrac + CDoom.fixed_mul(tx, xscale)) >> CDoom::FRACBITS
+
+    # off the right side?
+    return if x1 > CDoom.viewwidth
+
+    tx += CDoom.spritewidth[lump]
+    x2 = ((CDoom.centerxfrac + CDoom.fixed_mul(tx, xscale)) >> CDoom::FRACBITS) - 1
+
+    # off the left side
+    return if x2 < 0
+
+    # store information in a vissprite
+    vis = CDoom.r_new_vis_sprite
+    vis.value.mobjflags = thing.value.flags
+    vis.value.scale = xscale
+    vis.value.gx = thing.value.x
+    vis.value.gy = thing.value.y
+    vis.value.gz = thing.value.z
+    vis.value.gzt = thing.value.z + CDoom.spritetopoffset[lump]
+    vis.value.texturemid = vis.value.gzt - CDoom.viewz
+    vis.value.x1 = x1 < 0 ? 0 : x1
+    vis.value.x2 = x2 >= CDoom.viewwidth ? CDoom.viewwidth - 1 : x2
+    iscale = CDoom.fixed_div(CDoom::FRACUNIT, xscale)
+
+    if flip != 0
+      vis.value.startfrac = CDoom.spritewidth[lump] - 1
+      vis.value.xiscale = -iscale
+    else
+      vis.value.startfrac = 0
+      vis.value.xiscale = iscale
+    end
+
+    if vis.value.x1 > x1
+      vis.value.startfrac = vis.value.startfrac + vis.value.xiscale * (vis.value.x1 - x1)
+    end
+    vis.value.patch = lump
+
+    # get light level
+    if thing.value.flags & CDoom::Mobjflag::MF_SHADOW.value != 0
+      # shadow draw
+      vis.value.colormap = Pointer(CDoom::Lighttable).null
+    elsif !CDoom.fixedcolormap.null?
+      # fixed map
+      vis.value.colormap = CDoom.fixedcolormap
+    elsif thing.value.frame & CDoom::FF_FULLBRIGHT != 0
+      # full bright
+      vis.value.colormap = CDoom.colormaps
+    else
+      # diminished light
+      index = xscale >> CDoom::LIGHTSCALESHIFT
+
+      index = CDoom::MAXLIGHTSCALE - 1 if index >= CDoom::MAXLIGHTSCALE
+
+      vis.value.colormap = CDoom.spritelights[index]
+    end
+  end
+
+  #
+  # During BSP traversal, this adds sprites by sector.
+  #
+  def self.r_add_sprites(sec : CDoom::Sector*)
+    # BSP is traversed by subsector.
+    # A sector might have been split into several
+    #  subsectors during BSP building.
+    # Thus we check whether its already added.
+    return if sec.value.validcount == CDoom.validcount
+
+    # Well, now it will be done.
+    sec.value.validcount = CDoom.validcount
+
+    lightnum = (sec.value.lightlevel >> CDoom::LIGHTSEGSHIFT) + CDoom.extralight
+
+    if lightnum < 0
+      CDoom.spritelights = CDoom.scalelight[0]
+    elsif lightnum >= CDoom::LIGHTLEVELS
+      CDoom.spritelights = CDoom.scalelight[CDoom::LIGHTLEVELS - 1]
+    else
+      CDoom.spritelights = CDoom.scalelight[lightnum]
+    end
+
+    # Handle all things in sector.
+    thing = sec.value.thinglist
+    until thing.null?
+      CDoom.r_project_sprite(thing)
+      thing = thing.value.snext
+    end
+  end
+
+  def self.r_draw_psprite(psp : CDoom::Pspdef*)
+    # decide which patch to use
+    {% if @top_level.has_constant?("RANGECHECK") %}
+      if psp.value.state.value.sprite.value >= CDoom.numsprites
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_psprite: invalid sprite number ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(psp.value.state.value.sprite.value, 10))
+        CDoom.doom_concat(CDoom.error_buf, " ")
+        CDoom.i_error(CDoom.error_buf)
+      end
+    {% end %}
+    sprdef = CDoom.sprites + psp.value.state.value.sprite.value
+    {% if @top_level.has_constant?("RANGECHECK") %}
+      if psp.value.state.value.frame & CDoom::FF_FRAMEMASK >= sprdef.value.numframes
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_psprite: invalid sprite frame ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(psp.value.state.value.sprite.value, 10))
+        CDoom.doom_concat(CDoom.error_buf, " : ")
+        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(psp.value.state.value.frame, 10))
+        CDoom.doom_concat(CDoom.error_buf, " ")
+        CDoom.i_error(CDoom.error_buf)
+      end
+    {% end %}
+    sprframe = sprdef.value.spriteframes + (psp.value.state.value.frame & CDoom::FF_FRAMEMASK)
+
+    lump = sprframe.value.lump[0]
+    flip = sprframe.value.flip[0]
+
+    # calculate edges of the shape
+    tx = psp.value.sx - 160 * CDoom::FRACUNIT
+
+    tx -= CDoom.spriteoffset[lump]
+    x1 = (CDoom.centerxfrac + CDoom.fixed_mul(tx, CDoom.pspritescale)) >> CDoom::FRACBITS
+
+    # off the right side?
+    return if x1 > CDoom.viewwidth
+
+    tx += CDoom.spritewidth[lump]
+    x2 = ((CDoom.centerxfrac + CDoom.fixed_mul(tx, CDoom.pspritescale)) >> CDoom::FRACBITS) - 1
+
+    # off the left side
+    return if x2 < 0
+
+    avis = CDoom::Vissprite.new
+    # store information in a vissprite
+    vis = pointerof(avis)
+    vis.value.mobjflags = 0
+    vis.value.texturemid = (CDoom::BASEYCENTER << CDoom::FRACBITS) + CDoom::FRACUNIT // 2 - (psp.value.sy - CDoom.spritetopoffset[lump])
+    vis.value.x1 = x1 < 0 ? 0 : x1
+    vis.value.x2 = x2 >= CDoom.viewwidth ? CDoom.viewwidth - 1 : x2
+    vis.value.scale = CDoom.pspritescale
+
+    if flip != 0
+      vis.value.xiscale = -CDoom.pspriteiscale
+      vis.value.startfrac = CDoom.spritewidth[lump] - 1
+    else
+      vis.value.xiscale = CDoom.pspriteiscale
+      vis.value.startfrac = 0
+    end
+
+    if vis.value.x1 > x1
+      vis.value.startfrac = vis.value.startfrac + vis.value.xiscale * (vis.value.x1 - x1)
+    end
+    vis.value.patch = lump
+
+    # get light level
+    if CDoom.viewplayer.value.powers[CDoom::Powertype::Invisibility.value] > 4 * 32 ||
+       CDoom.viewplayer.value.powers[CDoom::Powertype::Invisibility.value] & 8 != 0
+      # shadow draw
+      vis.value.colormap = Pointer(CDoom::Lighttable).null
+    elsif !CDoom.fixedcolormap.null?
+      # fixed map
+      vis.value.colormap = CDoom.fixedcolormap
+    elsif psp.value.state.value.frame & CDoom::FF_FULLBRIGHT != 0
+      # full bright
+      vis.value.colormap = CDoom.colormaps
+    else
+      # local light
+      vis.value.colormap = CDoom.spritelights[CDoom::MAXLIGHTSCALE - 1]
+    end
+
+    CDoom.r_draw_vis_sprite(vis, vis.value.x1, vis.value.x2)
+  end
+
+  def self.r_draw_player_sprites
+    # get light level
+    lightnum =
+      (CDoom.viewplayer.value.mo.value.subsector.value.sector.value.lightlevel >> CDoom::LIGHTSEGSHIFT) +
+        CDoom.extralight
+
+    if lightnum < 0
+      CDoom.spritelights = CDoom.scalelight[0]
+    elsif lightnum >= CDoom::LIGHTLEVELS
+      CDoom.spritelights = CDoom.scalelight[CDoom::LIGHTLEVELS - 1]
+    else
+      CDoom.spritelights = CDoom.scalelight[lightnum]
+    end
+
+    # clip to screen bounds
+    CDoom.mfloorclip = CDoom.screenheightarray
+    CDoom.mceilingclip = CDoom.negonearray
+
+    # add all active psprites
+    psp = CDoom.viewplayer.value.psprites.to_unsafe
+    CDoom::Psprnum::NUMPSPRITES.value.times do |i|
+      CDoom.r_draw_psprite(psp) unless psp.value.state.null?
+      psp += 1
+    end
+  end
+
+  def self.r_sort_vis_sprites
+    count = CDoom.vissprite_p - CDoom.vissprites.to_unsafe
+
+    unsorted = CDoom::Vissprite.new
+    unsorted.next = pointerof(unsorted)
+    unsorted.prev = unsorted.next
+
+    return if count == 0
+
+    ds = CDoom.vissprites.to_unsafe
+    while ds < CDoom.vissprite_p
+      ds.value.next = ds + 1
+      ds.value.prev = ds - 1
+      ds += 1
+    end
+
+    CDoom.vissprites.to_unsafe.value.prev = pointerof(unsorted)
+    unsorted.next = CDoom.vissprites.to_unsafe
+    (CDoom.vissprite_p - 1).value.next = pointerof(unsorted)
+    unsorted.prev = CDoom.vissprite_p - 1
+
+    # pull the vissprites out by scale
+    CDoom.vsprsortedhead.next = pointerof(CDoom.vsprsortedhead)
+    CDoom.vsprsortedhead.prev = CDoom.vsprsortedhead.next
+    best = Pointer(CDoom::Vissprite).null # shut up the compiler warning
+    count.times do |i|
+      bestscale = Int32::MAX
+      ds = unsorted.next
+      while ds != pointerof(unsorted)
+        if ds.value.scale < bestscale
+          bestscale = ds.value.scale
+          best = ds
+        end
+        ds = ds.value.next
+      end
+      best.value.next.value.prev = best.value.prev
+      best.value.prev.value.next = best.value.next
+      best.value.next = pointerof(CDoom.vsprsortedhead)
+      best.value.prev = CDoom.vsprsortedhead.prev
+      CDoom.vsprsortedhead.prev.value.next = best
+      CDoom.vsprsortedhead.prev = best
+    end
+  end
+
+  def self.r_draw_sprite(spr : CDoom::Vissprite*)
+    clipbot = uninitialized StaticArray(Int16, CDoom::SCREENWIDTH)
+    cliptop = uninitialized StaticArray(Int16, CDoom::SCREENWIDTH)
+
+    x = spr.value.x1
+    while x <= spr.value.x2
+      clipbot[x] = -2
+      cliptop[x] = -2
+      x += 1
+    end
+
+    # Scan drawsegs from end to start for obscuring segs.
+    # The first drawseg that has a greater scale
+    #  is the clip seg.
+    ds = CDoom.ds_p - 1
+    while ds >= CDoom.drawsegs.to_unsafe
+      # determine if the drawseg obscures the sprite
+      if ds.value.x1 > spr.value.x2 ||
+         ds.value.x2 < spr.value.x1 ||
+         (ds.value.silhouette == 0 &&
+         ds.value.maskedtexturecol.null?)
+        # does not cover sprite
+        ds -= 1
+        next
+      end
+
+      r1 = ds.value.x1 < spr.value.x1 ? spr.value.x1 : ds.value.x1
+      r2 = ds.value.x2 > spr.value.x2 ? spr.value.x2 : ds.value.x2
+
+      if ds.value.scale1 > ds.value.scale2
+        lowscale = ds.value.scale2
+        scale = ds.value.scale1
+      else
+        lowscale = ds.value.scale1
+        scale = ds.value.scale2
+      end
+
+      if scale < spr.value.scale ||
+         (lowscale < spr.value.scale &&
+         CDoom.r_point_on_seg_side(spr.value.gx, spr.value.gy, ds.value.curline) == 0)
+        # masked mid texture?
+        CDoom.r_render_masked_seg_range(ds, r1, r2) unless ds.value.maskedtexturecol.null?
+        # seg is behind sprite
+        ds -= 1
+        next
+      end
+
+      # clip this piece of the sprite
+      silhouette = ds.value.silhouette
+
+      silhouette &= ~CDoom::SIL_BOTTOM if spr.value.gz >= ds.value.bsilheight
+
+      silhouette &= ~CDoom::SIL_TOP if spr.value.gzt <= ds.value.tsilheight
+
+      if silhouette == 1
+        # bottom sil
+        x = r1
+        while x <= r2
+          clipbot[x] = ds.value.sprbottomclip[x] if clipbot[x] == -2
+          x += 1
+        end
+      elsif silhouette == 2
+        # top sil
+        x = r1
+        while x <= r2
+          cliptop[x] = ds.value.sprtopclip[x] if cliptop[x] == -2
+          x += 1
+        end
+      elsif silhouette == 3
+        # both
+        x = r1
+        while x <= r2
+          clipbot[x] = ds.value.sprbottomclip[x] if clipbot[x] == -2
+          cliptop[x] = ds.value.sprtopclip[x] if cliptop[x] == -2
+          x += 1
+        end
+      end
+
+      ds -= 1
+    end
+
+    # all clipping has been performed, so draw the sprite
+
+    # check for unclipped columns
+    x = spr.value.x1
+    while x <= spr.value.x2
+      clipbot[x] = CDoom.viewheight.to_i16! if clipbot[x] == -2
+      cliptop[x] = -1 if cliptop[x] == -2
+      x += 1
+    end
+
+    CDoom.mfloorclip = clipbot
+    CDoom.mceilingclip = cliptop
+    CDoom.r_draw_vis_sprite(spr, spr.value.x1, spr.value.x2)
+  end
+
+  def self.r_draw_masked
+    CDoom.r_sort_vis_sprites
+
+    if CDoom.vissprite_p > CDoom.vissprites.to_unsafe
+      # draw all vissprites back to front
+      spr = CDoom.vsprsortedhead.next
+      while spr != pointerof(CDoom.vsprsortedhead)
+        CDoom.r_draw_sprite(spr)
+        spr = spr.value.next
+      end
+    end
+
+    # render any remaining masked mid textures
+    ds = CDoom.ds_p - 1
+    while ds >= CDoom.drawsegs.to_unsafe
+      unless ds.value.maskedtexturecol.null?
+        CDoom.r_render_masked_seg_range(ds, ds.value.x1, ds.value.x2)
+      end
+      ds -= 1
+    end
+
+    # draw the psprites on top of everything
+    #  but does not draw on side views
+    CDoom.r_draw_player_sprites if CDoom.viewangleoffset == 0
+  end
+
+  #
+  # Initializes sound stuff, including volume
+  # Sets channels, SFX and music volume,
+  #  allocates channel buffer, sets S_sfx lookup.
+  #
+  def self.s_init(sfx_volume : LibC::Int, music_volume : LibC::Int)
+    CDoom.doom_print.call("s_init: default sfx volume ".to_unsafe)
+    CDoom.doom_print.call(CDoom.doom_itoa(sfx_volume, 10))
+    CDoom.doom_print.call("\n".to_unsafe)
+
+    # Whatever these did with DMX, these are rather dummies now. [ds] or are they...
+    CDoom.i_set_channels
+
+    CDoom.s_set_sfx_volume(sfx_volume)
+    # No music with Linux - another dummy. [ds] this didn't age well.
+    CDoom.s_set_music_volume(music_volume)
+
+    # Allocating the internal channels for mixing
+    # (the maximum numer of sounds rendered
+    # simultaneously) within zone memory.
+    CDoom.channels_s_sound =
+      CDoom.z_malloc(CDoom.num_channels * sizeof(CDoom::Channel), CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Channel*)
+
+    # Free all channels for use
+    CDoom.num_channels.times do |i|
+      (CDoom.channels_s_sound + i).value.sfxinfo = Pointer(CDoom::Sfxinfo).null
+    end
+
+    # no sounds are playing, and they are not mus_paused
+    CDoom.mus_paused = 0
+
+    # Note that sounds have not been cached (yet)
+    i = 1
+    while i < CDoom::Sfxenum::NUMSFX.value
+      (CDoom.s_sfx.to_unsafe + i).value.lumpnum = -1
+      (CDoom.s_sfx.to_unsafe + i).value.usefulness = -1
+      i += 1
+    end
   end
 end

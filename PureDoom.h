@@ -17489,44 +17489,7 @@ short* mceilingclip;
 fixed_t spryscale;
 fixed_t sprtopscreen;
 
-void R_DrawMaskedColumn(column_t* column)
-{
-    int topscreen;
-    int bottomscreen;
-    fixed_t basetexturemid;
-
-    basetexturemid = dc_texturemid;
-
-    for (; column->topdelta != 0xff; )
-    {
-        // calculate unclipped screen coordinates
-        //  for post
-        topscreen = sprtopscreen + spryscale * column->topdelta;
-        bottomscreen = topscreen + spryscale * column->length;
-
-        dc_yl = (topscreen + FRACUNIT - 1) >> FRACBITS;
-        dc_yh = (bottomscreen - 1) >> FRACBITS;
-
-        if (dc_yh >= mfloorclip[dc_x])
-            dc_yh = mfloorclip[dc_x] - 1;
-        if (dc_yl <= mceilingclip[dc_x])
-            dc_yl = mceilingclip[dc_x] + 1;
-
-        if (dc_yl <= dc_yh)
-        {
-            dc_source = (byte*)column + 3;
-            dc_texturemid = basetexturemid - (column->topdelta << FRACBITS);
-            // dc_source = (byte *)column + 3 - column->topdelta;
-
-            // Drawn by either R_DrawColumn
-            //  or (SHADOW) R_DrawFuzzColumn.
-            colfunc();
-        }
-        column = (column_t*)((byte*)column + column->length + 4);
-    }
-
-    dc_texturemid = basetexturemid;
-}
+extern void R_DrawMaskedColumn(column_t* column);
 
 
 
@@ -17534,49 +17497,7 @@ void R_DrawMaskedColumn(column_t* column)
 // R_DrawVisSprite
 //  mfloorclip and mceilingclip should also be set.
 //
-void R_DrawVisSprite(vissprite_t* vis, int x1, int x2)
-{
-    column_t* column;
-    int texturecolumn;
-    fixed_t frac;
-    patch_t* patch;
-
-    patch = W_CacheLumpNum(vis->patch + firstspritelump, PU_CACHE);
-
-    dc_colormap = vis->colormap;
-
-    if (!dc_colormap)
-    {
-        // 0 colormap = shadow draw
-        colfunc = R_DrawFuzzColumn;
-    }
-    else if (vis->mobjflags & MF_TRANSLATION)
-    {
-        colfunc = R_DrawTranslatedColumn;
-        dc_translation = translationtables - 256 +
-            ((vis->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT - 8));
-    }
-
-    dc_iscale = doom_abs(vis->xiscale) >> detailshift;
-    dc_texturemid = vis->texturemid;
-    frac = vis->startfrac;
-    spryscale = vis->scale;
-    sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-
-    for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
-    {
-        texturecolumn = frac >> FRACBITS;
-#ifdef RANGECHECK
-        if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
-            I_Error("Error: R_DrawSpriteRange: bad texturecolumn");
-#endif
-        column = (column_t*)((byte*)patch +
-                             LONG(patch->columnofs[texturecolumn]));
-        R_DrawMaskedColumn(column);
-    }
-
-    colfunc = R_DrawColumn;
-}
+extern void R_DrawVisSprite(vissprite_t* vis, int x1, int x2);
 
 
 //
@@ -17584,559 +17505,44 @@ void R_DrawVisSprite(vissprite_t* vis, int x1, int x2)
 // Generates a vissprite for a thing
 //  if it might be visible.
 //
-void R_ProjectSprite(mobj_t* thing)
-{
-    fixed_t tr_x;
-    fixed_t tr_y;
-
-    fixed_t gxt;
-    fixed_t gyt;
-
-    fixed_t tx;
-    fixed_t tz;
-
-    fixed_t xscale;
-
-    int x1;
-    int x2;
-
-    spritedef_t* sprdef;
-    spriteframe_t* sprframe;
-    int lump;
-
-    unsigned rot;
-    doom_boolean flip;
-
-    int index;
-
-    vissprite_t* vis;
-
-    angle_t ang;
-    fixed_t iscale;
-
-    // transform the origin point
-    tr_x = thing->x - viewx;
-    tr_y = thing->y - viewy;
-
-    gxt = FixedMul(tr_x, viewcos);
-    gyt = -FixedMul(tr_y, viewsin);
-
-    tz = gxt - gyt;
-
-    // thing is behind view plane?
-    if (tz < MINZ)
-        return;
-
-    xscale = FixedDiv(projection, tz);
-
-    gxt = -FixedMul(tr_x, viewsin);
-    gyt = FixedMul(tr_y, viewcos);
-    tx = -(gyt + gxt);
-
-    // too far off the side?
-    if (doom_abs(tx) > (tz << 2))
-        return;
-
-    // decide which patch to use for sprite relative to player
-#ifdef RANGECHECK
-    if ((unsigned)thing->sprite >= (unsigned)numsprites)
-    {
-        //I_Error("Error: R_ProjectSprite: invalid sprite number %i ",
-        //        thing->sprite);
-        
-        doom_strcpy(error_buf, "Error: R_ProjectSprite: invalid sprite number ");
-        doom_concat(error_buf, doom_itoa(thing->sprite, 10));
-        doom_concat(error_buf, " ");
-        I_Error(error_buf);
-    }
-#endif
-    sprdef = &sprites[thing->sprite];
-#ifdef RANGECHECK
-    if ((thing->frame & FF_FRAMEMASK) >= sprdef->numframes)
-    {
-        //I_Error("Error: R_ProjectSprite: invalid sprite frame %i : %i ",
-        //        thing->sprite, thing->frame);
-        
-        doom_strcpy(error_buf, "Error: R_ProjectSprite: invalid sprite frame ");
-        doom_concat(error_buf, doom_itoa(thing->sprite, 10));
-        doom_concat(error_buf, " : ");
-        doom_concat(error_buf, doom_itoa(thing->frame, 10));
-        doom_concat(error_buf, " ");
-        I_Error(error_buf);
-    }
-#endif
-    sprframe = &sprdef->spriteframes[thing->frame & FF_FRAMEMASK];
-
-    if (sprframe->rotate)
-    {
-        // choose a different rotation based on player view
-        ang = R_PointToAngle(thing->x, thing->y);
-        rot = (ang - thing->angle + (unsigned)(ANG45 / 2) * 9) >> 29;
-        lump = sprframe->lump[rot];
-        flip = (doom_boolean)sprframe->flip[rot];
-    }
-    else
-    {
-        // use single rotation for all views
-        lump = sprframe->lump[0];
-        flip = (doom_boolean)sprframe->flip[0];
-    }
-
-    // calculate edges of the shape
-    tx -= spriteoffset[lump];
-    x1 = (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS;
-
-    // off the right side?
-    if (x1 > viewwidth)
-        return;
-
-    tx += spritewidth[lump];
-    x2 = ((centerxfrac + FixedMul(tx, xscale)) >> FRACBITS) - 1;
-
-    // off the left side
-    if (x2 < 0)
-        return;
-
-    // store information in a vissprite
-    vis = R_NewVisSprite();
-    vis->mobjflags = thing->flags;
-    vis->scale = xscale << detailshift;
-    vis->gx = thing->x;
-    vis->gy = thing->y;
-    vis->gz = thing->z;
-    vis->gzt = thing->z + spritetopoffset[lump];
-    vis->texturemid = vis->gzt - viewz;
-    vis->x1 = x1 < 0 ? 0 : x1;
-    vis->x2 = x2 >= viewwidth ? viewwidth - 1 : x2;
-    iscale = FixedDiv(FRACUNIT, xscale);
-
-    if (flip)
-    {
-        vis->startfrac = spritewidth[lump] - 1;
-        vis->xiscale = -iscale;
-    }
-    else
-    {
-        vis->startfrac = 0;
-        vis->xiscale = iscale;
-    }
-
-    if (vis->x1 > x1)
-        vis->startfrac += vis->xiscale * (vis->x1 - x1);
-    vis->patch = lump;
-
-    // get light level
-    if (thing->flags & MF_SHADOW)
-    {
-        // shadow draw
-        vis->colormap = 0;
-    }
-    else if (fixedcolormap)
-    {
-        // fixed map
-        vis->colormap = fixedcolormap;
-    }
-    else if (thing->frame & FF_FULLBRIGHT)
-    {
-        // full bright
-        vis->colormap = colormaps;
-    }
-
-    else
-    {
-        // diminished light
-        index = xscale >> (LIGHTSCALESHIFT - detailshift);
-
-        if (index >= MAXLIGHTSCALE)
-            index = MAXLIGHTSCALE - 1;
-
-        vis->colormap = spritelights[index];
-    }
-}
+extern void R_ProjectSprite(mobj_t* thing);
 
 
 //
 // R_AddSprites
 // During BSP traversal, this adds sprites by sector.
 //
-void R_AddSprites(sector_t* sec)
-{
-    mobj_t* thing;
-    int lightnum;
-
-    // BSP is traversed by subsector.
-    // A sector might have been split into several
-    //  subsectors during BSP building.
-    // Thus we check whether its already added.
-    if (sec->validcount == validcount)
-        return;
-
-    // Well, now it will be done.
-    sec->validcount = validcount;
-
-    lightnum = (sec->lightlevel >> LIGHTSEGSHIFT) + extralight;
-
-    if (lightnum < 0)
-        spritelights = scalelight[0];
-    else if (lightnum >= LIGHTLEVELS)
-        spritelights = scalelight[LIGHTLEVELS - 1];
-    else
-        spritelights = scalelight[lightnum];
-
-    // Handle all things in sector.
-    for (thing = sec->thinglist; thing; thing = thing->snext)
-        R_ProjectSprite(thing);
-}
+extern void R_AddSprites(sector_t* sec);
 
 
 //
 // R_DrawPSprite
 //
-void R_DrawPSprite(pspdef_t* psp)
-{
-    fixed_t tx;
-    int x1;
-    int x2;
-    spritedef_t* sprdef;
-    spriteframe_t* sprframe;
-    int lump;
-    doom_boolean flip;
-    vissprite_t* vis;
-    vissprite_t avis;
-
-    // decide which patch to use
-#ifdef RANGECHECK
-    if ((unsigned)psp->state->sprite >= (unsigned)numsprites)
-    {
-        //I_Error("Error: R_ProjectSprite: invalid sprite number %i ",
-        //        psp->state->sprite);
-        doom_strcpy(error_buf, "Error: R_ProjectSprite: invalid sprite number ");
-        doom_concat(error_buf, doom_itoa(psp->state->sprite, 10));
-        doom_concat(error_buf, " ");
-        I_Error(error_buf);
-    }
-#endif
-    sprdef = &sprites[psp->state->sprite];
-#ifdef RANGECHECK
-    if ((psp->state->frame & FF_FRAMEMASK) >= sprdef->numframes)
-    {
-        //I_Error("Error: R_ProjectSprite: invalid sprite frame %i : %i ",
-        //        psp->state->sprite, psp->state->frame);
-        doom_strcpy(error_buf, "Error: R_ProjectSprite: invalid sprite frame ");
-        doom_concat(error_buf, doom_itoa(psp->state->sprite, 10));
-        doom_concat(error_buf, " : ");
-        doom_concat(error_buf, doom_itoa(psp->state->frame, 10));
-        doom_concat(error_buf, " ");
-        I_Error(error_buf);
-    }
-#endif
-    sprframe = &sprdef->spriteframes[psp->state->frame & FF_FRAMEMASK];
-
-    lump = sprframe->lump[0];
-    flip = (doom_boolean)sprframe->flip[0];
-
-    // calculate edges of the shape
-    tx = psp->sx - 160 * FRACUNIT;
-
-    tx -= spriteoffset[lump];
-    x1 = (centerxfrac + FixedMul(tx, pspritescale)) >> FRACBITS;
-
-    // off the right side
-    if (x1 > viewwidth)
-        return;
-
-    tx += spritewidth[lump];
-    x2 = ((centerxfrac + FixedMul(tx, pspritescale)) >> FRACBITS) - 1;
-
-    // off the left side
-    if (x2 < 0)
-        return;
-
-    // store information in a vissprite
-    vis = &avis;
-    vis->mobjflags = 0;
-    vis->texturemid = (BASEYCENTER << FRACBITS) + FRACUNIT / 2 - (psp->sy - spritetopoffset[lump]);
-    vis->x1 = x1 < 0 ? 0 : x1;
-    vis->x2 = x2 >= viewwidth ? viewwidth - 1 : x2;
-    vis->scale = pspritescale << detailshift;
-
-    if (flip)
-    {
-        vis->xiscale = -pspriteiscale;
-        vis->startfrac = spritewidth[lump] - 1;
-    }
-    else
-    {
-        vis->xiscale = pspriteiscale;
-        vis->startfrac = 0;
-    }
-
-    if (vis->x1 > x1)
-        vis->startfrac += vis->xiscale * (vis->x1 - x1);
-
-    vis->patch = lump;
-
-    if (viewplayer->powers[pw_invisibility] > 4 * 32
-        || viewplayer->powers[pw_invisibility] & 8)
-    {
-        // shadow draw
-        vis->colormap = 0;
-    }
-    else if (fixedcolormap)
-    {
-        // fixed color
-        vis->colormap = fixedcolormap;
-    }
-    else if (psp->state->frame & FF_FULLBRIGHT)
-    {
-        // full bright
-        vis->colormap = colormaps;
-    }
-    else
-    {
-        // local light
-        vis->colormap = spritelights[MAXLIGHTSCALE - 1];
-    }
-
-    R_DrawVisSprite(vis, vis->x1, vis->x2);
-}
+extern void R_DrawPSprite(pspdef_t* psp);
 
 
 //
 // R_DrawPlayerSprites
 //
-void R_DrawPlayerSprites(void)
-{
-    int i;
-    int lightnum;
-    pspdef_t* psp;
-
-    // get light level
-    lightnum =
-        (viewplayer->mo->subsector->sector->lightlevel >> LIGHTSEGSHIFT)
-        + extralight;
-
-    if (lightnum < 0)
-        spritelights = scalelight[0];
-    else if (lightnum >= LIGHTLEVELS)
-        spritelights = scalelight[LIGHTLEVELS - 1];
-    else
-        spritelights = scalelight[lightnum];
-
-    // clip to screen bounds
-    mfloorclip = screenheightarray;
-    mceilingclip = negonearray;
-
-    // add all active psprites
-    for (i = 0, psp = viewplayer->psprites;
-         i < NUMPSPRITES;
-         i++, psp++)
-    {
-        if (psp->state)
-            R_DrawPSprite(psp);
-    }
-}
+extern void R_DrawPlayerSprites(void);
 
 
 //
 // R_SortVisSprites
 //
-void R_SortVisSprites(void)
-{
-    int i;
-    int count;
-    vissprite_t* ds;
-    vissprite_t* best;
-    vissprite_t unsorted;
-    fixed_t bestscale;
-
-    count = (int)(vissprite_p - vissprites);
-
-    unsorted.next = unsorted.prev = &unsorted;
-
-    if (!count)
-        return;
-
-    for (ds = vissprites; ds < vissprite_p; ds++)
-    {
-        ds->next = ds + 1;
-        ds->prev = ds - 1;
-    }
-
-    vissprites[0].prev = &unsorted;
-    unsorted.next = &vissprites[0];
-    (vissprite_p - 1)->next = &unsorted;
-    unsorted.prev = vissprite_p - 1;
-
-    // pull the vissprites out by scale
-    //best = 0;                // shut up the compiler warning
-    vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
-    for (i = 0; i < count; i++)
-    {
-        bestscale = DOOM_MAXINT;
-        for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
-        {
-            if (ds->scale < bestscale)
-            {
-                bestscale = ds->scale;
-                best = ds;
-            }
-        }
-        best->next->prev = best->prev;
-        best->prev->next = best->next;
-        best->next = &vsprsortedhead;
-        best->prev = vsprsortedhead.prev;
-        vsprsortedhead.prev->next = best;
-        vsprsortedhead.prev = best;
-    }
-}
+extern void R_SortVisSprites(void);
 
 
 //
 // R_DrawSprite
 //
-void R_DrawSprite(vissprite_t* spr)
-{
-    drawseg_t* ds;
-    short clipbot[SCREENWIDTH];
-    short cliptop[SCREENWIDTH];
-    int x;
-    int r1;
-    int r2;
-    fixed_t scale;
-    fixed_t lowscale;
-    int silhouette;
-
-    for (x = spr->x1; x <= spr->x2; x++)
-        clipbot[x] = cliptop[x] = -2;
-
-    // Scan drawsegs from end to start for obscuring segs.
-    // The first drawseg that has a greater scale
-    //  is the clip seg.
-    for (ds = ds_p - 1; ds >= drawsegs; ds--)
-    {
-        // determine if the drawseg obscures the sprite
-        if (ds->x1 > spr->x2
-            || ds->x2 < spr->x1
-            || (!ds->silhouette
-                && !ds->maskedtexturecol))
-        {
-            // does not cover sprite
-            continue;
-        }
-
-        r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
-        r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
-
-        if (ds->scale1 > ds->scale2)
-        {
-            lowscale = ds->scale2;
-            scale = ds->scale1;
-        }
-        else
-        {
-            lowscale = ds->scale1;
-            scale = ds->scale2;
-        }
-
-        if (scale < spr->scale
-            || (lowscale < spr->scale
-                && !R_PointOnSegSide(spr->gx, spr->gy, ds->curline)))
-        {
-            // masked mid texture?
-            if (ds->maskedtexturecol)
-                R_RenderMaskedSegRange(ds, r1, r2);
-            // seg is behind sprite
-            continue;
-        }
-
-
-        // clip this piece of the sprite
-        silhouette = ds->silhouette;
-
-        if (spr->gz >= ds->bsilheight)
-            silhouette &= ~SIL_BOTTOM;
-
-        if (spr->gzt <= ds->tsilheight)
-            silhouette &= ~SIL_TOP;
-
-        if (silhouette == 1)
-        {
-            // bottom sil
-            for (x = r1; x <= r2; x++)
-                if (clipbot[x] == -2)
-                    clipbot[x] = ds->sprbottomclip[x];
-        }
-        else if (silhouette == 2)
-        {
-            // top sil
-            for (x = r1; x <= r2; x++)
-                if (cliptop[x] == -2)
-                    cliptop[x] = ds->sprtopclip[x];
-        }
-        else if (silhouette == 3)
-        {
-            // both
-            for (x = r1; x <= r2; x++)
-            {
-                if (clipbot[x] == -2)
-                    clipbot[x] = ds->sprbottomclip[x];
-                if (cliptop[x] == -2)
-                    cliptop[x] = ds->sprtopclip[x];
-            }
-        }
-    }
-
-    // all clipping has been performed, so draw the sprite
-
-    // check for unclipped columns
-    for (x = spr->x1; x <= spr->x2; x++)
-    {
-        if (clipbot[x] == -2)
-            clipbot[x] = viewheight;
-
-        if (cliptop[x] == -2)
-            cliptop[x] = -1;
-    }
-
-    mfloorclip = clipbot;
-    mceilingclip = cliptop;
-    R_DrawVisSprite(spr, spr->x1, spr->x2);
-}
+extern void R_DrawSprite(vissprite_t* spr);
 
 
 //
 // R_DrawMasked
 //
-void R_DrawMasked(void)
-{
-    vissprite_t* spr;
-    drawseg_t* ds;
-
-    R_SortVisSprites();
-
-    if (vissprite_p > vissprites)
-    {
-        // draw all vissprites back to front
-        for (spr = vsprsortedhead.next;
-             spr != &vsprsortedhead;
-             spr = spr->next)
-        {
-
-            R_DrawSprite(spr);
-        }
-    }
-
-    // render any remaining masked mid textures
-    for (ds = ds_p - 1; ds >= drawsegs; ds--)
-        if (ds->maskedtexturecol)
-            R_RenderMaskedSegRange(ds, ds->x1, ds->x2);
-
-    // draw the psprites on top of everything
-    //  but does not draw on side views
-    if (!viewangleoffset)
-        R_DrawPlayerSprites();
-}
+extern void R_DrawMasked(void);
 #define S_MAX_VOLUME 127
 
 // when to clip out sounds
@@ -18191,24 +17597,24 @@ typedef struct
 
 
 // the set of channels available
-static channel_t* channels_s_sound;
+ channel_t* channels_s_sound;
 
 // whether songs are mus_paused
-static doom_boolean mus_paused;
+ doom_boolean mus_paused;
 
 // music currently being played
-static musicinfo_t* mus_playing_s_sound = 0;
+ musicinfo_t* mus_playing_s_sound;
 
-static int nextcleanup;
+ int nextcleanup;
 
 
 // These are not used, but should be (menu).
 // Maximum volume of a sound effect.
 // Internal default is max out of 0-15.
-int snd_SfxVolume = 15;
+int snd_SfxVolume;
 
 // Maximum volume of music. Useless so far.
-int snd_MusicVolume = 15;
+int snd_MusicVolume;
 
 // following is set
 //  by the defaults code in M_misc:
@@ -18229,39 +17635,7 @@ void S_StopChannel(int cnum);
 // Sets channels, SFX and music volume,
 //  allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init(int sfxVolume, int musicVolume)
-{
-    int i;
-
-    //doom_print("S_Init: default sfx volume %d\n", sfxVolume);
-    doom_print("S_Init: default sfx volume ");
-    doom_print(doom_itoa(sfxVolume, 10));
-    doom_print("\n");
-
-    // Whatever these did with DMX, these are rather dummies now.
-    I_SetChannels();
-
-    S_SetSfxVolume(sfxVolume);
-    // No music with Linux - another dummy.
-    S_SetMusicVolume(musicVolume);
-
-    // Allocating the internal channels for mixing
-    // (the maximum numer of sounds rendered
-    // simultaneously) within zone memory.
-    channels_s_sound =
-        (channel_t*)Z_Malloc(numChannels * sizeof(channel_t), PU_STATIC, 0);
-
-    // Free all channels for use
-    for (i = 0; i < numChannels; i++)
-        channels_s_sound[i].sfxinfo = 0;
-
-    // no sounds are playing, and they are not mus_paused
-    mus_paused = 0;
-
-    // Note that sounds have not been cached (yet).
-    for (i = 1; i < NUMSFX; i++)
-        S_sfx[i].lumpnum = S_sfx[i].usefulness = -1;
-}
+extern void S_Init(int sfxVolume, int musicVolume);
 
 
 //
