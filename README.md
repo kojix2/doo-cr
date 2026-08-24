@@ -1,22 +1,8 @@
-# libdoom-cr
-
-TODO: Write a description here
-
-## Installation
-
-TODO: Write installation instructions here
-
-## Usage
-
-TODO: Write usage instructions here
-
-## Development
-
-TODO: Write development instructions here
+# doo-cr
 
 ## Contributing
 
-1. Fork it (<https://github.com/your-github-user/libdoom-cr/fork>)
+1. Fork it (<https://github.com/d-shwagginz/doo-cr/fork>)
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
@@ -24,4 +10,4 @@ TODO: Write development instructions here
 
 ## Contributors
 
-- [D. Shwagginz](https://github.com/your-github-user) - creator and maintainer
+- [D. Shwagginz](https://github.com/d-shwagginz) - creator and maintainer

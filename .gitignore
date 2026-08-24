@@ -8,3 +8,5 @@ doom.h
 /raylib/
 /libADLMIDI/
 *.dylib
+*.dll
+*.so

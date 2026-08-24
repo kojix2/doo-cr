@@ -1,12 +1,12 @@
-name: libdoom-cr
+name: doo-cr
 version: 0.1.0
 
 authors:
   - D. Shwagginz <mynameisformat@gmail.com>
 
 targets:
-  libdoom-cr:
-    main: src/libdoom-cr.cr
+  doo-cr:
+    main: src/doo-cr.cr
 
 dependencies:
   raylib-cr:

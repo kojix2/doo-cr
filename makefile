@@ -27,7 +27,7 @@ endif
 all: libpuredoom.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \
 	shards install
-	crystal build src/libdoom-cr.cr $(CRYSTAL_FLAGS) --link-flags "-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld" -o bin/libdoom
+	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) --link-flags "-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld" -o bin/libdoom
 	mv -f libpuredoom.$(LIB_EXT) ./bin
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
