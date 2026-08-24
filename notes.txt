@@ -28,3 +28,4 @@
 -- Added -fwad to add a wad as an iwad, even if its a pwad (-forcedwad)
 -- Made ssg activate the arms hud number '3' if owned before shotgun
 -- Added more options menu
+-- Fixed Demos not playing back with -playdemo and -timedemo
