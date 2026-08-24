@@ -80,7 +80,7 @@ macro padsavep
   CDoom.save_p += (4 - (CDoom.save_p.address & 3)) & 3
 end
 
-@[Link(ldflags: "-L#{__DIR__}/../.. -lpuredoom")]
+@[Link(ldflags: "-L#{__DIR__}/../.. -lcvars")]
 lib CDoom
   # Sample rate of sound samples from doom
   DOOM_SAMPLERATE = 11025

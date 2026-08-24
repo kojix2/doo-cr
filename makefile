@@ -24,11 +24,11 @@ endif
 
 
 .PHONY: all clean
-all: libpuredoom.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
+all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \
 	shards install
 	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) --link-flags "-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld" -o bin/libdoom
-	mv -f libpuredoom.$(LIB_EXT) ./bin
+	mv -f libcvars.$(LIB_EXT) ./bin
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
 	install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" ./bin/libdoom
@@ -45,11 +45,11 @@ clean:
 	rm libADLMIDI.$(LIB_EXT)
 
 
-libpuredoom.$(LIB_EXT):
+libcvars.$(LIB_EXT):
 	cc -shared -fPIC -x c \
 		-Wl,-undefined,dynamic_lookup \
 		-DDOOM_IMPLEMENTATION \
-			PureDoom.h -o libpuredoom.$(LIB_EXT)
+			cvars.h -o libcvars.$(LIB_EXT)
 
 libraylib.$(LIB_EXT):
 	test -d raylib || git clone --depth 1 --branch 6.0 --recursive https://github.com/raysan5/raylib 
