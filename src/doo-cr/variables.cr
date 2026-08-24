@@ -5510,6 +5510,8 @@ module LibDoom
     SmoothPan
     Pitching
     AmActive
+    WepFCent
+    MosMove
     End
   end
 
@@ -5520,6 +5522,8 @@ module LibDoom
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_smoothpan(Int32), alpha_key: 's'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_pitching(Int32), alpha_key: 'r'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_amactivedraw(Int32), alpha_key: 'a'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_weaponfirecentered(Int32), alpha_key: 'f'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_mouse_move(Int32), alpha_key: 'm'.ord),
 
   ]
 
@@ -5614,6 +5618,7 @@ module LibDoom
   @@midismoothpan = 1
   @@randompitch = 0
   @@amactivedraw = 1
+  @@weaponfirecentered = 1
 
   @@defaults = [CDoom::Default.new(name: "mouse_sensitivity", location: pointerof(CDoom.mouse_sensitivity), defaultvalue: 5),
                 CDoom::Default.new(name: "sfx_volume", location: pointerof(CDoom.snd_sfx_volume), defaultvalue: 8),
@@ -5667,6 +5672,7 @@ module LibDoom
                 CDoom::Default.new(name: "midismoothpan", location: pointerof(@@midismoothpan), defaultvalue: 1),
                 CDoom::Default.new(name: "randompitching", location: pointerof(@@randompitch), defaultvalue: 0),
                 CDoom::Default.new(name: "amactivedraw", location: pointerof(@@amactivedraw), defaultvalue: 1),
+                CDoom::Default.new(name: "weaponfirecentered", location: pointerof(@@weaponfirecentered), defaultvalue: 1),
   ]
 
   c_array(CDoom.rndtable,

@@ -216,10 +216,16 @@ module LibDoom
   end
 
   def self.doom_update
+    update_audio
+
+    if CDoom.timingdemo != 0
+      doom_force_update
+      return
+    end
+
     now = CDoom.i_get_time
     delta_time = now - CDoom.last_update_time
 
-    update_audio
 
     delta_time.times do |i|
       if CDoom.is_wiping_screen != 0
@@ -2055,17 +2061,20 @@ module LibDoom
       CDoom.autostart = 1
     end
 
+    demo_deferred = false
     p = CDoom.m_check_parm("-playdemo")
     if p != 0 && p < CDoom.myargc - 1
-      CDoom.singledemo = 0 # quit after one demo
+      CDoom.singledemo = 1 # quit after one demo
       CDoom.g_defered_play_demo(CDoom.myargv[p + 1])
-      CDoom.d_doom_loop # never returns
+      #CDoom.d_doom_loop # never returns
+      demo_deferred = true
     end
 
     p = CDoom.m_check_parm("-timedemo")
     if p != 0 && p < CDoom.myargc - 1
       CDoom.g_time_demo(CDoom.myargv[p + 1])
-      CDoom.d_doom_loop # never returns
+      #CDoom.d_doom_loop # never returns
+      demo_deferred = true
     end
 
     p = CDoom.m_check_parm("-loadgame")
@@ -2084,7 +2093,7 @@ module LibDoom
       CDoom.g_load_game(file)
     end
 
-    if CDoom.gameaction != CDoom::Gameaction::Loadgame
+    if CDoom.gameaction != CDoom::Gameaction::Loadgame && !demo_deferred
       if CDoom.autostart != 0 || CDoom.netgame != 0
         CDoom.g_init_new(CDoom.startskill, CDoom.startepisode, CDoom.startmap)
       else
@@ -4288,8 +4297,13 @@ module LibDoom
     CDoom.demo_p += 1
   end
 
+  @@prevstate : CDoom::Playerstate = CDoom::Playerstate::PST_LIVE
   def self.g_write_demo_ticcmd(cmd : CDoom::Ticcmd*)
-    CDoom.g_check_demo_status if CDoom.gamekeydown['q'.ord] != 0 # press q to end demo recording
+    pstate = CDoom.players[CDoom.consoleplayer].playerstate
+    CDoom.g_check_demo_status if CDoom.gamekeydown['q'.ord] != 0 ||                                                  # press q to end demo recording
+                                 (@@prevstate == CDoom::Playerstate::PST_DEAD && pstate == CDoom::Playerstate::PST_LIVE) || # or if player is respawning
+                                 CDoom.gamestate != CDoom::Gamestate::Level                                          # or if we are no longer on a level
+    @@prevstate = pstate
     CDoom.demo_p.value = cmd.value.forwardmove.to_u8!
     CDoom.demo_p += 1
     CDoom.demo_p.value = cmd.value.sidemove.to_u8!
@@ -4325,6 +4339,8 @@ module LibDoom
   end
 
   def self.g_begin_recording
+    @@prevstate = CDoom::Playerstate::PST_LIVE
+
     CDoom.demo_p = CDoom.demobuffer
 
     CDoom.demo_p.value = CDoom::VERSION.to_u8
@@ -4461,7 +4477,7 @@ module LibDoom
       CDoom.z_free(CDoom.demobuffer)
       CDoom.demorecording = 0
 
-      CDoom.i_error("Error: Demo #{CDoom.demoname} recorded")
+      CDoom.i_error("Error: Demo #{String.new(CDoom.demoname.to_unsafe)} recorded")
     end
 
     return 0
@@ -5879,12 +5895,12 @@ module LibDoom
   def self.i_init_graphics
     CDoom.screens[0] = CDoom.doom_malloc.call(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
 
-    Raylib.set_config_flags(Raylib::ConfigFlags::WindowResizable | Raylib::ConfigFlags::VSyncHint)
+    Raylib.set_config_flags(Raylib::ConfigFlags::WindowResizable)
     Raylib.init_window(1024, 768, "LibDoom")
     Raylib.set_exit_key(Raylib::KeyboardKey::Null)
     Raylib.disable_cursor
     Raylib.toggle_fullscreen if @@rlfullscreen != 0
-    # Raylib.set_target_fps(60)
+    # Raylib.set_target_fps(35)
 
     image = Raylib.gen_image_color(320, 200, Raylib::BLACK)
     @@screen_texture = Raylib.load_texture_from_image(image)
@@ -6400,6 +6416,14 @@ module LibDoom
     CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
                                             CDoom::LINEHEIGHT * MoreoptionsEnum::AmActive.value + CDoom.hu_font[0].value.height // 2,
       "active automap drawing: " + (@@amactivedraw != 0 ? "on" : "off"))
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::WepFCent.value + CDoom.hu_font[0].value.height // 2,
+      "Fire weapon centered: " + (@@weaponfirecentered != 0 ? "on" : "off"))
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::MosMove.value + CDoom.hu_font[0].value.height // 2,
+      "Mouse Y movement: " + (CDoom.mousemove != 0 ? "on" : "off"))
   end
 
   #
@@ -6434,8 +6458,12 @@ module LibDoom
     @@randompitch = 1 - @@randompitch
   end
 
-  def self.m_toggle_amactivedraw(choic : Int32)
+  def self.m_toggle_amactivedraw(choice : Int32)
     @@amactivedraw = 1 - @@amactivedraw
+  end
+
+  def self.m_toggle_weaponfirecentered(choice : Int32)
+    @@weaponfirecentered = 1 - @@weaponfirecentered
   end
 
   #
@@ -12837,13 +12865,12 @@ module LibDoom
     CDoom.p_set_psprite(player, CDoom::Psprnum::Weapon, newstate)
     CDoom.p_noise_alert(player.value.mo, player.value.mo)
 
-    # Pause gun bobbing when shooting
-    # psp = player.value.psprites.to_unsafe + CDoom::Psprnum::Weapon.value
-    # psp.value.sx = psp.value.sx
-    # psp.value.sy = psp.value.sy
-    # psp.value.sx = CDoom::FRACUNIT
-    # psp.value.sy = CDoom::WEAPONTOP
-
+    # Pause gun bobbing based off setting
+    if @@weaponfirecentered != 0
+      psp = player.value.psprites.to_unsafe + CDoom::Psprnum::Weapon.value
+      psp.value.sx = CDoom::FRACUNIT
+      psp.value.sy = CDoom::WEAPONTOP
+    end
   end
 
   #
@@ -20981,7 +21008,7 @@ module LibDoom
       CDoom.reloadlump = CDoom.numlumps
     end
 
-    if (handle = CDoom.doom_open.call(filename, "rb".to_unsafe)) == 0
+    if (handle = CDoom.doom_open.call(filename, "rb".to_unsafe)).null?
       puts " couldn't open #{String.new(filename)}"
       return
     end
@@ -21182,7 +21209,7 @@ module LibDoom
         i = CDoom.w_check_num_for_name(name)
       end
       if i == -1
-        CDoom.i_error("Error: w_get_num_for_name: #{name} not found!")
+        CDoom.i_error("Error: w_get_num_for_name: #{String.new(name)} not found!")
       end
     end
 
