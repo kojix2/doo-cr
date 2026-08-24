@@ -14,7 +14,6 @@ MIDI_BUFFER_SIZE =  2048
 MIDI_SAMPLE_RATE = 44100
 MIDI_TICK_TIME   = 1.0 / 140.0
 MIDI_BANK        = 16
-Fiber::ExecutionContext.default.resize(maximum: System.cpu_count)
 
 # If rangecheck is undefined,
 # most parameter validation debugging code will not be compiled

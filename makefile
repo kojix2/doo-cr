@@ -1,4 +1,5 @@
 CRYSTAL_FLAGS := -DRANGECHECK
+EXEC := doo-cr
 
 ifeq ($(OS),Windows_NT)
     # Windows-specific settings
@@ -16,10 +17,22 @@ endif
 
 ifeq ($(DETECTED_OS),Windows)
 	LIB_EXT := dll
+	RLMAKE := cmake --build . --config Release
+	AMMAKE := cmake --build .
 else ifeq ($(DETECTED_OS),Linux)
 	LIB_EXT := so
+	RLMAKE := make -Bj4 SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
+	AMMAKE := make
+	RLOUT := libraylib.6.0.0.
+	AMOUT := libADLMIDI.1.6.2.
+	CHANGE_LIB_NAMES := patchelf --replace-needed libADLMIDI.1.$(LIB_EXT) ./libADLMIDI.$(LIB_EXT) ./bin/$(EXEC) && patchelf --replace-needed ibraylib.600.$(LIB_EXT) ./libraylib.$(LIB_EXT) ./bin/$(EXEC)
 else ifeq ($(DETECTED_OS),macOS)
 	LIB_EXT := dylib
+	RLMAKE := make -Bj4 SHAREDLIBS="-lglfw -framework OpenGL -framework OpenAL -framework Cocoa" SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
+	AMMAKE := make
+	RLOUT := libraylib.6.0.0.
+	AMOUT := libADLMIDI.1.6.2.
+	CHANGE_LIB_NAMES := install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" ./bin/$(EXEC) && install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" ./bin/$(EXEC)
 endif
 
 
@@ -27,15 +40,13 @@ endif
 all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \
 	shards install
-	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) --link-flags "-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld" -o bin/libdoom
+	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC)
 	mv -f libcvars.$(LIB_EXT) ./bin
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
-	install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" ./bin/libdoom
-	install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" ./bin/libdoom
+	$(CHANGE_LIB_NAMES)
 
-# 	cd ./bin && \
-# 	./libdoom
+
 
 clean:
 	rm -rf raylib
@@ -58,8 +69,8 @@ libraylib.$(LIB_EXT):
 	test -d build || mkdir build && \
 	cd build && \
 	cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DBUILD_SHARED_LIBS=ON && \
-	make -Bj4 SHAREDLIBS="-lglfw -framework OpenGL -framework OpenAL -framework Cocoa" SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP && \
-	cp ./raylib/libraylib.6.0.0.$(LIB_EXT) ../../libraylib.$(LIB_EXT)
+	$(RLMAKE) && \
+	cp ./raylib/$(RLOUT)$(LIB_EXT) ../../libraylib.$(LIB_EXT)
 
 libADLMIDI.$(LIB_EXT):
 	test -d libADLMIDI || git clone https://github.com/Wohlstand/libADLMIDI
@@ -67,7 +78,7 @@ libADLMIDI.$(LIB_EXT):
 	test -d build || mkdir build && \
 	cd build && \
 	cmake -DCMAKE_BUILD_TYPE=Release -DlibADLMIDI_SHARED=ON .. && \
-	make && \
-	cp ./libADLMIDI.1.6.2.$(LIB_EXT) ../../libADLMIDI.$(LIB_EXT)
+	$(AMMAKE) && \
+	cp ./$(AMOUT)$(LIB_EXT) ../../libADLMIDI.$(LIB_EXT)
 
 
