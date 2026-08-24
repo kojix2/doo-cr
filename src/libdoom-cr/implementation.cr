@@ -2560,3 +2560,108 @@ end
 fun s_init = S_Init(sfx_volume : LibC::Int, music_volume : LibC::Int)
   LibDoom.s_init(sfx_volume, music_volume)
 end
+
+  fun s_start = S_Start
+    LibDoom.s_start
+  end
+
+  fun s_start_sound_at_volume = S_StartSoundAtVolume(origin_p : Void*, sfx_id : LibC::Int, volume : LibC::Int)
+LibDoom.s_start_sound_at_volume(origin_p, sfx_id, volume)
+  end
+
+  fun s_start_sound = S_StartSound(origin : Void*, sfx_id : LibC::Int)
+    LibDoom.s_start_sound(origin, sfx_id)
+  end
+
+  fun s_stop_sound = S_StopSound(origin : Void*)
+LibDoom.s_stop_sound(origin)
+  end
+
+  fun s_pause_sound = S_PauseSound
+LibDoom.s_pause_sound
+  end
+
+  fun s_resume_sound = S_ResumeSound
+LibDoom.s_resume_sound
+  end
+
+  fun s_update_sounds = S_UpdateSounds(listener_p : Void*)
+LibDoom.s_update_sounds(listener_p)
+  end
+
+  fun s_set_music_volume = S_SetMusicVolume(volume : LibC::Int)
+LibDoom.s_set_music_volume(volume)
+  end
+
+  fun s_set_sfx_volume = S_SetSfxVolume(volume : LibC::Int)
+LibDoom.s_set_sfx_volume(volume)
+  end
+
+  fun s_start_music = S_StartMusic(music_id : LibC::Int)
+LibDoom.s_start_music(music_id)
+  end
+
+  fun s_change_music = S_ChangeMusic(music_id : LibC::Int, looping : LibC::Int)
+LibDoom.s_change_music(music_id, looping)
+  end
+
+  fun s_stop_music = S_StopMusic
+LibDoom.s_stop_music
+  end
+
+  fun s_stop_channel = S_StopChannel(cnum : LibC::Int)
+LibDoom.s_stop_channel(cnum)
+  end
+
+  fun s_adjust_sound_params = S_AdjustSoundParams(listener : CDoom::Mobj*, source : CDoom::Mobj*, vol : LibC::Int*, sep : LibC::Int*, pitch : LibC::Int*) : LibC::Int
+LibDoom.s_adjust_sound_params(listener, source, vol, sep, pitch)
+  end
+
+  fun s_get_channel = S_getChannel(origin : Void*, sfxinfo : CDoom::Sfxinfo*) : LibC::Int
+LibDoom.s_get_channel(origin, sfxinfo)
+  end
+
+  fun stlib_init = STlib_init
+LibDoom.stlib_init
+  end
+
+  fun stlib_init_num = STlib_initNum(n : CDoom::ST_Number*,
+                                     x : LibC::Int,
+                                     y : LibC::Int,
+                                     pl : CDoom::Patch**,
+                                     num : LibC::Int*,
+                                     on : CDoom::DoomBool*,
+                                     width : LibC::Int)
+    LibDoom.stlib_init_num(n,
+    x,
+    y,
+    pl,
+    num,
+    on,
+    width)
+  end
+
+    fun stlib_draw_num = STlib_drawNum(n : CDoom::ST_Number*, refresh : CDoom::DoomBool)
+LibDoom.stlib_draw_num(n, refresh)
+    end
+
+  fun stlib_update_num = STlib_updateNum(n : CDoom::ST_Number*, refresh : CDoom::DoomBool)
+    LibDoom.stlib_update_num(n, refresh)
+  end
+
+  fun stlib_init_percent = STlib_initPercent(p : CDoom::ST_Percent*,
+                                             x : LibC::Int,
+                                             y : LibC::Int,
+                                             pl : CDoom::Patch**,
+                                             num : LibC::Int*,
+                                             on : CDoom::DoomBool*,
+                                             percent : CDoom::Patch*)
+                                             LibDoom.stlib_init_percent(p, x, y, pl, num, on, percent)
+  end
+
+
+  fun stlib_update_percent = STlib_updatePercent(per : CDoom::ST_Percent*, refresh : LibC::Int)
+    LibDoom.stlib_update_percent(per, refresh)
+  end
+
+  

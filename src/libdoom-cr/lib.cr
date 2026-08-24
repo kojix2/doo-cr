@@ -3173,10 +3173,10 @@ lib CDoom
   # Start sound for thing at <origin>
   #  using <sound_id> from sounds.h
   #
-  fun s_start_sound = S_StartSound(origin : Void*, sound_id : LibC::Int)
+  fun s_start_sound = S_StartSound(origin : Void*, sfx_id : LibC::Int)
 
   # Will start a sound at a given volume.
-  fun s_start_sound_at_volume = S_StartSoundAtVolume(origin : Void*, sound_id : LibC::Int, volume : LibC::Int)
+  fun s_start_sound_at_volume = S_StartSoundAtVolume(origin_p : Void*, sfx_id : LibC::Int, volume : LibC::Int)
 
   # Stop sound for thing at <origin>
   fun s_stop_sound = S_StopSound(origin : Void*)
@@ -3198,7 +3198,7 @@ lib CDoom
   #
   # Updates music & sounds
   #
-  fun s_update_sounds = S_UpdateSounds(listener : Void*)
+  fun s_update_sounds = S_UpdateSounds(listener_p : Void*)
 
   fun s_set_music_volume = S_SetMusicVolume(volume : LibC::Int)
   fun s_set_sfx_volume = S_SetSfxVolume(volume : LibC::Int)
@@ -3257,10 +3257,10 @@ lib CDoom
   end
 
   # the complete set of sound effects
-  $s_sfx = S_sfx : Sfxinfo[1]
+  $s_sfx = S_sfx : Sfxinfo*
 
   # the complete set of music
-  $s_music = S_music : Sfxinfo[1]
+  $s_music = S_music : Musicinfo*
 
   #
   # Identifiers for all music in game.
@@ -7930,4 +7930,14 @@ lib CDoom
   fun s_get_channel = S_getChannel(origin : Void*, sfxinfo : Sfxinfo*) : LibC::Int
   fun s_adjust_sound_params = S_AdjustSoundParams(listener : Mobj*, source : Mobj*, vol : LibC::Int*, sep : LibC::Int*, pitch : LibC::Int*) : LibC::Int
   fun s_stop_channel = S_StopChannel(cnum : LibC::Int)
+
+    #
+    # Hack display negative frags.
+#  Loads and store the stminus lump.
+#
+    $sttminus : Patch*
+
+    fun stlib_draw_num = STlib_drawNum(n : ST_Number*, refresh : DoomBool)
+
+
 end

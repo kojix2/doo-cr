@@ -3685,10 +3685,10 @@ typedef struct
 
 
 // the complete set of sound effects
-extern sfxinfo_t S_sfx[];
+extern sfxinfo_t* S_sfx;
 
 // the complete set of music
-extern musicinfo_t S_music[];
+extern musicinfo_t* S_music;
 
 //
 // Identifiers for all music in game.
@@ -17643,324 +17643,34 @@ extern void S_Init(int sfxVolume, int musicVolume);
 // Kills playing sounds at start of level,
 //  determines music if any, changes music.
 //
-void S_Start(void)
-{
-    int cnum;
-    int mnum;
-
-    // kill all playing sounds at start of level
-    //  (trust me - a good idea)
-    for (cnum = 0; cnum < numChannels; cnum++)
-        if (channels_s_sound[cnum].sfxinfo)
-            S_StopChannel(cnum);
-
-    // start new music for the level
-    mus_paused = 0;
-
-    if (gamemode == commercial)
-        mnum = mus_runnin + gamemap - 1;
-    else
-    {
-        int spmus[] =
-        {
-            // Song - Who? - Where?
-
-            mus_e3m4,        // American        e4m1
-            mus_e3m2,        // Romero        e4m2
-            mus_e3m3,        // Shawn        e4m3
-            mus_e1m5,        // American        e4m4
-            mus_e2m7,        // Tim         e4m5
-            mus_e2m4,        // Romero        e4m6
-            mus_e2m6,        // J.Anderson        e4m7 CHIRON.WAD
-            mus_e2m5,        // Shawn        e4m8
-            mus_e1m9        // Tim                e4m9
-        };
-
-        if (gameepisode < 4)
-            mnum = mus_e1m1 + (gameepisode - 1) * 9 + gamemap - 1;
-        else
-            mnum = spmus[gamemap - 1];
-    }
-
-    // HACK FOR COMMERCIAL
-    //  if (commercial && mnum > mus_e3m9)        
-    //      mnum -= mus_e3m9;
-
-    S_ChangeMusic(mnum, true);
-
-    nextcleanup = 15;
-}
+extern void S_Start(void);
 
 
-void S_StartSoundAtVolume(void* origin_p, int sfx_id, int volume)
-{
-    int                rc;
-    int                sep;
-    int                pitch;
-    int                priority;
-    sfxinfo_t*         sfx;
-    int                cnum;
-
-    mobj_t* origin = (mobj_t*)origin_p;
-
-    // check for bogus sound #
-    if (sfx_id < 1 || sfx_id > NUMSFX)
-    {
-        //I_Error("Error: Bad sfx #: %d", sfx_id);
-        doom_strcpy(error_buf, "Error: Bad sfx #: ");
-        doom_concat(error_buf, doom_itoa(sfx_id, 10));
-        I_Error(error_buf);
-    }
-
-    sfx = &S_sfx[sfx_id];
-
-    // Initialize sound parameters
-    if (sfx->link)
-    {
-        pitch = sfx->pitch;
-        priority = sfx->priority;
-        volume += sfx->volume;
-
-        if (volume < 1)
-            return;
-
-        if (volume > snd_SfxVolume)
-            volume = snd_SfxVolume;
-    }
-    else
-    {
-        pitch = NORM_PITCH;
-        priority = NORM_PRIORITY;
-    }
-
-    // Check to see if it is audible,
-    //  and if not, modify the params
-    if (origin && origin != players[consoleplayer].mo)
-    {
-        rc = S_AdjustSoundParams(players[consoleplayer].mo,
-                                 origin,
-                                 &volume,
-                                 &sep,
-                                 &pitch);
-
-        if (origin->x == players[consoleplayer].mo->x
-            && origin->y == players[consoleplayer].mo->y)
-        {
-            sep = NORM_SEP;
-        }
-
-        if (!rc)
-            return;
-    }
-    else
-    {
-        sep = NORM_SEP;
-    }
-
-    // hacks to vary the sfx pitches
-    if (sfx_id >= sfx_sawup
-        && sfx_id <= sfx_sawhit)
-    {
-        pitch += 8 - (M_Random() & 15);
-
-        if (pitch < 0)
-            pitch = 0;
-        else if (pitch > 255)
-            pitch = 255;
-    }
-    else if (sfx_id != sfx_itemup
-             && sfx_id != sfx_tink)
-    {
-        pitch += 16 - (M_Random() & 31);
-
-        if (pitch < 0)
-            pitch = 0;
-        else if (pitch > 255)
-            pitch = 255;
-    }
-
-    // kill old sound
-    S_StopSound(origin);
-
-    // try to find a channel
-    cnum = S_getChannel(origin, sfx);
-
-    if (cnum < 0)
-        return;
-
-    //
-    // This is supposed to handle the loading/caching.
-    // For some odd reason, the caching is done nearly
-    //  each time the sound is needed?
-    //
-
-    // get lumpnum if necessary
-    if (sfx->lumpnum < 0)
-        sfx->lumpnum = I_GetSfxLumpNum(sfx);
-
-#ifndef SNDSRV
-    // cache data if necessary
-    if (!sfx->data)
-    {
-        doom_print(
-                "S_StartSoundAtVolume: 16bit and not pre-cached - wtf?\n");
-
-        // DOS remains, 8bit handling
-        //sfx->data = (void *) W_CacheLumpNum(sfx->lumpnum, PU_MUSIC);
-        // fprintf( stderr,
-        //             "S_StartSoundAtVolume: loading %d (lump %d) : 0x%x\n",
-        //       sfx_id, sfx->lumpnum, (int)sfx->data );
-
-    }
-#endif
-
-    // increase the usefulness
-    if (sfx->usefulness++ < 0)
-        sfx->usefulness = 1;
-
-    // Assigns the handle to one of the channels in the
-    //  mix/output buffer.
-    channels_s_sound[cnum].handle = I_StartSound(sfx_id,
-                                         /*sfx->data,*/
-                                         volume,
-                                         sep,
-                                         pitch,
-                                         priority);
-}
+extern void S_StartSoundAtVolume(void* origin_p, int sfx_id, int volume);
 
 
-void S_StartSound(void* origin, int sfx_id)
-{
-    S_StartSoundAtVolume(origin, sfx_id, snd_SfxVolume);
-}
+extern void S_StartSound(void* origin, int sfx_id);
 
 
-void S_StopSound(void* origin)
-{
-    int cnum;
-
-    for (cnum = 0; cnum < numChannels; cnum++)
-    {
-        if (channels_s_sound[cnum].sfxinfo && channels_s_sound[cnum].origin == origin)
-        {
-            S_StopChannel(cnum);
-            break;
-        }
-    }
-}
+extern void S_StopSound(void* origin);
 
 
 //
 // Stop and resume music, during game PAUSE.
 //
-void S_PauseSound(void)
-{
-    if (mus_playing_s_sound && !mus_paused)
-    {
-        I_PauseSong(mus_playing_s_sound->handle);
-        mus_paused = true;
-    }
-}
+extern void S_PauseSound(void);
 
 
-void S_ResumeSound(void)
-{
-    if (mus_playing_s_sound && mus_paused)
-    {
-        I_ResumeSong(mus_playing_s_sound->handle);
-        mus_paused = false;
-    }
-}
+extern void S_ResumeSound(void);
 
 
 //
 // Updates music & sounds
 //
-void S_UpdateSounds(void* listener_p)
-{
-    int audible;
-    int cnum;
-    int volume;
-    int sep;
-    int pitch;
-    sfxinfo_t* sfx;
-    channel_t* c;
-
-    mobj_t* listener = (mobj_t*)listener_p;
-
-    for (cnum = 0; cnum < numChannels; cnum++)
-    {
-        c = &channels_s_sound[cnum];
-        sfx = c->sfxinfo;
-
-        if (c->sfxinfo)
-        {
-            if (I_SoundIsPlaying(c->handle))
-            {
-                // initialize parameters
-                volume = snd_SfxVolume;
-                pitch = NORM_PITCH;
-                sep = NORM_SEP;
-
-                if (sfx->link)
-                {
-                    pitch = sfx->pitch;
-                    volume += sfx->volume;
-                    if (volume < 1)
-                    {
-                        S_StopChannel(cnum);
-                        continue;
-                    }
-                    else if (volume > snd_SfxVolume)
-                    {
-                        volume = snd_SfxVolume;
-                    }
-                }
-
-                // check non-local sounds for distance clipping
-                //  or modify their params
-                if (c->origin && listener_p != c->origin)
-                {
-                    audible = S_AdjustSoundParams(listener,
-                                                  c->origin,
-                                                  &volume,
-                                                  &sep,
-                                                  &pitch);
-
-                    if (!audible)
-                    {
-                        S_StopChannel(cnum);
-                    }
-                    else 
-                        I_UpdateSoundParams(c->handle, volume, sep, pitch);
-                }
-            }
-            else
-            {
-                // if channel is allocated but sound has stopped,
-                //  free it
-                S_StopChannel(cnum);
-            }
-        }
-    }
-}
+extern void S_UpdateSounds(void* listener_p);
 
 
-void S_SetMusicVolume(int volume)
-{
-    if (volume < 0 || volume > 127)
-    {
-        //I_Error("Error: Attempt to set music volume at %d",
-        //        volume);
-        doom_strcpy(error_buf, "Error: Attempt to set music volume at ");
-        doom_concat(error_buf, doom_itoa(volume, 10));
-        I_Error(error_buf);
-    }
-
-    I_SetMusicVolume(127);
-    I_SetMusicVolume(volume);
-    snd_MusicVolume = volume;
-}
+extern void S_SetMusicVolume(int volume);
 
 
 void S_SetSfxVolume(int volume)
@@ -17980,105 +17690,16 @@ void S_SetSfxVolume(int volume)
 //
 // Starts some music with the music id found in sounds.h.
 //
-void S_StartMusic(int m_id)
-{
-    S_ChangeMusic(m_id, false);
-}
+extern void S_StartMusic(int m_id);
 
 
-void S_ChangeMusic(int musicnum, int looping)
-{
-    musicinfo_t* music;
-    char namebuf[9];
-
-    if ((musicnum <= mus_None)
-        || (musicnum >= NUMMUSIC))
-    {
-        //I_Error("Error: Bad music number %d", musicnum);
-        doom_strcpy(error_buf, "Error: Bad music number ");
-        doom_concat(error_buf, doom_itoa(musicnum, 10));
-        I_Error(error_buf);
-    }
-    else
-        music = &S_music[musicnum];
-
-    if (mus_playing_s_sound == music)
-        return;
-
-    // shutdown old music
-    S_StopMusic();
-
-    // get lumpnum if neccessary
-    if (!music->lumpnum)
-    {
-        //doom_sprintf(namebuf, "d_%s", music->name);
-        doom_strcpy(namebuf, "d_");
-        doom_concat(namebuf, music->name);
-        music->lumpnum = W_GetNumForName(namebuf);
-    }
-
-    // load & register it
-    music->data = (void*)W_CacheLumpNum(music->lumpnum, PU_MUSIC);
-    music->handle = I_RegisterSong(music->data);
-
-    // play it
-    I_PlaySong(music->handle, looping);
-
-    mus_playing_s_sound = music;
-}
+extern void S_ChangeMusic(int musicnum, int looping);
 
 
-void S_StopMusic(void)
-{
-    if (mus_playing_s_sound)
-    {
-        if (mus_paused)
-            I_ResumeSong(mus_playing_s_sound->handle);
-
-        I_StopSong(mus_playing_s_sound->handle);
-        I_UnRegisterSong(mus_playing_s_sound->handle);
-        Z_ChangeTag(mus_playing_s_sound->data, PU_CACHE);
-
-        mus_playing_s_sound->data = 0;
-        mus_playing_s_sound = 0;
-    }
-}
+extern void S_StopMusic(void);
 
 
-void S_StopChannel(int cnum)
-{
-    int i;
-    channel_t* c = &channels_s_sound[cnum];
-
-    if (c->sfxinfo)
-    {
-        // stop the sound playing
-        if (I_SoundIsPlaying(c->handle))
-        {
-#ifdef SAWDEBUG
-            if (c->sfxinfo == &S_sfx[sfx_sawful])
-                doom_print("stopped\n");
-#endif
-            I_StopSound(c->handle);
-        }
-
-        // check to see
-        //  if other channels are playing the sound
-        for (i = 0; i < numChannels; i++)
-        {
-            if (cnum != i
-                && c->sfxinfo == channels_s_sound[i].sfxinfo)
-            {
-                break;
-            }
-        }
-
-        // degrade usefulness of sound data
-        c->sfxinfo->usefulness--;
-
-        c->sfxinfo = 0;
-    }
-}
+extern void S_StopChannel(int cnum);
 
 
 //
@@ -18087,308 +17708,20 @@ void S_StopChannel(int cnum)
 // If the sound is not audible, returns a 0.
 // Otherwise, modifies parameters and returns 1.
 //
-int S_AdjustSoundParams(mobj_t* listener, mobj_t* source, int* vol, int* sep, int* pitch)
-{
-    fixed_t approx_dist;
-    fixed_t adx;
-    fixed_t ady;
-    angle_t angle;
-
-    // calculate the distance to sound origin
-    //  and clip it if necessary
-    adx = doom_abs(listener->x - source->x);
-    ady = doom_abs(listener->y - source->y);
-
-    // From _GG1_ p.428. Appox. eucledian distance fast.
-    approx_dist = adx + ady - ((adx < ady ? adx : ady) >> 1);
-
-    if (gamemap != 8
-        && approx_dist > S_CLIPPING_DIST)
-    {
-        return 0;
-    }
-
-    // angle of source to listener
-    angle = R_PointToAngle2(listener->x,
-                            listener->y,
-                            source->x,
-                            source->y);
-
-    if (angle > listener->angle)
-        angle = angle - listener->angle;
-    else
-        angle = angle + (0xffffffff - listener->angle);
-
-    angle >>= ANGLETOFINESHIFT;
-
-    // stereo separation
-    *sep = 128 - (FixedMul(S_STEREO_SWING, finesine[angle]) >> FRACBITS);
-
-    // volume calculation
-    if (approx_dist < S_CLOSE_DIST)
-    {
-        *vol = snd_SfxVolume;
-    }
-    else if (gamemap == 8)
-    {
-        if (approx_dist > S_CLIPPING_DIST)
-            approx_dist = S_CLIPPING_DIST;
-
-        *vol = 15 + ((snd_SfxVolume - 15)
-                     * ((S_CLIPPING_DIST - approx_dist) >> FRACBITS))
-            / S_ATTENUATOR;
-    }
-    else
-    {
-        // distance effect
-        *vol = (snd_SfxVolume
-                * ((S_CLIPPING_DIST - approx_dist) >> FRACBITS))
-            / S_ATTENUATOR;
-    }
-
-    return (*vol > 0);
-}
+extern int S_AdjustSoundParams(mobj_t* listener, mobj_t* source, int* vol, int* sep, int* pitch);
 
 
 //
 // S_getChannel :
 // If none available, return -1.  Otherwise channel #.
 //
-int S_getChannel(void* origin, sfxinfo_t* sfxinfo)
-{
-    // channel number to use
-    int cnum;
-
-    channel_t* c;
-
-    // Find an open channel
-    for (cnum = 0; cnum < numChannels; cnum++)
-    {
-        if (!channels_s_sound[cnum].sfxinfo)
-            break;
-        else if (origin && channels_s_sound[cnum].origin == origin)
-        {
-            S_StopChannel(cnum);
-            break;
-        }
-    }
-
-    // None available
-    if (cnum == numChannels)
-    {
-        // Look for lower priority
-        for (cnum = 0; cnum < numChannels; cnum++)
-            if (channels_s_sound[cnum].sfxinfo->priority >= sfxinfo->priority) break;
-
-        if (cnum == numChannels)
-        {
-            // FUCK!  No lower priority.  Sorry, Charlie.    
-            return -1;
-        }
-        else
-        {
-            // Otherwise, kick out lower priority.
-            S_StopChannel(cnum);
-        }
-    }
-
-    c = &channels_s_sound[cnum];
-
-    // channel is decided to be cnum.
-    c->sfxinfo = sfxinfo;
-    c->origin = origin;
-
-    return cnum;
-}
-musicinfo_t S_music[] =
-{
-    { 0 },
-    { "e1m1", 0 },
-    { "e1m2", 0 },
-    { "e1m3", 0 },
-    { "e1m4", 0 },
-    { "e1m5", 0 },
-    { "e1m6", 0 },
-    { "e1m7", 0 },
-    { "e1m8", 0 },
-    { "e1m9", 0 },
-    { "e2m1", 0 },
-    { "e2m2", 0 },
-    { "e2m3", 0 },
-    { "e2m4", 0 },
-    { "e2m5", 0 },
-    { "e2m6", 0 },
-    { "e2m7", 0 },
-    { "e2m8", 0 },
-    { "e2m9", 0 },
-    { "e3m1", 0 },
-    { "e3m2", 0 },
-    { "e3m3", 0 },
-    { "e3m4", 0 },
-    { "e3m5", 0 },
-    { "e3m6", 0 },
-    { "e3m7", 0 },
-    { "e3m8", 0 },
-    { "e3m9", 0 },
-    { "inter", 0 },
-    { "intro", 0 },
-    { "bunny", 0 },
-    { "victor", 0 },
-    { "introa", 0 },
-    { "runnin", 0 },
-    { "stalks", 0 },
-    { "countd", 0 },
-    { "betwee", 0 },
-    { "doom", 0 },
-    { "the_da", 0 },
-    { "shawn", 0 },
-    { "ddtblu", 0 },
-    { "in_cit", 0 },
-    { "dead", 0 },
-    { "stlks2", 0 },
-    { "theda2", 0 },
-    { "doom2", 0 },
-    { "ddtbl2", 0 },
-    { "runni2", 0 },
-    { "dead2", 0 },
-    { "stlks3", 0 },
-    { "romero", 0 },
-    { "shawn2", 0 },
-    { "messag", 0 },
-    { "count2", 0 },
-    { "ddtbl3", 0 },
-    { "ampie", 0 },
-    { "theda3", 0 },
-    { "adrian", 0 },
-    { "messg2", 0 },
-    { "romer2", 0 },
-    { "tense", 0 },
-    { "shawn3", 0 },
-    { "openin", 0 },
-    { "evil", 0 },
-    { "ultima", 0 },
-    { "read_m", 0 },
-    { "dm2ttl", 0 },
-    { "dm2int", 0 }
-};
-
+extern int S_getChannel(void* origin, sfxinfo_t* sfxinfo);
+musicinfo_t* S_music;
 
 //
 // Information about all the sfx
 //
-sfxinfo_t S_sfx[] =
-{
-    // S_sfx[0] needs to be a dummy for odd reasons.
-    { "none", false,  0, 0, -1, -1, 0 },
-    { "pistol", false, 64, 0, -1, -1, 0 },
-    { "shotgn", false, 64, 0, -1, -1, 0 },
-    { "sgcock", false, 64, 0, -1, -1, 0 },
-    { "dshtgn", false, 64, 0, -1, -1, 0 },
-    { "dbopn", false, 64, 0, -1, -1, 0 },
-    { "dbcls", false, 64, 0, -1, -1, 0 },
-    { "dbload", false, 64, 0, -1, -1, 0 },
-    { "plasma", false, 64, 0, -1, -1, 0 },
-    { "bfg", false, 64, 0, -1, -1, 0 },
-    { "sawup", false, 64, 0, -1, -1, 0 },
-    { "sawidl", false, 118, 0, -1, -1, 0 },
-    { "sawful", false, 64, 0, -1, -1, 0 },
-    { "sawhit", false, 64, 0, -1, -1, 0 },
-    { "rlaunc", false, 64, 0, -1, -1, 0 },
-    { "rxplod", false, 70, 0, -1, -1, 0 },
-    { "firsht", false, 70, 0, -1, -1, 0 },
-    { "firxpl", false, 70, 0, -1, -1, 0 },
-    { "pstart", false, 100, 0, -1, -1, 0 },
-    { "pstop", false, 100, 0, -1, -1, 0 },
-    { "doropn", false, 100, 0, -1, -1, 0 },
-    { "dorcls", false, 100, 0, -1, -1, 0 },
-    { "stnmov", false, 119, 0, -1, -1, 0 },
-    { "swtchn", false, 78, 0, -1, -1, 0 },
-    { "swtchx", false, 78, 0, -1, -1, 0 },
-    { "plpain", false, 96, 0, -1, -1, 0 },
-    { "dmpain", false, 96, 0, -1, -1, 0 },
-    { "popain", false, 96, 0, -1, -1, 0 },
-    { "vipain", false, 96, 0, -1, -1, 0 },
-    { "mnpain", false, 96, 0, -1, -1, 0 },
-    { "pepain", false, 96, 0, -1, -1, 0 },
-    { "slop", false, 78, 0, -1, -1, 0 },
-    { "itemup", true, 78, 0, -1, -1, 0 },
-    { "wpnup", true, 78, 0, -1, -1, 0 },
-    { "oof", false, 96, 0, -1, -1, 0 },
-    { "telept", false, 32, 0, -1, -1, 0 },
-    { "posit1", true, 98, 0, -1, -1, 0 },
-    { "posit2", true, 98, 0, -1, -1, 0 },
-    { "posit3", true, 98, 0, -1, -1, 0 },
-    { "bgsit1", true, 98, 0, -1, -1, 0 },
-    { "bgsit2", true, 98, 0, -1, -1, 0 },
-    { "sgtsit", true, 98, 0, -1, -1, 0 },
-    { "cacsit", true, 98, 0, -1, -1, 0 },
-    { "brssit", true, 94, 0, -1, -1, 0 },
-    { "cybsit", true, 92, 0, -1, -1, 0 },
-    { "spisit", true, 90, 0, -1, -1, 0 },
-    { "bspsit", true, 90, 0, -1, -1, 0 },
-    { "kntsit", true, 90, 0, -1, -1, 0 },
-    { "vilsit", true, 90, 0, -1, -1, 0 },
-    { "mansit", true, 90, 0, -1, -1, 0 },
-    { "pesit", true, 90, 0, -1, -1, 0 },
-    { "sklatk", false, 70, 0, -1, -1, 0 },
-    { "sgtatk", false, 70, 0, -1, -1, 0 },
-    { "skepch", false, 70, 0, -1, -1, 0 },
-    { "vilatk", false, 70, 0, -1, -1, 0 },
-    { "claw", false, 70, 0, -1, -1, 0 },
-    { "skeswg", false, 70, 0, -1, -1, 0 },
-    { "pldeth", false, 32, 0, -1, -1, 0 },
-    { "pdiehi", false, 32, 0, -1, -1, 0 },
-    { "podth1", false, 70, 0, -1, -1, 0 },
-    { "podth2", false, 70, 0, -1, -1, 0 },
-    { "podth3", false, 70, 0, -1, -1, 0 },
-    { "bgdth1", false, 70, 0, -1, -1, 0 },
-    { "bgdth2", false, 70, 0, -1, -1, 0 },
-    { "sgtdth", false, 70, 0, -1, -1, 0 },
-    { "cacdth", false, 70, 0, -1, -1, 0 },
-    { "skldth", false, 70, 0, -1, -1, 0 },
-    { "brsdth", false, 32, 0, -1, -1, 0 },
-    { "cybdth", false, 32, 0, -1, -1, 0 },
-    { "spidth", false, 32, 0, -1, -1, 0 },
-    { "bspdth", false, 32, 0, -1, -1, 0 },
-    { "vildth", false, 32, 0, -1, -1, 0 },
-    { "kntdth", false, 32, 0, -1, -1, 0 },
-    { "pedth", false, 32, 0, -1, -1, 0 },
-    { "skedth", false, 32, 0, -1, -1, 0 },
-    { "posact", true, 120, 0, -1, -1, 0 },
-    { "bgact", true, 120, 0, -1, -1, 0 },
-    { "dmact", true, 120, 0, -1, -1, 0 },
-    { "bspact", true, 100, 0, -1, -1, 0 },
-    { "bspwlk", true, 100, 0, -1, -1, 0 },
-    { "vilact", true, 100, 0, -1, -1, 0 },
-    { "noway", false, 78, 0, -1, -1, 0 },
-    { "barexp", false, 60, 0, -1, -1, 0 },
-    { "punch", false, 64, 0, -1, -1, 0 },
-    { "hoof", false, 70, 0, -1, -1, 0 },
-    { "metal", false, 70, 0, -1, -1, 0 },
-    { "chgun", false, 64, &S_sfx[sfx_pistol], 150, 0, 0 },
-    { "tink", false, 60, 0, -1, -1, 0 },
-    { "bdopn", false, 100, 0, -1, -1, 0 },
-    { "bdcls", false, 100, 0, -1, -1, 0 },
-    { "itmbk", false, 100, 0, -1, -1, 0 },
-    { "flame", false, 32, 0, -1, -1, 0 },
-    { "flamst", false, 32, 0, -1, -1, 0 },
-    { "getpow", false, 60, 0, -1, -1, 0 },
-    { "bospit", false, 70, 0, -1, -1, 0 },
-    { "boscub", false, 70, 0, -1, -1, 0 },
-    { "bossit", false, 70, 0, -1, -1, 0 },
-    { "bospn", false, 70, 0, -1, -1, 0 },
-    { "bosdth", false, 70, 0, -1, -1, 0 },
-    { "manatk", false, 70, 0, -1, -1, 0 },
-    { "mandth", false, 70, 0, -1, -1, 0 },
-    { "sssit", false, 70, 0, -1, -1, 0 },
-    { "ssdth", false, 70, 0, -1, -1, 0 },
-    { "keenpn", false, 70, 0, -1, -1, 0 },
-    { "keendt", false, 70, 0, -1, -1, 0 },
-    { "skeact", false, 70, 0, -1, -1, 0 },
-    { "skesit", false, 70, 0, -1, -1, 0 },
-    { "skeatk", false, 70, 0, -1, -1, 0 },
-    { "radio", false, 60, 0, -1, -1, 0 }
-};
+sfxinfo_t* S_sfx;
 extern doom_boolean                automapactive;
 
 
@@ -18399,104 +17732,24 @@ extern doom_boolean                automapactive;
 patch_t* sttminus;
 
 
-void STlib_init(void)
-{
-    sttminus = (patch_t*)W_CacheLumpName("STTMINUS", PU_STATIC);
-}
+extern void STlib_init(void);
 
 // ?
-void STlib_initNum(st_number_t* n, int x, int y, patch_t** pl, int* num, doom_boolean* on, int width)
-{
-    n->x = x;
-    n->y = y;
-    n->oldnum = 0;
-    n->width = width;
-    n->num = num;
-    n->on = on;
-    n->p = pl;
-}
+extern void STlib_initNum(st_number_t* n, int x, int y, patch_t** pl, int* num, doom_boolean* on, int width);
 
 // 
 // A fairly efficient way to draw a number
 //  based on differences from the old number.
 // Note: worth the trouble?
 //
-void STlib_drawNum(st_number_t* n, doom_boolean refresh)
-{
-    int numdigits = n->width;
-    int num = *n->num;
-
-    int w = SHORT(n->p[0]->width);
-    int h = SHORT(n->p[0]->height);
-    int x = n->x;
-
-    int neg;
-
-    n->oldnum = *n->num;
-
-    neg = num < 0;
-
-    if (neg)
-    {
-        if (numdigits == 2 && num < -9)
-            num = -9;
-        else if (numdigits == 3 && num < -99)
-            num = -99;
-
-        num = -num;
-    }
-
-    // clear the area
-    x = n->x - numdigits * w;
-
-    if (n->y - ST_Y < 0)
-        I_Error("Error: drawNum: n->y - ST_Y < 0");
-
-    V_CopyRect(x, n->y - ST_Y, STLIB_BG, w * numdigits, h, x, n->y, STLIB_FG);
-
-    // if non-number, do not draw it
-    if (num == 1994)
-        return;
-
-    x = n->x;
-
-    // in the special case of 0, you draw 0
-    if (!num)
-        V_DrawPatch(x - w, n->y, STLIB_FG, n->p[0]);
-
-    // draw the new number
-    while (num && numdigits--)
-    {
-        x -= w;
-        V_DrawPatch(x, n->y, STLIB_FG, n->p[num % 10]);
-        num /= 10;
-    }
-
-    // draw a minus sign if necessary
-    if (neg)
-        V_DrawPatch(x - 8, n->y, STLIB_FG, sttminus);
-}
+extern void STlib_drawNum(st_number_t* n, doom_boolean refresh);
+//
+extern void STlib_updateNum(st_number_t* n, doom_boolean refresh);
 
 //
-void STlib_updateNum(st_number_t* n, doom_boolean refresh)
-{
-    if (*n->on) STlib_drawNum(n, refresh);
-}
+extern void STlib_initPercent(st_percent_t* p, int x, int y, patch_t** pl, int* num, doom_boolean* on, patch_t* percent);
 
-//
-void STlib_initPercent(st_percent_t* p, int x, int y, patch_t** pl, int* num, doom_boolean* on, patch_t* percent)
-{
-    STlib_initNum(&p->n, x, y, pl, num, on, 3);
-    p->p = percent;
-}
-
-void STlib_updatePercent(st_percent_t* per, int refresh)
-{
-    if (refresh && *per->n.on)
-        V_DrawPatch(per->n.x, per->n.y, STLIB_FG, per->p);
-
-    STlib_updateNum(&per->n, refresh);
-}
+extern void STlib_updatePercent(st_percent_t* per, int refresh);
 
 void STlib_initMultIcon(st_multicon_t* i, int x, int y, patch_t** il, int* inum, doom_boolean* on)
 {

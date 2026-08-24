@@ -2465,6 +2465,208 @@ module LibDoom
 
   CDoom.snd_music_volume = 15
 
+
+  @@s_music_data : Array(Tuple(String, Int32)) = [
+    { "\0", 0 },
+    { "e1m1", 0 },
+    { "e1m2", 0 },
+    { "e1m3", 0 },
+    { "e1m4", 0 },
+    { "e1m5", 0 },
+    { "e1m6", 0 },
+    { "e1m7", 0 },
+    { "e1m8", 0 },
+    { "e1m9", 0 },
+    { "e2m1", 0 },
+    { "e2m2", 0 },
+    { "e2m3", 0 },
+    { "e2m4", 0 },
+    { "e2m5", 0 },
+    { "e2m6", 0 },
+    { "e2m7", 0 },
+    { "e2m8", 0 },
+    { "e2m9", 0 },
+    { "e3m1", 0 },
+    { "e3m2", 0 },
+    { "e3m3", 0 },
+    { "e3m4", 0 },
+    { "e3m5", 0 },
+    { "e3m6", 0 },
+    { "e3m7", 0 },
+    { "e3m8", 0 },
+    { "e3m9", 0 },
+    { "inter", 0 },
+    { "intro", 0 },
+    { "bunny", 0 },
+    { "victor", 0 },
+    { "introa", 0 },
+    { "runnin", 0 },
+    { "stalks", 0 },
+    { "countd", 0 },
+    { "betwee", 0 },
+    { "doom", 0 },
+    { "the_da", 0 },
+    { "shawn", 0 },
+    { "ddtblu", 0 },
+    { "in_cit", 0 },
+    { "dead", 0 },
+    { "stlks2", 0 },
+    { "theda2", 0 },
+    { "doom2", 0 },
+    { "ddtbl2", 0 },
+    { "runni2", 0 },
+    { "dead2", 0 },
+    { "stlks3", 0 },
+    { "romero", 0 },
+    { "shawn2", 0 },
+    { "messag", 0 },
+    { "count2", 0 },
+    { "ddtbl3", 0 },
+    { "ampie", 0 },
+    { "theda3", 0 },
+    { "adrian", 0 },
+    { "messg2", 0 },
+    { "romer2", 0 },
+    { "tense", 0 },
+    { "shawn3", 0 },
+    { "openin", 0 },
+    { "evil", 0 },
+    { "ultima", 0 },
+    { "read_m", 0 },
+    { "dm2ttl", 0 },
+    { "dm2int", 0 }
+  ]
+  @@s_music : Array(CDoom::Musicinfo) = Array(CDoom::Musicinfo).new(68, CDoom::Musicinfo.new)
+  @@s_music_data.each_with_index do |elm, i|
+    (@@s_music.to_unsafe + i).value.name = elm[0].to_unsafe
+    (@@s_music.to_unsafe + i).value.lumpnum = elm[1]
+  end
+  CDoom.s_music = @@s_music.to_unsafe
+
+  @@s_sfx_data : Array(Tuple(String, Bool, Int32, Pointer(CDoom::Sfxinfo), Int32, Int32, Int32)) = [
+    # S_sfx[0] needs to be a dummy for odd reasons.
+    { "none", false,  0, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "pistol", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "shotgn", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sgcock", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "dshtgn", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "dbopn", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "dbcls", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "dbload", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "plasma", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bfg", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sawup", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sawidl", false, 118, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sawful", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sawhit", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "rlaunc", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "rxplod", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "firsht", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "firxpl", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "pstart", false, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "pstop", false, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "doropn", false, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "dorcls", false, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "stnmov", false, 119, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "swtchn", false, 78, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "swtchx", false, 78, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "plpain", false, 96, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "dmpain", false, 96, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "popain", false, 96, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "vipain", false, 96, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "mnpain", false, 96, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "pepain", false, 96, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "slop", false, 78, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "itemup", true, 78, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "wpnup", true, 78, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "oof", false, 96, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "telept", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "posit1", true, 98, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "posit2", true, 98, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "posit3", true, 98, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bgsit1", true, 98, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bgsit2", true, 98, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sgtsit", true, 98, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "cacsit", true, 98, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "brssit", true, 94, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "cybsit", true, 92, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "spisit", true, 90, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bspsit", true, 90, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "kntsit", true, 90, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "vilsit", true, 90, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "mansit", true, 90, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "pesit", true, 90, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sklatk", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sgtatk", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "skepch", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "vilatk", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "claw", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "skeswg", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "pldeth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "pdiehi", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "podth1", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "podth2", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "podth3", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bgdth1", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bgdth2", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sgtdth", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "cacdth", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "skldth", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "brsdth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "cybdth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "spidth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bspdth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "vildth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "kntdth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "pedth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "skedth", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "posact", true, 120, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bgact", true, 120, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "dmact", true, 120, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bspact", true, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bspwlk", true, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "vilact", true, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "noway", false, 78, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "barexp", false, 60, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "punch", false, 64, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "hoof", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "metal", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "chgun", false, 64, @@s_sfx.to_unsafe + CDoom::Sfxenum::SFX_pistol.value, 150, 0, 0 },
+    { "tink", false, 60, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bdopn", false, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bdcls", false, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "itmbk", false, 100, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "flame", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "flamst", false, 32, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "getpow", false, 60, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bospit", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "boscub", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bossit", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bospn", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "bosdth", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "manatk", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "mandth", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "sssit", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "ssdth", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "keenpn", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "keendt", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "skeact", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "skesit", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "skeatk", false, 70, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 },
+    { "radio", false, 60, Pointer(CDoom::Sfxinfo).null, -1, -1, 0 }
+  ]
+  @@s_sfx : Array(CDoom::Sfxinfo) = Array(CDoom::Sfxinfo).new(109, CDoom::Sfxinfo.new)
+  @@s_sfx_data.each_with_index do |elm, i|
+    (@@s_sfx.to_unsafe + i).value.name = elm[0].to_unsafe
+    (@@s_sfx.to_unsafe + i).value.singularity = elm[1].to_unsafe
+    (@@s_sfx.to_unsafe + i).value.priority = elm[2]
+    (@@s_sfx.to_unsafe + i).value.link = elm[3]
+    (@@s_sfx.to_unsafe + i).value.pitch = elm[4]
+    (@@s_sfx.to_unsafe + i).value.volume = elm[5]
+    (@@s_sfx.to_unsafe + i).value.data = Pointer(Void).new(elm[6])
+    end
+  CDoom.s_sfx = @@s_sfx.to_unsafe
+
   def self.doom_print_impl(str : UInt8*)
     print String.new(str)
   end
@@ -7671,7 +7873,7 @@ module LibDoom
     # Okay, in the less recent channel,
     #  we will handle the new SFX.
     # Set pointer to raw data.
-    CDoom.channels[slot] = (CDoom.s_sfx.to_unsafe + sfxid).value.data.as(UInt8*)
+    CDoom.channels[slot] = (CDoom.s_sfx + sfxid).value.data.as(UInt8*)
     # Set pointer to end of raw data.
     CDoom.channelsend[slot] = CDoom.channels[slot] + CDoom.lengths[sfxid]
 
@@ -8014,13 +8216,13 @@ module LibDoom
     i = 1
     while i < CDoom::Sfxenum::NUMSFX.value
       # Alias? Example is the chaingun sound linked to pistol.
-      if (CDoom.s_sfx.to_unsafe + i).value.link.null?
+      if (CDoom.s_sfx + i).value.link.null?
         # Load data from WAD file.
-        (CDoom.s_sfx.to_unsafe + i).value.data = CDoom.getsfx((CDoom.s_sfx.to_unsafe + i).value.name, CDoom.lengths.to_unsafe + i)
+        (CDoom.s_sfx + i).value.data = CDoom.getsfx((CDoom.s_sfx + i).value.name, CDoom.lengths.to_unsafe + i)
       else
         # Previously loaded already?
-        (CDoom.s_sfx.to_unsafe + i).value.data = (CDoom.s_sfx.to_unsafe + i).value.link.value.data
-        CDoom.lengths[i] = CDoom.lengths[((CDoom.s_sfx.to_unsafe + i).value.link - CDoom.s_sfx.to_unsafe) // sizeof(CDoom::Sfxinfo)]
+        (CDoom.s_sfx + i).value.data = (CDoom.s_sfx + i).value.link.value.data
+        CDoom.lengths[i] = CDoom.lengths[((CDoom.s_sfx + i).value.link - CDoom.s_sfx) // sizeof(CDoom::Sfxinfo)]
       end
 
       i += 1
@@ -21887,9 +22089,577 @@ module LibDoom
     # Note that sounds have not been cached (yet)
     i = 1
     while i < CDoom::Sfxenum::NUMSFX.value
-      (CDoom.s_sfx.to_unsafe + i).value.lumpnum = -1
-      (CDoom.s_sfx.to_unsafe + i).value.usefulness = -1
+      (CDoom.s_sfx + i).value.lumpnum = -1
+      (CDoom.s_sfx + i).value.usefulness = -1
       i += 1
     end
   end
+
+#
+# Per level startup code.
+# Kills playing sounds at start of level,
+#  determines music if any, changes music.
+#
+  def self.s_start
+    # kill all playing sounds at start of level
+    #  (trust me - a good idea)
+    CDoom.num_channels.times do |cnum|
+      CDoom.s_stop_channel(cnum) unless CDoom.channels_s_sound[cnum].sfxinfo.null?
+    end
+
+    # start new music for the level
+CDoom.mus_paused = 0
+
+if CDoom.gamemode == CDoom::GameMode::Commercial
+  mnum = CDoom::Musicenum::MUS_runnin.value + CDoom.gamemap - 1
+else
+  spmus = [
+    # Song - Who? - Where?
+
+            CDoom::Musicenum::MUS_e3m4,        # American        e4m1
+            CDoom::Musicenum::MUS_e3m2,        # Romero        e4m2
+            CDoom::Musicenum::MUS_e3m3,        # Shawn        e4m3
+            CDoom::Musicenum::MUS_e1m5,        # American        e4m4
+            CDoom::Musicenum::MUS_e2m7,        # Tim         e4m5
+            CDoom::Musicenum::MUS_e2m4,        # Romero        e4m6
+            CDoom::Musicenum::MUS_e2m6,        # J.Anderson        e4m7 CHIRON.WAD
+            CDoom::Musicenum::MUS_e2m5,        # Shawn        e4m8
+            CDoom::Musicenum::MUS_e1m9        # Tim                e4m9
+  ]
+  
+  if CDoom.gameepisode < 4
+    mnum = CDoom::Musicenum::MUS_e1m1.value + (CDoom.gameepisode - 1) * 9 + CDoom.gamemap - 1
+  else
+    mnum = spmus[CDoom.gamemap - 1].value
+  end
+  end
+
+  CDoom.s_change_music(mnum, 1)
+
+  CDoom.nextcleanup = 15
+  end
+
+
+
+  def self.s_start_sound_at_volume(origin_p : Void*, sfx_id : LibC::Int, volume : LibC::Int)
+    origin = origin_p.as(CDoom::Mobj*)
+
+    # check for bogus sound #
+    if sfx_id < 1 || sfx_id > CDoom::Sfxenum::NUMSFX.value
+      CDoom.doom_strcpy(CDoom.error_buf, "Error: Bad sfx #: ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(sfx_id, 10))
+      CDoom.i_error(CDoom.error_buf)
+    end
+
+    sfx = CDoom.s_sfx + sfx_id
+
+    # Initialize sound parameters
+    unless sfx.value.link.null?
+      pitch = sfx.value.pitch
+      priority = sfx.value.priority
+      volume += sfx.value.volume
+
+      return if volume < 1
+
+      volume = CDoom.snd_sfx_volume if volume > CDoom.snd_sfx_volume
+    else
+      pitch = CDoom::NORM_PITCH
+      priority = CDoom::NORM_PRIORITY
+    end
+
+    # Check to see if it is audible,
+    #  and if not, modify the params
+    sep = CDoom::NORM_SEP
+    if !origin.null? && origin != CDoom.players[CDoom.consoleplayer].mo
+      rc = CDoom.s_adjust_sound_params(CDoom.players[CDoom.consoleplayer].mo,
+      origin,
+      pointerof(volume),
+      pointerof(sep),
+      pointerof(pitch))
+      
+      if origin.value.x == CDoom.players[CDoom.consoleplayer].mo.value.x &&
+       origin.value.y == CDoom.players[CDoom.consoleplayer].mo.value.y
+       sep = CDoom::NORM_SEP
+      end
+
+      return if rc == 0
+    end
+
+    # hacks to vary the sfx pitches
+    if sfx_id >= CDoom::Sfxenum::SFX_sawup.value &&
+      sfx_id <= CDoom::Sfxenum::SFX_sawhit.value
+      pitch += 8 - (CDoom.m_random & 15)
+
+      if pitch < 0
+        pitch = 0
+      elsif pitch > 255
+        pitch = 255
+      end
+    elsif sfx_id != CDoom::Sfxenum::SFX_itemup.value &&
+      sfx_id != CDoom::Sfxenum::SFX_tink.value
+      pitch += 16 - (CDoom.m_random & 31)
+
+      if pitch < 0
+        pitch = 0
+      elsif pitch > 255
+        pitch = 255
+      end
+    end
+    
+    # kill old sound
+    CDoom.s_stop_sound(origin)
+
+    # try to find a channel
+    cnum = CDoom.s_get_channel(origin, sfx)
+
+    return if cnum < 0
+
+    #
+    # This is supposed to handle the loading/caching.
+    # For some odd reason, the caching is done nearly
+    #  each time the sound is needed?
+    #
+
+    # get lumpnum if necessary
+    sfx.value.lumpnum = CDoom.i_get_sfx_lump_num(sfx) if sfx.value.lumpnum < 0
+
+    # increase the usefulness
+    if sfx.value.usefulness < 0
+      sfx.value.usefulness = 1
+    else
+      sfx.value.usefulness = sfx.value.usefulness + 1
+    end
+
+    # Assigns the handle to one of the channels in the
+    #  mix/output buffer.
+    (CDoom.channels_s_sound + cnum).value.handle = CDoom.i_start_sound(sfx_id,
+    volume,
+    sep,
+    pitch,
+    priority)
+    
+
+
+  end
+
+
+
+  def self.s_start_sound(origin : Void*, sfx_id : LibC::Int)
+    LibDoom.s_start_sound_at_volume(origin, sfx_id, CDoom.snd_sfx_volume)
+  end
+
+
+  def self.s_stop_sound(origin : Void*)
+    CDoom.num_channels.times do |cnum|
+      if !CDoom.channels_s_sound[cnum].sfxinfo.null? && CDoom.channels_s_sound[cnum].origin == origin
+        CDoom.s_stop_channel(cnum)
+        break
+      end
+    end
+  end
+
+  #
+  # Stop and resume music, during game PAUSE.
+  #
+  def self.s_pause_sound
+    if !CDoom.mus_playing_s_sound.null? && CDoom.mus_paused == 0
+      CDoom.i_pause_song(CDoom.mus_playing_s_sound.value.handle)
+      CDoom.mus_paused = 1
+    end
+  end
+
+  def self.s_resume_sound
+    if !CDoom.mus_playing_s_sound.null? && CDoom.mus_paused != 0
+      CDoom.i_resume_song(CDoom.mus_playing_s_sound.value.handle)
+      CDoom.mus_paused = 0
+    end
+  end
+
+
+  #
+  # Updates music & sounds
+  #
+  def self.s_update_sounds(listener_p : Void*)
+    listener = listener_p.as(CDoom::Mobj*)
+
+    CDoom.num_channels.times do |cnum|
+      c = CDoom.channels_s_sound + cnum
+      sfx = c.value.sfxinfo
+
+      unless c.value.sfxinfo.null?
+        if CDoom.i_sound_is_playing(c.value.handle) != 0
+          # initialize parameters
+          volume = CDoom.snd_sfx_volume
+          pitch = CDoom::NORM_PITCH
+          sep = CDoom::NORM_SEP
+
+          unless sfx.value.link.null?
+            pitch = sfx.value.pitch
+            volume += sfx.value.volume
+            if volume < 1
+              CDoom.s_stop_channel(cnum)
+              next
+            elsif volume > CDoom.snd_sfx_volume
+              volume = CDoom.snd_sfx_volume
+            end
+          end
+
+          # check non-local sounds for distance clipping
+                #  or modify their params
+                if !c.value.origin.null? && listener_p != c.value.origin
+                  audible = CDoom.s_adjust_sound_params(listener,
+                  c.value.origin.as(CDoom::Mobj*),
+                  pointerof(volume),
+                  pointerof(sep),
+                  pointerof(pitch))
+
+                  if audible == 0
+                    CDoom.s_stop_channel(cnum)
+                  else
+                    CDoom.i_update_sound_params(c.value.handle, volume, sep, pitch)
+                  end
+                end
+              else
+                # if channel is allocated but sound has stopped,
+                #  free it
+                CDoom.s_stop_channel(cnum)
+              end
+            end
+          end
+  end
+
+
+  def self.s_set_music_volume(volume : LibC::Int)
+    if volume < 0 || volume > 127
+      CDoom.doom_strcpy(CDoom.error_buf, "Error: Attempt to set music volume at ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(volume, 10))
+      CDoom.i_error(CDoom.error_buf)
+    end
+
+    CDoom.i_set_music_volume(127)
+    CDoom.i_set_music_volume(volume)
+    CDoom.snd_music_volume = volume
+  end
+
+  def self.s_set_sfx_volume(volume : LibC::Int)
+    if volume < 0 || volume > 127
+      CDoom.doom_strcpy(CDoom.error_buf, "Error: Attempt to set sfx volume at ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(volume, 10))
+      CDoom.i_error(CDoom.error_buf)
+    end
+
+    CDoom.snd_sfx_volume = volume
+  end
+
+  #
+  # Starts some music with the music id found in sounds.h.
+  #
+  def self.s_start_music(m_id : LibC::Int)
+    CDoom.s_change_music(m_id, 0)
+  end
+
+  def self.s_change_music(musicnum : LibC::Int, looping : LibC::Int)
+    music = CDoom.s_music + musicnum
+
+    if musicnum <= CDoom::Musicenum::MUS_None.value ||
+      musicnum >= CDoom::Musicenum::NUMMUSIC.value
+        CDoom.doom_strcpy(CDoom.error_buf, "Error: Bad music number ")
+      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(musicnum, 10))
+      CDoom.i_error(CDoom.error_buf)      
+    end
+
+    return if CDoom.mus_playing_s_sound == music
+
+    # shutdown old music
+    CDoom.s_stop_music
+
+    # get lumpnum if neccessary
+    if music.value.lumpnum == 0
+      namebuf = Pointer(UInt8).malloc(9)
+      CDoom.doom_strcpy(namebuf, "d_")
+      CDoom.doom_concat(namebuf, music.value.name)
+      music.value.lumpnum = CDoom.w_get_num_for_name(namebuf)
+    end
+
+    # load & register it
+    music.value.data = CDoom.w_cache_lump_num(music.value.lumpnum, CDoom::PU_MUSIC)
+    music.value.handle = CDoom.i_register_song(music.value.data)
+
+    # play it
+    CDoom.i_play_song(music.value.handle, looping)
+
+    CDoom.mus_playing_s_sound = music
+  end
+
+
+  def self.s_stop_music
+    unless CDoom.mus_playing_s_sound.null?
+      if CDoom.mus_paused != 0
+        CDoom.i_resume_song(CDoom.mus_playing_s_sound.value.handle)
+      end
+
+      CDoom.i_stop_song(CDoom.mus_playing_s_sound.value.handle)
+      CDoom.i_unregister_song(CDoom.mus_playing_s_sound.value.handle)
+      z_change_tag(CDoom.mus_playing_s_sound.value.data, CDoom::PU_CACHE)
+
+      CDoom.mus_playing_s_sound.value.data = Pointer(Void).null
+      CDoom.mus_playing_s_sound = Pointer(CDoom::Musicinfo).null
+    end
+  end
+
+  def self.s_stop_channel(cnum : LibC::Int)
+    c = CDoom.channels_s_sound + cnum
+
+    unless c.value.sfxinfo.null?
+      # stop the sound playing
+      CDoom.i_stop_sound(c.value.handle) if CDoom.i_sound_is_playing(c.value.handle) != 0
+
+      # check to see
+        #  if other channels are playing the sound
+        i = 0
+        while i < CDoom.num_channels
+          if cnum != i &&
+            c.value.sfxinfo == CDoom.channels_s_sound[i].sfxinfo
+            break
+          end
+
+          i += 1
+        end
+
+        # degrade usefulness of sound data
+        c.value.sfxinfo.value.usefulness = c.value.sfxinfo.value.usefulness - 1
+
+        c.value.sfxinfo = Pointer(CDoom::Sfxinfo).null
+      end
+
+  end
+
+
+  #
+  # Changes volume, stereo-separation, and pitch variables
+#  from the norm of a sound effect to be played.
+# If the sound is not audible, returns a 0.
+# Otherwise, modifies parameters and returns 1.
+#
+  def self.s_adjust_sound_params(listener : CDoom::Mobj*, source : CDoom::Mobj*, vol : LibC::Int*, sep : LibC::Int*, pitch : LibC::Int*) : LibC::Int
+    # calculate the distance to sound origin
+    #  and clip it if necessary
+    adx = doom_abs(listener.value.x - source.value.x)
+    ady = doom_abs(listener.value.y - source.value.y)
+
+     #From _GG1_ p.428. Appox. eucledian distance fast.
+    approx_dist = adx + ady - ((adx < ady ? adx : ady) >> 1)
+
+    return 0 if CDoom.gamemap != 8 &&
+    approx_dist > CDoom::S_CLIPPING_DIST
+
+    # angle of source to listener
+    angle = CDoom.r_point_to_angle2(listener.value.x,
+    listener.value.y,
+    source.value.x,
+    source.value.y)
+
+    if angle > listener.value.angle
+      angle = angle &- listener.value.angle
+    else
+      angle = angle &+ (0xffffffff &- listener.value.angle)
+    end
+
+    angle >>= CDoom::ANGLETOFINESHIFT
+
+    # stereo separation
+    sep.value = 128 - (CDoom.fixed_mul(CDoom::S_STEREO_SWING, CDoom.finesine[angle]) >> CDoom::FRACBITS)
+
+    # volume calculation
+    if approx_dist < CDoom::S_CLOSE_DIST
+      vol.value = CDoom.snd_sfx_volume
+    elsif CDoom.gamemap == 8
+      approx_dist = CDoom::S_CLIPPING_DIST if approx_dist > CDoom::S_CLIPPING_DIST
+
+      vol.value = 15 + ((CDoom.snd_sfx_volume - 15) *
+      ((CDoom::S_CLIPPING_DIST - approx_dist) >> CDoom::FRACBITS)) // CDoom::S_ATTENUATOR
+    else
+      # distance effect
+      vol.value = (CDoom.snd_sfx_volume *
+      ((CDoom::S_CLIPPING_DIST - approx_dist) >> CDoom::FRACBITS)) // CDoom::S_ATTENUATOR
+    end
+
+    return (vol.value > 0).to_unsafe
+
+  end
+
+
+#
+# If none available, return -1.  Otherwise channel #.
+#
+  def self.s_get_channel(origin : Void*, sfxinfo : CDoom::Sfxinfo*) : LibC::Int
+    # channel number to use
+    cnum = 0
+
+    # Find an open channel
+    while cnum < CDoom.num_channels
+      if CDoom.channels_s_sound[cnum].sfxinfo.null?
+        break
+      elsif !origin.null? && CDoom.channels_s_sound[cnum].origin == origin
+        CDoom.s_stop_channel(cnum)
+        break
+      end
+
+      cnum += 1
+    end
+
+    # None available
+    if cnum == CDoom.num_channels
+      # Look for lower priority
+      cnum = 0
+      while cnum < CDoom.num_channels
+        if CDoom.channels_s_sound[cnum].sfxinfo.value.priority >= sfxinfo.value.priority
+          break
+        end
+
+        cnum += 1
+      end
+
+      if cnum == CDoom.num_channels
+        # FUCK!  No lower priority.  Sorry, Charlie.
+        return -1
+      else
+        # Otherwise, kick out lower priority
+        CDoom.s_stop_channel(cnum)
+      end
+    end
+
+    c = CDoom.channels_s_sound + cnum
+
+    # channel is decided to be cnum.
+    c.value.sfxinfo = sfxinfo
+    c.value.origin = origin
+
+    return cnum
+
+  end
+
+
+
+  def self.stlib_init
+    CDoom.sttminus = CDoom.w_cache_lump_name("STTMINUS", CDoom::PU_STATIC).as(CDoom::Patch*)
+  end
+
+
+  # ?
+  def self.stlib_init_num(n : CDoom::ST_Number*,
+                                     x : LibC::Int,
+                                     y : LibC::Int,
+                                     pl : CDoom::Patch**,
+                                     num : LibC::Int*,
+                                     on : CDoom::DoomBool*,
+                                     width : LibC::Int)
+    n.value.x = x
+    n.value.y = y
+    n.value.oldnum = 0
+    n.value.width = width
+    n.value.num = num
+    n.value.on = on
+    n.value.p = pl
+  end
+
+
+  #
+  # A fairly efficient way to draw a number
+#  based on differences from the old number.
+# Note: worth the trouble?
+#
+    def self.stlib_draw_num(n : CDoom::ST_Number*, refresh : CDoom::DoomBool)
+      numdigits = n.value.width
+      num = n.value.num.value
+
+      w = n.value.p[0].value.width
+      h = n.value.p[0].value.height
+      x = n.value.x
+
+      n.value.oldnum = n.value.num.value
+
+      neg = num < 0
+
+      if neg
+        if numdigits == 2 && num < -9
+          num = -9
+        elsif numdigits == 3 && num < -99
+          num = -99
+        end
+
+        num = -num
+      end
+
+      # clear the area
+      x = n.value.x - numdigits * w
+
+      if n.value.y - CDoom::ST_Y < 0
+        CDoom.i_error("Error: stlib_draw_num: n.value.y - CDoom::ST_Y < 0")
+      end
+
+      CDoom.v_copy_rect(x, n.value.y - CDoom::ST_Y, CDoom::STLIB_BG, w * numdigits, h, x, n.value.y, CDoom::STLIB_FG)
+
+      # if non-number, do not draw it
+      return if num == 1994
+
+      x = n.value.x
+
+      # in the special case of 0, you draw 0
+      if num == 0
+        CDoom.v_draw_patch(x - w, n.value.y, CDoom::STLIB_FG, n.value.p[0])
+      end
+
+      # draw the new number
+      while num != 0 && numdigits != 0
+        numdigits -= 1
+        x -= w
+        CDoom.v_draw_patch(x, n.value.y, CDoom::STLIB_FG, n.value.p[num % 10])
+        num //= 10
+      end
+
+      # draw a minus sign if necessary
+      if neg
+        CDoom.v_draw_patch(x - 8, n.value.y, CDoom::STLIB_FG, CDoom.sttminus)
+      end
+
+      
+
+    end
+
+
+
+  def self.stlib_update_num(n : CDoom::ST_Number*, refresh : CDoom::DoomBool)
+    CDoom.stlib_draw_num(n, refresh) if n.value.on.value != 0
+  end
+
+  
+  def self.stlib_init_percent(p : CDoom::ST_Percent*,
+                                             x : LibC::Int,
+                                             y : LibC::Int,
+                                             pl : CDoom::Patch**,
+                                             num : LibC::Int*,
+                                             on : CDoom::DoomBool*,
+                                             percent : CDoom::Patch*)
+CDoom.stlib_init_num(
+  (p.as(UInt8*) + offsetof(CDoom::ST_Percent, @n)).as(CDoom::ST_Number*),
+  x, y, pl, num, on, 3)
+  p.value.p = percent
+  end
+
+
+  def self.stlib_update_percent(per : CDoom::ST_Percent*, refresh : LibC::Int)
+    if refresh != 0 && per.value.n.on.value != 0
+      CDoom.v_draw_patch(per.value.n.x, per.value.n.y, CDoom::STLIB_FG, per.value.p)
+    end
+
+    CDoom.stlib_update_num(
+      (per.as(UInt8*) + offsetof(CDoom::ST_Percent, @n)).as(CDoom::ST_Number*),
+      refresh
+    )
+
+  end
+
+
+
 end
