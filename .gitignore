@@ -10,3 +10,6 @@ doom.h
 *.dylib
 *.dll
 *.so
+*.lock
+/.vscode/
+*.editorconfig
