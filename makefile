@@ -1,8 +1,11 @@
+CRYSTAL_FLAGS := -DRANGECHECK
+
+
 .PHONY: all clean
 all: libpuredoom.dylib libraylib.dylib libADLMIDI.dylib
 	test -d bin || mkdir bin && \
 	shards install
-	crystal build src/libdoom-cr.cr --link-flags "-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld" -o bin/libdoom
+	crystal build src/libdoom-cr.cr $(CRYSTAL_FLAGS) --link-flags "-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld" -o bin/libdoom
 	mv -f libpuredoom.dylib ./bin
 	cp -f libraylib.dylib ./bin
 	cp -f libADLMIDI.dylib ./bin

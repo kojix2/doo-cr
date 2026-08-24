@@ -2561,107 +2561,484 @@ fun s_init = S_Init(sfx_volume : LibC::Int, music_volume : LibC::Int)
   LibDoom.s_init(sfx_volume, music_volume)
 end
 
-  fun s_start = S_Start
-    LibDoom.s_start
-  end
+fun s_start = S_Start
+  LibDoom.s_start
+end
 
-  fun s_start_sound_at_volume = S_StartSoundAtVolume(origin_p : Void*, sfx_id : LibC::Int, volume : LibC::Int)
-LibDoom.s_start_sound_at_volume(origin_p, sfx_id, volume)
-  end
+fun s_start_sound_at_volume = S_StartSoundAtVolume(origin_p : Void*, sfx_id : LibC::Int, volume : LibC::Int)
+  LibDoom.s_start_sound_at_volume(origin_p, sfx_id, volume)
+end
 
-  fun s_start_sound = S_StartSound(origin : Void*, sfx_id : LibC::Int)
-    LibDoom.s_start_sound(origin, sfx_id)
-  end
+fun s_start_sound = S_StartSound(origin : Void*, sfx_id : LibC::Int)
+  LibDoom.s_start_sound(origin, sfx_id)
+end
 
-  fun s_stop_sound = S_StopSound(origin : Void*)
-LibDoom.s_stop_sound(origin)
-  end
+fun s_stop_sound = S_StopSound(origin : Void*)
+  LibDoom.s_stop_sound(origin)
+end
 
-  fun s_pause_sound = S_PauseSound
-LibDoom.s_pause_sound
-  end
+fun s_pause_sound = S_PauseSound
+  LibDoom.s_pause_sound
+end
 
-  fun s_resume_sound = S_ResumeSound
-LibDoom.s_resume_sound
-  end
+fun s_resume_sound = S_ResumeSound
+  LibDoom.s_resume_sound
+end
 
-  fun s_update_sounds = S_UpdateSounds(listener_p : Void*)
-LibDoom.s_update_sounds(listener_p)
-  end
+fun s_update_sounds = S_UpdateSounds(listener_p : Void*)
+  LibDoom.s_update_sounds(listener_p)
+end
 
-  fun s_set_music_volume = S_SetMusicVolume(volume : LibC::Int)
-LibDoom.s_set_music_volume(volume)
-  end
+fun s_set_music_volume = S_SetMusicVolume(volume : LibC::Int)
+  LibDoom.s_set_music_volume(volume)
+end
 
-  fun s_set_sfx_volume = S_SetSfxVolume(volume : LibC::Int)
-LibDoom.s_set_sfx_volume(volume)
-  end
+fun s_set_sfx_volume = S_SetSfxVolume(volume : LibC::Int)
+  LibDoom.s_set_sfx_volume(volume)
+end
 
-  fun s_start_music = S_StartMusic(music_id : LibC::Int)
-LibDoom.s_start_music(music_id)
-  end
+fun s_start_music = S_StartMusic(music_id : LibC::Int)
+  LibDoom.s_start_music(music_id)
+end
 
-  fun s_change_music = S_ChangeMusic(music_id : LibC::Int, looping : LibC::Int)
-LibDoom.s_change_music(music_id, looping)
-  end
+fun s_change_music = S_ChangeMusic(music_id : LibC::Int, looping : LibC::Int)
+  LibDoom.s_change_music(music_id, looping)
+end
 
-  fun s_stop_music = S_StopMusic
-LibDoom.s_stop_music
-  end
+fun s_stop_music = S_StopMusic
+  LibDoom.s_stop_music
+end
 
-  fun s_stop_channel = S_StopChannel(cnum : LibC::Int)
-LibDoom.s_stop_channel(cnum)
-  end
+fun s_stop_channel = S_StopChannel(cnum : LibC::Int)
+  LibDoom.s_stop_channel(cnum)
+end
 
-  fun s_adjust_sound_params = S_AdjustSoundParams(listener : CDoom::Mobj*, source : CDoom::Mobj*, vol : LibC::Int*, sep : LibC::Int*, pitch : LibC::Int*) : LibC::Int
-LibDoom.s_adjust_sound_params(listener, source, vol, sep, pitch)
-  end
+fun s_adjust_sound_params = S_AdjustSoundParams(listener : CDoom::Mobj*, source : CDoom::Mobj*, vol : LibC::Int*, sep : LibC::Int*, pitch : LibC::Int*) : LibC::Int
+  LibDoom.s_adjust_sound_params(listener, source, vol, sep, pitch)
+end
 
-  fun s_get_channel = S_getChannel(origin : Void*, sfxinfo : CDoom::Sfxinfo*) : LibC::Int
-LibDoom.s_get_channel(origin, sfxinfo)
-  end
+fun s_get_channel = S_getChannel(origin : Void*, sfxinfo : CDoom::Sfxinfo*) : LibC::Int
+  LibDoom.s_get_channel(origin, sfxinfo)
+end
 
-  fun stlib_init = STlib_init
-LibDoom.stlib_init
-  end
+fun stlib_init = STlib_init
+  LibDoom.stlib_init
+end
 
-  fun stlib_init_num = STlib_initNum(n : CDoom::ST_Number*,
-                                     x : LibC::Int,
-                                     y : LibC::Int,
-                                     pl : CDoom::Patch**,
-                                     num : LibC::Int*,
-                                     on : CDoom::DoomBool*,
-                                     width : LibC::Int)
-    LibDoom.stlib_init_num(n,
+fun stlib_init_num = STlib_initNum(n : CDoom::ST_Number*,
+                                   x : LibC::Int,
+                                   y : LibC::Int,
+                                   pl : CDoom::Patch**,
+                                   num : LibC::Int*,
+                                   on : CDoom::DoomBool*,
+                                   width : LibC::Int)
+  LibDoom.stlib_init_num(n,
     x,
     y,
     pl,
     num,
     on,
     width)
+end
+
+fun stlib_draw_num = STlib_drawNum(n : CDoom::ST_Number*, refresh : CDoom::DoomBool)
+  LibDoom.stlib_draw_num(n, refresh)
+end
+
+fun stlib_update_num = STlib_updateNum(n : CDoom::ST_Number*, refresh : CDoom::DoomBool)
+  LibDoom.stlib_update_num(n, refresh)
+end
+
+fun stlib_init_percent = STlib_initPercent(p : CDoom::ST_Percent*,
+                                           x : LibC::Int,
+                                           y : LibC::Int,
+                                           pl : CDoom::Patch**,
+                                           num : LibC::Int*,
+                                           on : CDoom::DoomBool*,
+                                           percent : CDoom::Patch*)
+  LibDoom.stlib_init_percent(p, x, y, pl, num, on, percent)
+end
+
+fun stlib_update_percent = STlib_updatePercent(per : CDoom::ST_Percent*, refresh : LibC::Int)
+  LibDoom.stlib_update_percent(per, refresh)
+end
+
+fun stlib_init_mult_icon = STlib_initMultIcon(mi : CDoom::ST_Multicon*,
+                                              x : LibC::Int,
+                                              y : LibC::Int,
+                                              il : CDoom::Patch**,
+                                              inum : LibC::Int*,
+                                              on : CDoom::DoomBool*)
+  LibDoom.stlib_init_mult_icon(mi, x, y, il, inum, on)
+end
+
+fun stlib_update_mult_icon = STlib_updateMultIcon(mi : CDoom::ST_Multicon*, refresh : CDoom::DoomBool)
+  LibDoom.stlib_update_mult_icon(mi, refresh)
+end
+
+fun stlib_init_bin_icon = STlib_initBinIcon(b : CDoom::ST_Binicon*,
+                                            x : LibC::Int,
+                                            y : LibC::Int,
+                                            i : CDoom::Patch*,
+                                            val : CDoom::DoomBool*,
+                                            on : CDoom::DoomBool*)
+  LibDoom.stlib_init_bin_icon(b, x, y, i, val, on)
+end
+
+fun stlib_update_bin_icon = STlib_updateBinIcon(bi : CDoom::ST_Binicon*, refresh : CDoom::DoomBool)
+  LibDoom.stlib_update_bin_icon(bi, refresh)
+end
+
+fun st_refresh_background = ST_refreshBackground
+  LibDoom.st_refresh_background
+end
+
+fun st_responder = ST_Responder(ev : CDoom::Event*) : CDoom::DoomBool
+  LibDoom.st_responder(ev)
+end
+
+fun st_calc_pain_offset = ST_calcPainOffset : LibC::Int
+  LibDoom.st_calc_pain_offset
+end
+
+fun st_update_face_widget = ST_updateFaceWidget
+  LibDoom.st_update_face_widget
+end
+
+fun st_update_widgets = ST_updateWidgets
+  LibDoom.st_update_widgets
+end
+
+fun st_ticker = ST_Ticker
+  LibDoom.st_ticker
+end
+
+fun st_do_palette_stuff = ST_doPaletteStuff
+  LibDoom.st_do_palette_stuff
+end
+
+fun st_draw_widgets = ST_drawWidgets(refresh : CDoom::DoomBool)
+  LibDoom.st_draw_widgets(refresh)
+end
+
+fun st_do_refresh = ST_doRefresh
+  LibDoom.st_do_refresh
+end
+
+fun st_diff_draw = ST_diffDraw
+  LibDoom.st_diff_draw
+end
+
+fun st_drawer = ST_Drawer(fullscreen : CDoom::DoomBool, refresh : CDoom::DoomBool)
+  LibDoom.st_drawer(fullscreen, refresh)
+end
+
+fun st_load_graphics = ST_loadGraphics
+  LibDoom.st_load_graphics
+end
+
+fun st_load_data = ST_loadData
+  LibDoom.st_load_data
+end
+
+fun st_unload_graphics = ST_unloadGraphics
+  LibDoom.st_unload_graphics
+end
+
+fun st_unload_data = ST_unloadData
+  LibDoom.st_unload_data
+end
+
+fun st_init_data = ST_initData
+  LibDoom.st_init_data
+end
+
+fun st_create_widgets = ST_createWidgets
+  LibDoom.st_create_widgets
+end
+
+fun st_start = ST_Start
+  LibDoom.st_start
+end
+
+fun st_stop = ST_Stop
+  LibDoom.st_stop
+end
+
+fun st_init = ST_Init
+  LibDoom.st_init
+end
+
+fun slope_div = SlopeDiv(num : LibC::UInt, den : LibC::UInt) : LibC::Int
+  LibDoom.slope_div(num, den)
+end
+
+fun v_mark_rect = V_MarkRect(x : LibC::Int,
+                             y : LibC::Int,
+                             width : LibC::Int,
+                             height : LibC::Int)
+  LibDoom.v_mark_rect(x, y, width, height)
+end
+
+fun v_copy_rect = V_CopyRect(srcx : LibC::Int,
+                             srcy : LibC::Int,
+                             srcscrn : LibC::Int,
+                             width : LibC::Int,
+                             height : LibC::Int,
+                             destx : LibC::Int,
+                             desty : LibC::Int,
+                             destscrn : LibC::Int)
+  LibDoom.v_copy_rect(srcx, srcy, srcscrn, width, height, destx, desty, destscrn)
+end
+
+fun v_draw_patch = V_DrawPatch(x : LibC::Int,
+                               y : LibC::Int,
+                               scrn : LibC::Int,
+                               patch : CDoom::Patch*)
+  LibDoom.v_draw_patch(x, y, scrn, patch)
+end
+
+fun v_draw_patch_flipped = V_DrawPatchFlipped(x : LibC::Int, y : LibC::Int, scrn : LibC::Int, patch : CDoom::Patch*)
+  LibDoom.v_draw_patch_flipped(x, y, scrn, patch)
+end
+
+fun v_draw_patch_rect_direct = V_DrawPatchRectDirect(x : LibC::Int, y : LibC::Int, scrn : LibC::Int, patch : CDoom::Patch*, src_x : LibC::Int, src_w : LibC::Int)
+  LibDoom.v_draw_patch_rect_direct(x, y, scrn, patch, src_x, src_w)
+end
+
+fun v_draw_patch_direct = V_DrawPatchDirect(x : LibC::Int,
+                                            y : LibC::Int,
+                                            scrn : LibC::Int,
+                                            patch : CDoom::Patch*)
+  LibDoom.v_draw_patch_direct(x, y, scrn, patch)
+end
+
+fun v_draw_block = V_DrawBlock(x : LibC::Int,
+                               y : LibC::Int,
+                               scrn : LibC::Int,
+                               width : LibC::Int,
+                               height : LibC::Int,
+                               src : CDoom::Byte*)
+  LibDoom.v_draw_block(x, y, scrn, width, height, src)
+end
+
+fun v_get_block = V_GetBlock(x : LibC::Int,
+                             y : LibC::Int,
+                             scrn : LibC::Int,
+                             width : LibC::Int,
+                             height : LibC::Int,
+                             dest : CDoom::Byte*)
+  LibDoom.v_get_block(x, y, scrn, width, height, dest)
+end
+
+fun v_init = V_Init
+  LibDoom.v_init
+end
+
+fun doom_strupr(s : LibC::Char*)
+  LibDoom.doom_strupr(s)
+end
+
+fun extract_file_base = ExtractFileBase(path : LibC::Char*, dest : LibC::Char*)
+  LibDoom.extract_file_base(path, dest)
+end
+
+fun w_add_file = W_AddFile(filename : LibC::Char*)
+  LibDoom.w_add_file(filename)
+end
+
+fun w_reload = W_Reload
+  LibDoom.w_reload
+end
+
+fun w_init_multiple_files = W_InitMultipleFiles(filenames : LibC::Char**)
+  LibDoom.w_init_multiple_files(filenames)
+end
+
+fun w_init_file = W_InitFile(filename : LibC::Char*)
+  LibDoom.w_init_file(filename)
+end
+
+fun w_check_num_for_name = W_CheckNumForName(name : LibC::Char*) : LibC::Int
+  LibDoom.w_check_num_for_name(name)
+end
+
+fun w_get_num_for_name = W_GetNumForName(name : LibC::Char*) : LibC::Int
+  LibDoom.w_get_num_for_name(name)
+end
+
+fun w_lump_length = W_LumpLength(lump : LibC::Int) : LibC::Int
+  LibDoom.w_lump_length(lump)
+end
+
+fun w_read_lump = W_ReadLump(lump : LibC::Int, dest : Void*)
+  LibDoom.w_read_lump(lump, dest)
+end
+
+fun w_cache_lump_num = W_CacheLumpNum(lump : LibC::Int, tag : LibC::Int) : Void*
+  LibDoom.w_cache_lump_num(lump, tag)
+end
+
+fun w_cache_lump_name = W_CacheLumpName(name : LibC::Char*, tag : LibC::Int) : Void*
+  LibDoom.w_cache_lump_name(name, tag)
+end
+
+fun wi_slam_background = WI_slamBackground
+  LibDoom.wi_slam_background
+end
+
+fun wi_draw_lf = WI_drawLF
+  LibDoom.wi_draw_lf
+end
+
+fun wi_draw_el = WI_drawEL
+  LibDoom.wi_draw_el
+end
+
+fun wi_draw_on_lnode = WI_drawOnLnode(n : LibC::Int, c : CDoom::Patch**)
+  LibDoom.wi_draw_on_lnode(n, c)
+end
+
+fun wi_init_animated_back = WI_initAnimatedBack
+  LibDoom.wi_init_animated_back
+end
+
+fun wi_update_animated_back = WI_updateAnimatedBack
+  LibDoom.wi_update_animated_back
+end
+
+fun wi_draw_animated_back = WI_drawAnimatedBack
+  LibDoom.wi_draw_animated_back
+end
+
+fun wi_draw_num = WI_drawNum(x : LibC::Int, y : LibC::Int, n : LibC::Int, digits : LibC::Int) : LibC::Int
+  LibDoom.wi_draw_num(x, y, n, digits)
+end
+
+fun wi_draw_percent = WI_drawPercent(x : LibC::Int, y : LibC::Int, p : LibC::Int)
+  LibDoom.wi_draw_percent(x, y, p)
+end
+
+fun wi_draw_time = WI_drawTime(x : LibC::Int, y : LibC::Int, t : LibC::Int)
+  LibDoom.wi_draw_time(x, y, t)
+end
+
+fun wi_end = WI_End
+  LibDoom.wi_end
+end
+
+fun wi_init_no_state = WI_initNoState
+  LibDoom.wi_init_no_state
+end
+
+fun wi_update_no_state = WI_updateNoState
+  LibDoom.wi_update_no_state
+end
+
+fun wi_init_show_next_loc = WI_initShowNextLoc
+  LibDoom.wi_init_show_next_loc
+end
+
+fun wi_update_show_next_loc = WI_updateShowNextLoc
+  LibDoom.wi_update_show_next_loc
+end
+
+fun wi_draw_show_next_loc = WI_drawShowNextLoc
+  LibDoom.wi_draw_show_next_loc
+end
+
+fun wi_draw_no_state = WI_drawNoState
+  LibDoom.wi_draw_no_state
+end
+
+fun wi_frag_sum = WI_fragSum(playernum : LibC::Int) : LibC::Int
+  LibDoom.wi_frag_sum(playernum)
+end
+
+fun wi_init_deathmatch_stats = WI_initDeathmatchStats
+  LibDoom.wi_init_deathmatch_stats
+end
+
+fun wi_update_deathmatch_stats = WI_updateDeathmatchStats
+  LibDoom.wi_update_deathmatch_stats
+end
+
+fun wi_draw_deathmatch_stats = WI_drawDeathmatchStats
+  LibDoom.wi_draw_deathmatch_stats
+end
+
+fun wi_init_netgame_stats = WI_initNetgameStats
+  LibDoom.wi_init_netgame_stats
+end
+
+fun wi_update_netgame_stats = WI_updateNetgameStats
+  LibDoom.wi_update_netgame_stats
+end
+
+fun wi_draw_netgame_stats = WI_drawNetgameStats
+  LibDoom.wi_draw_netgame_stats
+end
+
+fun wi_init_stats = WI_initStats
+  LibDoom.wi_init_stats
+end
+
+fun wi_update_stats = WI_updateStats
+  LibDoom.wi_update_stats
+end
+
+fun wi_draw_stats = WI_drawStats
+  LibDoom.wi_draw_stats
+end
+
+fun wi_check_for_accelerate = WI_checkForAccelerate
+  LibDoom.wi_check_for_accelerate
+end
+
+fun wi_ticker = WI_Ticker
+  LibDoom.wi_ticker
+end
+
+fun wi_load_data = WI_loadData
+  LibDoom.wi_load_data
+end
+
+fun wi_unload_data = WI_unloadData
+  LibDoom.wi_unload_data
+end
+
+fun wi_drawer = WI_Drawer
+  LibDoom.wi_drawer
+end
+
+fun wi_init_variables = WI_initVariables(wbstartstruct : CDoom::Wbstartstruct*)
+  LibDoom.wi_init_variables(wbstartstruct)
+end
+
+  fun wi_start = WI_Start(wbstartstruct : CDoom::Wbstartstruct*)
+LibDoom.wi_start(wbstartstruct)
   end
 
-    fun stlib_draw_num = STlib_drawNum(n : CDoom::ST_Number*, refresh : CDoom::DoomBool)
-LibDoom.stlib_draw_num(n, refresh)
-    end
-
-  fun stlib_update_num = STlib_updateNum(n : CDoom::ST_Number*, refresh : CDoom::DoomBool)
-    LibDoom.stlib_update_num(n, refresh)
+  fun z_init = Z_Init
+LibDoom.z_init
   end
 
-  fun stlib_init_percent = STlib_initPercent(p : CDoom::ST_Percent*,
-                                             x : LibC::Int,
-                                             y : LibC::Int,
-                                             pl : CDoom::Patch**,
-                                             num : LibC::Int*,
-                                             on : CDoom::DoomBool*,
-                                             percent : CDoom::Patch*)
-                                             LibDoom.stlib_init_percent(p, x, y, pl, num, on, percent)
+  fun z_free = Z_Free(ptr : Void*)
+LibDoom.z_free(ptr)
   end
 
-
-  fun stlib_update_percent = STlib_updatePercent(per : CDoom::ST_Percent*, refresh : LibC::Int)
-    LibDoom.stlib_update_percent(per, refresh)
+  fun z_malloc = Z_Malloc(size : LibC::Int, tag : LibC::Int, ptr : Void*) : Void*
+LibDoom.z_malloc(size, tag, ptr)
   end
 
-  
+  fun z_free_tags = Z_FreeTags(lowtag : LibC::Int, hightag : LibC::Int)
+LibDoom.z_free_tags(lowtag, hightag)
+  end
+
+  fun z_check_heap = Z_CheckHeap
+LibDoom.z_check_heap
+  end
+
+  fun z_change_tag2 = Z_ChangeTag2(ptr : Void*, tag : LibC::Int)
+LibDoom.z_change_tag2(ptr, tag)
+  end

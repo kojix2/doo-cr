@@ -54,6 +54,28 @@ macro c_array_strings(array, *objs)
   {% end %}
 end
 
+macro c_array_cheat(array, *objs)
+  {% for elm, i in objs %}
+    ({{array}}.to_unsafe + {{i}}).value.sequence = {{elm[0]}}
+    ({{array}}.to_unsafe + {{i}}).value.p = {{elm[1]}}
+  {% end %}
+end
+
+macro c_array_animinfo(array, *objs)
+  {% for elm, i in objs %}
+    ({{array}}.to_unsafe + {{i}}).value.type = {{elm[0]}}
+    ({{array}}.to_unsafe + {{i}}).value.period = {{elm[1]}}
+    ({{array}}.to_unsafe + {{i}}).value.nanims = {{elm[2]}}
+    ({{array}}.to_unsafe + {{i}}).value.loc.x = {{elm[3]}}[0]
+    ({{array}}.to_unsafe + {{i}}).value.loc.y = {{elm[3]}}[1]
+    ({{array}}.to_unsafe + {{i}}).value.data1 = {{elm[4]}}
+  {% end %}
+end
+
+macro ng_statsx
+  (32 + CDoom.star.value.width//2 + 32*(CDoom.dofrags == 0).to_unsafe)
+end
+
 macro padsavep
   CDoom.save_p += (4 - (CDoom.save_p.address & 3)) & 3
 end
@@ -1012,7 +1034,7 @@ lib CDoom
   MAXPLAYERS = 4
 
   # State updates, number of tics / second.
-  {% if @top_level.has_constant?("DOOM_FAST_TICK") %}
+  {% if flag?("DOOM_FAST_TICK") %}
     TICKMUL = 2
   {% else %}
     TICKMUL = 1
@@ -1482,7 +1504,7 @@ lib CDoom
   # Language selection (message strings).
   # Use -DFRENCH etc.
 
-  {% if @top_level.has_constant?("FRENCH") %}
+  {% if flag?("FRENCH") %}
     # require "./d_french.cr" # Leave the extra space there, to throw off regex in PureDOOM.h creation
   {% else %}
     # require "./d_englsh.cr"
@@ -3505,14 +3527,14 @@ lib CDoom
 
   # Effective size is 10240.
   FINESINE_SIZE = 5 * FINEANGLES//4
-  $finesine : Fixed[FINESINE_SIZE]
+  $finesine : Fixed*
 
   # Re-use data, is just PI/2 pahse shift.
   $finecosine : Fixed*
 
   # Effective size is 4096.
   FINETANGENT_SIZE = FINEANGLES//2
-  $finetangent : Fixed[FINETANGENT_SIZE]
+  $finetangent : Fixed*
 
   # Binary Angle Measument, BAM.
   ANG45  = 0x20000000
@@ -3530,7 +3552,7 @@ lib CDoom
   # The +1 size is to handle the case when x==y
   #  without additional checking.
   TANTOANGLE_SIZE = SLOPERANGE + 1
-  $tantoangle : Angle[TANTOANGLE_SIZE]
+  $tantoangle : Angle*
 
   # Utility function,
   #  called by R_PointToAngle.
@@ -5821,12 +5843,12 @@ lib CDoom
   fun stlib_update_mult_icon = STlib_updateMultIcon(mi : ST_Multicon*, refresh : DoomBool)
 
   # Binary Icon widget routines
-  fun stlib_init_bin_con = STlib_initBinIcon(b : ST_Binicon*,
-                                             x : LibC::Int,
-                                             y : LibC::Int,
-                                             i : Patch*,
-                                             val : DoomBool*,
-                                             on : DoomBool*)
+  fun stlib_init_bin_icon = STlib_initBinIcon(b : ST_Binicon*,
+                                              x : LibC::Int,
+                                              y : LibC::Int,
+                                              i : Patch*,
+                                              val : DoomBool*,
+                                              on : DoomBool*)
 
   fun stlib_update_bin_icon = STlib_updateBinIcon(bi : ST_Binicon*, refresh : DoomBool)
 
@@ -5973,11 +5995,8 @@ lib CDoom
   fun z_malloc = Z_Malloc(size : LibC::Int, tag : LibC::Int, ptr : Void*) : Void*
   fun z_free = Z_Free(ptr : Void*)
   fun z_free_tags = Z_FreeTags(lowtag : LibC::Int, hightag : LibC::Int)
-  fun z_dump_heap = Z_DumpHeap(lowtag : LibC::Int, hightag : LibC::Int)
-  fun z_file_dump_heap = Z_FileDumpHeap(f : Void*)
   fun z_check_heap = Z_CheckHeap
   fun z_change_tag2 = Z_ChangeTag2(ptr : Void*, tag : LibC::Int)
-  fun z_free_memory = Z_FreeMemory : LibC::Int
 
   struct Memblock
     size : LibC::Int # including the header and possibly tiny fragments
@@ -7931,13 +7950,521 @@ lib CDoom
   fun s_adjust_sound_params = S_AdjustSoundParams(listener : Mobj*, source : Mobj*, vol : LibC::Int*, sep : LibC::Int*, pitch : LibC::Int*) : LibC::Int
   fun s_stop_channel = S_StopChannel(cnum : LibC::Int)
 
-    #
-    # Hack display negative frags.
-#  Loads and store the stminus lump.
-#
-    $sttminus : Patch*
+  #
+  # Hack display negative frags.
+  #  Loads and store the stminus lump.
+  #
+  $sttminus : Patch*
 
-    fun stlib_draw_num = STlib_drawNum(n : ST_Number*, refresh : DoomBool)
+  fun stlib_draw_num = STlib_drawNum(n : ST_Number*, refresh : DoomBool)
 
+  STARTREDPALS   = 1
+  STARTBONUSPALS = 9
+  NUMREDPALS     = 8
+  NUMBONUSPALS   = 4
+  # Radiation suit, green shift.
+  RADIATIONPAL = 13
+
+  # Location of status bar
+  ST_X = 0
+
+  ST_FX = 143
+
+  # Number of status faces.
+  ST_NUMPAINFACES     = 5
+  ST_NUMSTRAIGHTFACES = 3
+  ST_NUMTURNFACES     = 2
+  ST_NUMSPECIALFACES  = 3
+
+  ST_FACESTRIDE = (ST_NUMSTRAIGHTFACES + ST_NUMTURNFACES + ST_NUMSPECIALFACES)
+
+  ST_NUMEXTRAFACES = 2
+
+  ST_NUMFACES = (ST_FACESTRIDE * ST_NUMPAINFACES + ST_NUMEXTRAFACES)
+
+  ST_TURNOFFSET     = (ST_NUMSTRAIGHTFACES)
+  ST_OUCHOFFSET     = (ST_TURNOFFSET + ST_NUMTURNFACES)
+  ST_EVILGRINOFFSET = (ST_OUCHOFFSET + 1)
+  ST_RAMPAGEOFFSET  = (ST_EVILGRINOFFSET + 1)
+  ST_GODFACE        = (ST_NUMPAINFACES*ST_FACESTRIDE)
+  ST_DEADFACE       = (ST_GODFACE + 1)
+
+  ST_FACESX = 143
+  ST_FACESY = 168
+
+  ST_EVILGRINCOUNT     = (2*TICRATE)
+  ST_STRAIGHTFACECOUNT = (TICRATE/2)
+  ST_TURNCOUNT         = (1*TICRATE)
+  ST_OUCHCOUNT         = (1*TICRATE)
+  ST_RAMPAGEDELAY      = (2*TICRATE)
+
+  ST_MUCHPAIN = 20
+
+  # Location and size of statistics,
+  # justified according to widget type.
+  # Problem is, within which space? STbar? Screen?
+  # Note: this could be read in by a lump.
+  #       Problem is, is the stuff rendered
+  #       into a buffer,
+  #       or into the frame buffer?
+
+  # AMMO number pos.
+  ST_AMMOWIDTH =   3
+  ST_AMMOX     =  44
+  ST_AMMOY     = 171
+
+  # HEALTH number pos.
+  ST_HEALTHX =  90
+  ST_HEALTHY = 171
+
+  # Weapon pos.
+  ST_ARMSX      = 111
+  ST_ARMSY      = 172
+  ST_ARMSBGX    = 104
+  ST_ARMSBGY    = 168
+  ST_ARMSXSPACE =  12
+  ST_ARMSYSPACE =  10
+
+  # Frags pos.
+  ST_FRAGSX     = 138
+  ST_FRAGSY     = 171
+  ST_FRAGSWIDTH =   2
+
+  # ARMOR number pos.
+  ST_ARMORX = 221
+  ST_ARMORY = 171
+
+  # Key icon positions.
+  ST_KEY0WIDTH =   8
+  ST_KEY0X     = 239
+  ST_KEY0Y     = 171
+  ST_KEY1WIDTH = ST_KEY0WIDTH
+  ST_KEY1X     = 239
+  ST_KEY1Y     = 181
+  ST_KEY2WIDTH = ST_KEY0WIDTH
+  ST_KEY2X     = 239
+  ST_KEY2Y     = 191
+
+  # Ammunition counter.
+  ST_AMMO0WIDTH =   3
+  ST_AMMO0X     = 288
+  ST_AMMO0Y     = 173
+  ST_AMMO1WIDTH = ST_AMMO0WIDTH
+  ST_AMMO1X     = 288
+  ST_AMMO1Y     = 179
+  ST_AMMO2WIDTH = ST_AMMO0WIDTH
+  ST_AMMO2X     = 288
+  ST_AMMO2Y     = 191
+  ST_AMMO3WIDTH = ST_AMMO0WIDTH
+  ST_AMMO3X     = 288
+  ST_AMMO3Y     = 185
+
+  # Indicate maximum ammunition.
+  # Only needed because backpack exists.
+  ST_MAXAMMO0WIDTH =   3
+  ST_MAXAMMO0X     = 314
+  ST_MAXAMMO0Y     = 173
+  ST_MAXAMMO1WIDTH = ST_MAXAMMO0WIDTH
+  ST_MAXAMMO1X     = 314
+  ST_MAXAMMO1Y     = 179
+  ST_MAXAMMO2WIDTH = ST_MAXAMMO0WIDTH
+  ST_MAXAMMO2X     = 314
+  ST_MAXAMMO2Y     = 191
+  ST_MAXAMMO3WIDTH = ST_MAXAMMO0WIDTH
+  ST_MAXAMMO3X     = 314
+  ST_MAXAMMO3Y     = 185
+
+  # Dimensions given in characters.
+  ST_MSGWIDTH = 52
+
+  $plyr : Player*                                            # main player in game
+  $st_firsttime : DoomBool                                   # ST_Start() has just been called
+  $veryfirsttime : LibC::Int                                 # used to execute ST_Init() only once
+  $lu_palette : LibC::Int                                    # lump number for PLAYPAL
+  $st_clock : LibC::UInt                                     # used for timing
+  $st_msgcounter : LibC::Int                                 # used for making messages go away
+  $st_chatstate : ST_Chatstateenum                           # used when in chat
+  $st_gamestate : ST_Statenum                                # whether in automap or first-person
+  $st_statusbaron : DoomBool                                 # whether left-side main status bar is active
+  $st_chat : DoomBool                                        # whether status bar chat is active
+  $st_oldchat : DoomBool                                     # value of st_chat before message popped up
+  $st_cursoron : DoomBool                                    # whether chat window has the cursor on
+  $st_notdeathmatch : DoomBool                               # !deathmatch
+  $st_armson : DoomBool                                      # !deathmatch && st_statusbaron
+  $st_fragson : DoomBool                                     # !deathmatch
+  $sbar : Patch*                                             # main bar left
+  $tallnum : Patch*[10]                                      # 0-9, tall numbers
+  $tallpercent : Patch*                                      # tall % sign
+  $shortnum : Patch*[10]                                     # 0-9, short, yellow (,different!) numbers
+  $keys : Patch*[CDoom::Card::NUMCARDS]                      # 3 key-cards, 3 skulls
+  $faces : Patch*[ST_NUMFACES]                               # face status patches
+  $faceback : Patch*                                         # face background
+  $armsbg : Patch*                                           # main bar right
+  $arms : Patch*[2][6]                                       # weapon ownership patches
+  $w_ready : ST_Number                                       # ready-weapon widget
+  $w_frags : ST_Number                                       # in deathmatch only, summary of frags stats
+  $w_health : ST_Percent                                     # health widget
+  $w_armsbg : ST_Binicon                                     # arms background
+  $w_arms : ST_Multicon[6]                                   # weapon ownership widgets
+  $w_faces : ST_Multicon                                     # face status widget
+  $w_keyboxes : ST_Multicon[3]                               # keycard widgets
+  $w_armor : ST_Percent                                      # armor widget
+  $w_ammo : ST_Number[4]                                     # ammo widgets
+  $w_maxammo : ST_Number[4]                                  # max ammo widgets
+  $st_fragscount : LibC::Int                                 # number of frags so far in deathmatch
+  $st_oldhealth : LibC::Int                                  # used to use appopriately pained face
+  $oldweaponsowned : DoomBool[CDoom::Weapontype::NUMWEAPONS] # used for evil grin
+  $st_facecount : LibC::Int                                  # count until face changes
+  $st_faceindex : LibC::Int                                  # current face index, used by w_faces
+  $keyboxes : LibC::Int[3]                                   # holds key-type for each key box on bar
+  $st_randomnumber : LibC::Int                               # a random number per tick
+  $st_palette : LibC::Int
+  $st_stopped : DoomBool
+
+  # Massive bunches of cheat shit
+  #  to keep it from being easy to figure them out.
+  # Yeah, right...
+  $cheat_mus_seq : LibC::UChar[9]
+  $cheat_choppers_seq : LibC::UChar[11]
+  $cheat_god_seq : LibC::UChar[6]
+  $cheat_ammo_seq : LibC::UChar[6]
+  $cheat_ammonokey_seq : LibC::UChar[5]
+
+  # Smashing Pumpkins Into Samml Piles Of Putried Debris.
+  $cheat_noclip_seq : LibC::UChar[11]
+
+  $cheat_commercial_noclip_seq : LibC::UChar[7]
+  $cheat_powerup_seq : LibC::UChar[10][7]
+
+  $cheat_clev_seq : LibC::UChar[10]
+
+  # my position cheat
+  $cheat_mypos_seq : LibC::UChar[8]
+
+  # Now what?
+  $cheat_mus : Cheatseq
+  $cheat_god : Cheatseq
+  $cheat_ammo : Cheatseq
+  $cheat_ammonokey : Cheatseq
+  $cheat_noclip : Cheatseq
+  $cheat_commercial_noclip : Cheatseq
+
+  $cheat_powerup : Cheatseq[7]
+
+  $cheat_choppers : Cheatseq
+  $cheat_clev : Cheatseq
+  $cheat_mypos : Cheatseq
+
+  fun st_stop = ST_Stop
+
+  fun st_refresh_background = ST_refreshBackground
+
+  fun st_calc_pain_offset = ST_calcPainOffset : LibC::Int
+  fun st_update_face_widget = ST_updateFaceWidget
+  fun st_update_widgets = ST_updateWidgets
+  fun st_do_palette_stuff = ST_doPaletteStuff
+  fun st_draw_widgets = ST_drawWidgets(refresh : DoomBool)
+  fun st_do_refresh = ST_doRefresh
+  fun st_diff_draw = ST_diffDraw
+  fun st_load_graphics = ST_loadGraphics
+  fun st_load_data = ST_loadData
+  fun st_unload_graphics = ST_unloadGraphics
+  fun st_unload_data = ST_unloadData
+  fun st_init_data = ST_initData
+  fun st_create_widgets = ST_createWidgets
+
+  $reloadlump : LibC::Int
+  $reloadname : LibC::Char*
+  $info : LibC::Int[10][2500]
+  $profilecount : LibC::Int
+
+  fun doom_strupr(s : LibC::Char*)
+
+  fun extract_file_base = ExtractFileBase(path : LibC::Char*, dest : LibC::Char*)
+
+  fun w_add_file = W_AddFile(filename : LibC::Char*)
+
+  union Name8
+    s : LibC::Char[9]
+    x : LibC::Int[2]
+  end
+
+  NUMEPISODES = 4
+  NUMMAPS     = 9
+
+  # GLOBAL LOCATIONS
+  WI_TITLEY   =  2
+  WI_SPACINGY = 33
+
+  # SINGPLE-PLAYER STUFF
+  SP_STATSX = 50
+  SP_STATSY = 50
+
+  SP_TIMEX = 16
+  SP_TIMEY = (SCREENHEIGHT - 32)
+
+  # NET GAME STUFF
+  NG_STATSY = 50
+
+  NG_SPACINGX = 64
+
+  # DEATHMATCH STUFF
+  DM_MATRIXX = 42
+  DM_MATRIXY = 68
+
+  DM_SPACINGX = 40
+
+  DM_TOTALSX = 269
+
+  DM_KILLERSX =  10
+  DM_KILLERSY = 100
+  DM_VICTIMSX =   5
+  DM_VICTIMSY =  50
+
+  # States for single-player
+  SP_KILLS  = 0
+  SP_ITEMS  = 2
+  SP_SECRET = 4
+  SP_FRAGS  = 6
+  SP_TIME   = 8
+  SP_PAR    = ST_TIME
+
+  SP_PAUSE = 1
+
+  # in seconds
+  SHOWNEXTLOCDELAY = 4
+
+  enum Animenum
+    Always
+    Random
+    Level
+  end
+
+  struct Point
+    x : LibC::Int
+    y : LibC::Int
+  end
+
+  #
+  # Animation.
+  # There is another anim_t used in p_spec.
+  #
+  struct AnimWIStuff
+    type : Animenum
+
+    # period in tics between animations
+    period : LibC::Int
+
+    # number of animation frames
+    nanims : LibC::Int
+
+    # location of animation
+    loc : Point
+
+    # ALWAYS: n/a,
+    # RANDOM: period deviation (<256),
+    # LEVEL: level
+    data1 : LibC::Int
+
+    # ALWAYS: n/a,
+    # RANDOM: random base period,
+    # LEVEL: n/a
+    data2 : LibC::Int
+
+    # actual graphics for frames of animations
+    p : Patch*[3]
+
+    # following must be initialized to zero before use!
+
+    # next value of bcnt (used in conjunction with period)
+    nexttic : LibC::Int
+
+    # last drawn animation frame
+    lastdrawn : LibC::Int
+
+    # next frame number to animate
+    ctr : LibC::Int
+
+    # used by RANDOM and LEVEL when animating
+    state : LibC::Int
+  end
+
+  $lnodes : Point*[NUMEPISODES]
+
+  $epsd0animinfo : AnimWIStuff[10]
+  $epsd1animinfo : AnimWIStuff[9]
+  $epsd2animinfo : AnimWIStuff[6]
+
+  $numanims = NUMANIMS : LibC::Int[NUMEPISODES]
+
+  $anims_wi_stuff : AnimWIStuff*[NUMEPISODES]
+
+  #
+  # GENERAL DATA
+  #
+
+  #
+  # Locally used stuff.
+  #
+
+  # used to accelerate or skip a stage
+  $acceleratestage : LibC::Int
+
+  # wbs->pnum
+  $me : LibC::Int
+
+  # specifies current state
+  $state : Stateenum
+
+  # contains information passed into intermission
+  $wbs : Wbstartstruct*
+
+  $plrs : Wbplayerstruct* # wbs->plyr[]
+
+  # used for general timing
+  $cnt : LibC::Int
+
+  # used for timing of background animation
+  $bcnt : LibC::Int
+
+  # signals to refresh everything for one frame
+  $firstrefresh : LibC::Int
+
+  $cnt_kills : LibC::Int[MAXPLAYERS]
+  $cnt_items : LibC::Int[MAXPLAYERS]
+  $cnt_secret : LibC::Int[MAXPLAYERS]
+  $cnt_time : LibC::Int
+  $cnt_par : LibC::Int
+  $cnt_pause : LibC::Int
+
+  # # of commercial levels
+  $numcmaps = NUMCMAPS : LibC::Int
+
+  #
+  # GRAPHICS
+  #
+
+  # background (map of levels).
+  $bg : Patch*
+
+  # You Are Here graphic
+  $yah : Patch*[2]
+
+  # splat
+  $splat : Patch*
+
+  # %, : graphics
+  $percent : Patch*
+  $colon : Patch*
+
+  # 0-9 graphic
+  $num : Patch*[10]
+
+  # minus sign
+  $wiminus : Patch*
+
+  # "Finished!" graphics
+  $finished : Patch*
+
+  # "Entering" graphic
+  $entering : Patch*
+
+  # "secret"
+  $sp_secret : Patch*
+
+  # "Kills", "Scrt", "Items", "Frags"
+  $kills : Patch*
+  $secret : Patch*
+  $items : Patch*
+  $frags : Patch*
+
+  # Time sucks.
+  $time_patch : Patch*
+  $par : Patch*
+  $sucks : Patch*
+
+  # "killers", "victims"
+  $killers : Patch*
+  $victims : Patch*
+
+  # "Total", your face, your dead face
+  $total : Patch*
+  $star : Patch*
+  $bstar : Patch*
+
+  # "red P[1..MAXPLAYERS]"
+  $p : Patch*[MAXPLAYERS]
+
+  # "gray P[1..MAXPLAYERS]"
+  $bp : Patch*[MAXPLAYERS]
+
+  # Name graphics of each level (centered)
+  $lnames : Patch**
+
+  $snl_pointeron : DoomBool
+  $dm_state : LibC::Int
+  $dm_frags : LibC::Int[MAXPLAYERS][MAXPLAYERS]
+  $dm_totals : LibC::Int[MAXPLAYERS]
+  $cnt_frags : LibC::Int[MAXPLAYERS]
+  $dofrags : LibC::Int
+  $ng_state : LibC::Int
+  $sp_state : LibC::Int
+
+  #
+  # CODE
+  #
+
+  fun wi_slam_background = WI_slamBackground
+
+  fun wi_draw_lf = WI_drawLF
+  fun wi_draw_el = WI_drawEL
+  fun wi_draw_on_lnode = WI_drawOnLnode(n : LibC::Int, c : Patch**)
+  fun wi_init_animated_back = WI_initAnimatedBack
+  fun wi_update_animated_back = WI_updateAnimatedBack
+  fun wi_draw_animated_back = WI_drawAnimatedBack
+
+  fun wi_draw_num = WI_drawNum(x : LibC::Int, y : LibC::Int, n : LibC::Int, digits : LibC::Int) : LibC::Int
+  fun wi_draw_percent = WI_drawPercent(x : LibC::Int, y : LibC::Int, p : LibC::Int)
+  fun wi_draw_time = WI_drawTime(x : LibC::Int, y : LibC::Int, t : LibC::Int)
+  fun wi_unload_data = WI_unloadData
+  fun wi_end = WI_End
+
+  fun wi_init_no_state = WI_initNoState
+  fun wi_update_no_state = WI_updateNoState
+  fun wi_init_show_next_loc = WI_initShowNextLoc
+  fun wi_update_show_next_loc = WI_updateShowNextLoc
+  fun wi_draw_show_next_loc = WI_drawShowNextLoc
+  fun wi_draw_no_state = WI_drawNoState
+  fun wi_frag_sum = WI_fragSum(playernum : LibC::Int) : LibC::Int
+  fun wi_init_deathmatch_stats = WI_initDeathmatchStats
+  fun wi_update_deathmatch_stats = WI_updateDeathmatchStats
+  fun wi_draw_deathmatch_stats = WI_drawDeathmatchStats
+  fun wi_init_netgame_stats = WI_initNetgameStats
+  fun wi_update_netgame_stats = WI_updateNetgameStats
+  fun wi_draw_netgame_stats = WI_drawNetgameStats
+  fun wi_init_stats = WI_initStats
+  fun wi_update_stats = WI_updateStats
+  fun wi_draw_stats = WI_drawStats
+  fun wi_check_for_accelerate = WI_checkForAccelerate
+  fun wi_load_data = WI_loadData
+  fun wi_init_variables = WI_initVariables(wbstartstruct : Wbstartstruct*)
+
+    ZONEID = 0x1d4a11
+    MINFRAGMENT = 64
+    MEM_ALIGN = sizeof(Void*)
+
+    struct Memzone
+      # total bytes malloced, including header
+      size : LibC::Int
+
+      # start / end cap for linked list
+      blocklist : Memblock
+
+      rover : Memblock*
+    end
+
+    $mainzone : Memzone*
+
+    fun z_clear_zone = Z_ClearZone(zone : Memzone*)
 
 end
