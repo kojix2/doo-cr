@@ -26,3 +26,4 @@
 -- Added plutonia tnt pack detection for version printing and stuff
 -- Added -iwad to add an iwad
 -- Added -fwad to add a wad as an iwad, even if its a pwad (-forcedwad)
+-- Made ssg activate the arms hud number '3' if owned before shotgun

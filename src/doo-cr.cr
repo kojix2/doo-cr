@@ -20,17 +20,17 @@ MIDI_BANK        = 16
 RANGECHECK = true
 
 macro poll_key(doomkey, raylibkey)
-  CDoom.doom_key_up(CDoom::DoomKey::{{doomkey}}) if Raylib::KeyboardKey::{{raylibkey}}.released?
-  CDoom.doom_key_down(CDoom::DoomKey::{{doomkey}}) if Raylib::KeyboardKey::{{raylibkey}}.pressed?
+  LibDoom.doom_key_up(CDoom::DoomKey::{{doomkey}}) if Raylib::KeyboardKey::{{raylibkey}}.released?
+  LibDoom.doom_key_down(CDoom::DoomKey::{{doomkey}}) if Raylib::KeyboardKey::{{raylibkey}}.pressed?
 end
 
 macro poll_button(doombutton, raylibbutton)
-  CDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if Raylib::MouseButton::{{raylibbutton}}.released?
-  CDoom.doom_button_down(CDoom::DoomButton::{{doombutton}}) if Raylib::MouseButton::{{raylibbutton}}.pressed?
+  LibDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if Raylib::MouseButton::{{raylibbutton}}.released?
+  LibDoom.doom_button_down(CDoom::DoomButton::{{doombutton}}) if Raylib::MouseButton::{{raylibbutton}}.pressed?
 end
 
 def run
-  CDoom.doom_init(ARGC_UNSAFE, ARGV_UNSAFE, 0)
+  LibDoom.doom_init(ARGC_UNSAFE, ARGV_UNSAFE, 0)
 
   until Raylib.close_window?
     poll_key(TAB, Tab)
@@ -113,9 +113,9 @@ def run
     poll_button(MIDDLE, Middle)
 
     delta = Raylib.get_mouse_delta * 2
-    CDoom.doom_mouse_move(delta.x, delta.y)
+    LibDoom.doom_mouse_move(delta.x.to_i32, delta.y.to_i32)
 
-    CDoom.doom_update
+    LibDoom.doom_update
     LibDoom.doom_draw
   end
   LibDoom.i_quit

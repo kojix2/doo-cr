@@ -6048,7 +6048,7 @@ module LibDoom
     (@@s_sfx.to_unsafe + i).value.link = elm[3]
     (@@s_sfx.to_unsafe + i).value.pitch = elm[4]
     (@@s_sfx.to_unsafe + i).value.volume = elm[5]
-    (@@s_sfx.to_unsafe + i).value.data = Pointer(Void).new(elm[6])
+    (@@s_sfx.to_unsafe + i).value.data = Pointer(Void).new(elm[6].to_u64!)
   end
   CDoom.s_sfx = @@s_sfx.to_unsafe
 

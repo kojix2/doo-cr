@@ -11801,7 +11801,7 @@ module LibDoom
   def self.p_set_mobj_state(mobj : CDoom::Mobj*, state : CDoom::Statenum) : CDoom::DoomBool
     loop do
       if state == CDoom::Statenum::S_NULL
-        mobj.value.state = Pointer(CDoom::State).new(CDoom::Statenum::S_NULL.value)
+        mobj.value.state = Pointer(CDoom::State).new(CDoom::Statenum::S_NULL.value.to_u64!)
         CDoom.p_remove_mobj(mobj)
         return 0
       end
@@ -13255,7 +13255,7 @@ module LibDoom
       CDoom::Psprnum::NUMPSPRITES.value.times do |j|
         if !dest.value.psprites[j].state.null?
           (dest.value.psprites.to_unsafe + j).value.state =
-            Pointer(CDoom::State).new((dest.value.psprites[j].state - CDoom.states).to_i64)
+            Pointer(CDoom::State).new((dest.value.psprites[j].state - CDoom.states).to_u64!)
         end
       end
     end
@@ -13406,9 +13406,9 @@ module LibDoom
         mobj = CDoom.save_p.as(CDoom::Mobj*)
         CDoom.doom_memcpy(mobj, th, sizeof(CDoom::Mobj))
         CDoom.save_p += sizeof(CDoom::Mobj)
-        mobj.value.state = Pointer(CDoom::State).new(mobj.value.state - CDoom.states)
+        mobj.value.state = Pointer(CDoom::State).new((mobj.value.state - CDoom.states).to_u64!)
 
-        mobj.value.player = Pointer(CDoom::Player).new((mobj.value.player - CDoom.players.to_unsafe) + 1) if !mobj.value.player.null?
+        mobj.value.player = Pointer(CDoom::Player).new(((mobj.value.player - CDoom.players.to_unsafe) + 1).to_u64!) if !mobj.value.player.null?
       end
 
       th = th.value.next
@@ -13493,7 +13493,7 @@ module LibDoom
           ceiling = CDoom.save_p.as(CDoom::Ceiling*)
           CDoom.doom_memcpy(ceiling, th, sizeof(CDoom::Ceiling))
           CDoom.save_p += sizeof(CDoom::Ceiling)
-          ceiling.value.sector = Pointer(CDoom::Sector).new(ceiling.value.sector - CDoom.sectors)
+          ceiling.value.sector = Pointer(CDoom::Sector).new((ceiling.value.sector - CDoom.sectors).to_u64!)
         end
         th = th.value.next
         next
@@ -13506,7 +13506,7 @@ module LibDoom
         ceiling = CDoom.save_p.as(CDoom::Ceiling*)
         CDoom.doom_memcpy(ceiling, th, sizeof(CDoom::Ceiling))
         CDoom.save_p += sizeof(CDoom::Ceiling)
-        ceiling.value.sector = Pointer(CDoom::Sector).new(ceiling.value.sector - CDoom.sectors)
+        ceiling.value.sector = Pointer(CDoom::Sector).new((ceiling.value.sector - CDoom.sectors).to_u64!)
         th = th.value.next
         next
       end
@@ -13518,7 +13518,7 @@ module LibDoom
         door = CDoom.save_p.as(CDoom::Vldoor*)
         CDoom.doom_memcpy(door, th, sizeof(CDoom::Vldoor))
         CDoom.save_p += sizeof(CDoom::Vldoor)
-        door.value.sector = Pointer(CDoom::Sector).new(door.value.sector - CDoom.sectors)
+        door.value.sector = Pointer(CDoom::Sector).new((door.value.sector - CDoom.sectors).to_u64!)
         th = th.value.next
         next
       end
@@ -13530,7 +13530,7 @@ module LibDoom
         floor = CDoom.save_p.as(CDoom::Floormove*)
         CDoom.doom_memcpy(floor, th, sizeof(CDoom::Floormove))
         CDoom.save_p += sizeof(CDoom::Floormove)
-        floor.value.sector = Pointer(CDoom::Sector).new(floor.value.sector - CDoom.sectors)
+        floor.value.sector = Pointer(CDoom::Sector).new((floor.value.sector - CDoom.sectors).to_u64!)
         th = th.value.next
         next
       end
@@ -13542,7 +13542,7 @@ module LibDoom
         plat = CDoom.save_p.as(CDoom::Plat*)
         CDoom.doom_memcpy(plat, th, sizeof(CDoom::Plat))
         CDoom.save_p += sizeof(CDoom::Plat)
-        plat.value.sector = Pointer(CDoom::Sector).new(plat.value.sector - CDoom.sectors)
+        plat.value.sector = Pointer(CDoom::Sector).new((plat.value.sector - CDoom.sectors).to_u64!)
         th = th.value.next
         next
       end
@@ -13554,7 +13554,7 @@ module LibDoom
         flash = CDoom.save_p.as(CDoom::Lightflash*)
         CDoom.doom_memcpy(flash, th, sizeof(CDoom::Lightflash))
         CDoom.save_p += sizeof(CDoom::Lightflash)
-        flash.value.sector = Pointer(CDoom::Sector).new(flash.value.sector - CDoom.sectors)
+        flash.value.sector = Pointer(CDoom::Sector).new((flash.value.sector - CDoom.sectors).to_u64!)
         th = th.value.next
         next
       end
@@ -13566,7 +13566,7 @@ module LibDoom
         strobe = CDoom.save_p.as(CDoom::Strobe*)
         CDoom.doom_memcpy(strobe, th, sizeof(CDoom::Strobe))
         CDoom.save_p += sizeof(CDoom::Strobe)
-        strobe.value.sector = Pointer(CDoom::Sector).new(strobe.value.sector - CDoom.sectors)
+        strobe.value.sector = Pointer(CDoom::Sector).new((strobe.value.sector - CDoom.sectors).to_u64!)
         th = th.value.next
         next
       end
@@ -13578,7 +13578,7 @@ module LibDoom
         glow = CDoom.save_p.as(CDoom::Glow*)
         CDoom.doom_memcpy(glow, th, sizeof(CDoom::Glow))
         CDoom.save_p += sizeof(CDoom::Glow)
-        glow.value.sector = Pointer(CDoom::Sector).new(glow.value.sector - CDoom.sectors)
+        glow.value.sector = Pointer(CDoom::Sector).new((glow.value.sector - CDoom.sectors).to_u64!)
         th = th.value.next
         next
       end
@@ -19764,6 +19764,13 @@ module LibDoom
 
   def self.stlib_update_mult_icon(mi : CDoom::ST_Multicon*,
                                   refresh : CDoom::DoomBool)
+    # Lazy ssg number hack to use whichever shotgun is active
+    if CDoom.gamemode == CDoom::GameMode::Commercial &&
+       mi.value.inum == CDoom.plyr.value.weaponowned.to_unsafe + CDoom::Weapontype::Shotgun.value &&
+       mi.value.inum.value < (ssgnum = (CDoom.plyr.value.weaponowned.to_unsafe + CDoom::Weapontype::Supershotgun.value)).value
+      mi.value.inum = ssgnum
+    end
+
     if mi.value.on.value != 0 &&
        (mi.value.oldinum != mi.value.inum.value || refresh != 0) &&
        mi.value.inum.value != -1
@@ -22491,7 +22498,7 @@ module LibDoom
       end
 
       # mark as in use, but unowned
-      base.value.user = Pointer(Void*).new(2)
+      base.value.user = Pointer(Void*).new(2_u64)
     end
     base.value.tag = tag
 
