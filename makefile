@@ -19,19 +19,22 @@ ifeq ($(DETECTED_OS),Windows)
 	LIB_EXT := dll
 	RLMAKE := cmake --build . --config Release
 	AMMAKE := cmake --build .
+	RLOUT := libraylib.dll
+	AMOUT := libADLMIDI.dll
+	CHANGE_LIB_NAMES := none
 else ifeq ($(DETECTED_OS),Linux)
 	LIB_EXT := so
 	RLMAKE := make -Bj4 SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
 	AMMAKE := make
-	RLOUT := libraylib.6.0.0.
-	AMOUT := libADLMIDI.1.6.2.
-	CHANGE_LIB_NAMES := patchelf --replace-needed libADLMIDI.1.$(LIB_EXT) ./libADLMIDI.$(LIB_EXT) ./bin/$(EXEC) && patchelf --replace-needed ibraylib.600.$(LIB_EXT) ./libraylib.$(LIB_EXT) ./bin/$(EXEC)
+	RLOUT := libraylib.so.6.0.0
+	AMOUT := libADLMIDI.so.1.6.3
+	CHANGE_LIB_NAMES := patchelf --replace-needed libADLMIDI.$(LIB_EXT).1 ./libADLMIDI.$(LIB_EXT) ./bin/$(EXEC) && patchelf --replace-needed libraylib.$(LIB_EXT).600 ./libraylib.$(LIB_EXT) ./bin/$(EXEC) && patchelf --replace-needed libcvars.$(LIB_EXT) ./libcvars.$(LIB_EXT) ./bin/$(EXEC)
 else ifeq ($(DETECTED_OS),macOS)
 	LIB_EXT := dylib
 	RLMAKE := make -Bj4 SHAREDLIBS="-lglfw -framework OpenGL -framework OpenAL -framework Cocoa" SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
 	AMMAKE := make
-	RLOUT := libraylib.6.0.0.
-	AMOUT := libADLMIDI.1.6.2.
+	RLOUT := libraylib.6.0.0.so
+	AMOUT := libADLMIDI.1.6.3.so
 	CHANGE_LIB_NAMES := install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" ./bin/$(EXEC) && install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" ./bin/$(EXEC)
 endif
 
@@ -70,7 +73,7 @@ libraylib.$(LIB_EXT):
 	cd build && \
 	cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DBUILD_SHARED_LIBS=ON && \
 	$(RLMAKE) && \
-	cp ./raylib/$(RLOUT)$(LIB_EXT) ../../libraylib.$(LIB_EXT)
+	cp ./raylib/$(RLOUT) ../../libraylib.$(LIB_EXT)
 
 libADLMIDI.$(LIB_EXT):
 	test -d libADLMIDI || git clone https://github.com/Wohlstand/libADLMIDI
@@ -79,6 +82,6 @@ libADLMIDI.$(LIB_EXT):
 	cd build && \
 	cmake -DCMAKE_BUILD_TYPE=Release -DlibADLMIDI_SHARED=ON .. && \
 	$(AMMAKE) && \
-	cp ./$(AMOUT)$(LIB_EXT) ../../libADLMIDI.$(LIB_EXT)
+	cp ./$(AMOUT) ../../libADLMIDI.$(LIB_EXT)
 
 
