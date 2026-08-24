@@ -1589,6 +1589,10 @@ fun a_brain_explode = A_BrainExplode(mo : CDoom::Mobj*)
   LibDoom.a_brain_explode(mo)
 end
 
+fun a_brain_die = A_BrainDie(mo : CDoom::Mobj*)
+  LibDoom.a_brain_die(mo)
+end
+
 fun a_brain_spit = A_BrainSpit(mo : CDoom::Mobj*)
   LibDoom.a_brain_spit(mo)
 end
@@ -3015,30 +3019,30 @@ fun wi_init_variables = WI_initVariables(wbstartstruct : CDoom::Wbstartstruct*)
   LibDoom.wi_init_variables(wbstartstruct)
 end
 
-  fun wi_start = WI_Start(wbstartstruct : CDoom::Wbstartstruct*)
-LibDoom.wi_start(wbstartstruct)
-  end
+fun wi_start = WI_Start(wbstartstruct : CDoom::Wbstartstruct*)
+  LibDoom.wi_start(wbstartstruct)
+end
 
-  fun z_init = Z_Init
-LibDoom.z_init
-  end
+fun z_init = Z_Init
+  LibDoom.z_init
+end
 
-  fun z_free = Z_Free(ptr : Void*)
-LibDoom.z_free(ptr)
-  end
+fun z_free = Z_Free(ptr : Void*)
+  LibDoom.z_free(ptr)
+end
 
-  fun z_malloc = Z_Malloc(size : LibC::Int, tag : LibC::Int, ptr : Void*) : Void*
-LibDoom.z_malloc(size, tag, ptr)
-  end
+fun z_malloc = Z_Malloc(size : LibC::Int, tag : LibC::Int, ptr : Void*) : Void*
+  LibDoom.z_malloc(size, tag, ptr)
+end
 
-  fun z_free_tags = Z_FreeTags(lowtag : LibC::Int, hightag : LibC::Int)
-LibDoom.z_free_tags(lowtag, hightag)
-  end
+fun z_free_tags = Z_FreeTags(lowtag : LibC::Int, hightag : LibC::Int)
+  LibDoom.z_free_tags(lowtag, hightag)
+end
 
-  fun z_check_heap = Z_CheckHeap
-LibDoom.z_check_heap
-  end
+fun z_check_heap = Z_CheckHeap
+  LibDoom.z_check_heap
+end
 
-  fun z_change_tag2 = Z_ChangeTag2(ptr : Void*, tag : LibC::Int)
-LibDoom.z_change_tag2(ptr, tag)
-  end
+fun z_change_tag2 = Z_ChangeTag2(ptr : Void*, tag : LibC::Int)
+  LibDoom.z_change_tag2(ptr, tag)
+end

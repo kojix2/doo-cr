@@ -942,7 +942,6 @@ lib CDoom
   {% end %}
 
   $error_buf : LibC::Char[260]
-  $doom_flags : LibC::Int
   $doom_print : DoomPrintFn
   $doom_malloc : DoomMallocFn
   $doom_free : DoomFreeFn
@@ -3013,7 +3012,7 @@ lib CDoom
     raisestate : LibC::Int
   end
 
-  $mobjinfo : Mobjinfo[Mobjtype::NUMMOBJTYPES]
+  $mobjinfo : Mobjinfo*
 
   # __M__ARGV__
 
@@ -7006,7 +7005,7 @@ lib CDoom
   fun a_keen_die = A_KeenDie(mo : Mobj*)
   fun a_brain_pain = A_BrainPain(mo : Mobj*)
   fun a_brain_scream = A_BrainScream(mo : Mobj*)
-  fun a_brain_die = A_BrainDie(Void*)
+  fun a_brain_die = A_BrainDie(mo : Mobj*)
   fun a_brain_awake = A_BrainAwake(mo : Mobj*)
   fun a_brain_spit = A_BrainSpit(mo : Mobj*)
   fun a_spawn_sound = A_SpawnSound(mo : Mobj*)
@@ -8449,22 +8448,21 @@ lib CDoom
   fun wi_load_data = WI_loadData
   fun wi_init_variables = WI_initVariables(wbstartstruct : Wbstartstruct*)
 
-    ZONEID = 0x1d4a11
-    MINFRAGMENT = 64
-    MEM_ALIGN = sizeof(Void*)
+  ZONEID      = 0x1d4a11
+  MINFRAGMENT =       64
+  MEM_ALIGN   = sizeof(Void*)
 
-    struct Memzone
-      # total bytes malloced, including header
-      size : LibC::Int
+  struct Memzone
+    # total bytes malloced, including header
+    size : LibC::Int
 
-      # start / end cap for linked list
-      blocklist : Memblock
+    # start / end cap for linked list
+    blocklist : Memblock
 
-      rover : Memblock*
-    end
+    rover : Memblock*
+  end
 
-    $mainzone : Memzone*
+  $mainzone : Memzone*
 
-    fun z_clear_zone = Z_ClearZone(zone : Memzone*)
-
+  fun z_clear_zone = Z_ClearZone(zone : Memzone*)
 end

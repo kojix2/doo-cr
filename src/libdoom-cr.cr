@@ -1,4 +1,5 @@
 require "./libdoom-cr/lib.cr"
+require "./libdoom-cr/variables.cr"
 require "./libdoom-cr/libdoom.cr"
 require "./libdoom-cr/implementation.cr"
 

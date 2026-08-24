@@ -12,8 +12,8 @@ all: libpuredoom.dylib libraylib.dylib libADLMIDI.dylib
 	install_name_tool -change "@rpath/libADLMIDI.1.dylib" "./libADLMIDI.dylib" ./bin/libdoom
 	install_name_tool -change "@rpath/libraylib.600.dylib" "./libraylib.dylib" ./bin/libdoom
 
-	cd ./bin && \
-	./libdoom
+# 	cd ./bin && \
+# 	./libdoom
 
 clean:
 	rm -rf raylib
