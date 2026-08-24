@@ -29,7 +29,6 @@ module LibDoom
   CDoom.last_update_time = 0
   CDoom.button_states = StaticArray(Int32, 3).new(0)
 
-  CDoom.doom_print = CDoom::DoomPrintFn.new(Pointer(Void).null, Pointer(Void).null)
   CDoom.doom_malloc = CDoom::DoomMallocFn.new(Pointer(Void).null, Pointer(Void).null)
   CDoom.doom_free = CDoom::DoomFreeFn.new(Pointer(Void).null, Pointer(Void).null)
   CDoom.doom_open = CDoom::DoomOpenFn.new(Pointer(Void).null, Pointer(Void).null)
@@ -5407,58 +5406,6 @@ module LibDoom
     "M_SKULL1",
     "M_SKULL2")
 
-  c_array(CDoom.menu_custom_texts,
-    CDoom::MenuCustomText.new(name: "TXT_MMOV".to_unsafe,
-      segs: StaticArray[
-        CDoom::MenuCustomTextSeg.new(lump: "M_MSENS", x: 0, w: 74, offx: 0, offy: 0),                   # Mouse
-        CDoom::MenuCustomTextSeg.new(lump: "M_MSENS", x: 0, w: 31, offx: 83, offy: 0),                  # Mo
-        CDoom::MenuCustomTextSeg.new(lump: "M_MSENS", x: 160, w: 14, offx: 83 + 31, offy: 0),           # v
-        CDoom::MenuCustomTextSeg.new(lump: "M_MSENS", x: 60, w: 14, offx: 83 + 31 + 14, offy: 0),       # e
-        CDoom::MenuCustomTextSeg.new(lump: "M_DETAIL", x: 169, w: 5, offx: 83 + 31 + 14 + 14, offy: 0), # :
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-      ]),
-    CDoom::MenuCustomText.new(name: "TXT_MOPT".to_unsafe,
-      segs: StaticArray[
-        CDoom::MenuCustomTextSeg.new(lump: "M_MSENS", x: 0, w: 74, offx: 0, offy: 0),       # Mouse
-        CDoom::MenuCustomTextSeg.new(lump: "M_OPTION", x: 0, w: 92, offx: 74 + 9, offy: 0), # Options
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-      ]),
-    CDoom::MenuCustomText.new(name: "TXT_CROS".to_unsafe,
-      segs: StaticArray[
-        CDoom::MenuCustomTextSeg.new(lump: "M_SKILL", x: 0, w: 16, offx: 0, offy: 0),                                  # C
-        CDoom::MenuCustomTextSeg.new(lump: "M_DETAIL", x: 14, w: 15, offx: 16, offy: 0),                               # r
-        CDoom::MenuCustomTextSeg.new(lump: "M_SKILL", x: 46, w: 30, offx: 16 + 15, offy: 0),                           # os
-        CDoom::MenuCustomTextSeg.new(lump: "M_SKILL", x: 62, w: 14, offx: 16 + 15 + 30, offy: 0),                      # s
-        CDoom::MenuCustomTextSeg.new(lump: "M_SKILL", x: 16, w: 15, offx: 16 + 15 + 30 + 14, offy: 0),                 # h
-        CDoom::MenuCustomTextSeg.new(lump: "M_DETAIL", x: 140, w: 19, offx: 16 + 15 + 30 + 14 + 15, offy: 0),          # ai
-        CDoom::MenuCustomTextSeg.new(lump: "M_DETAIL", x: 14, w: 15, offx: 16 + 15 + 30 + 14 + 15 + 19, offy: 0),      # r
-        CDoom::MenuCustomTextSeg.new(lump: "M_DETAIL", x: 169, w: 5, offx: 16 + 15 + 30 + 14 + 15 + 19 + 15, offy: 0), # :
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-      ]),
-    CDoom::MenuCustomText.new(name: "TXT_ARUN".to_unsafe,
-      segs: StaticArray[
-        CDoom::MenuCustomTextSeg.new(lump: "M_SGTTL", x: 90, w: 17, offx: 0, offy: 0),                                          # A
-        CDoom::MenuCustomTextSeg.new(lump: "M_GDLOW", x: 0, w: 10, offx: 17, offy: 3),                                          # l
-        CDoom::MenuCustomTextSeg.new(lump: "M_GDLOW", x: 26, w: 16, offx: 17 + 10, offy: 3),                                    #
-        CDoom::MenuCustomTextSeg.new(lump: "M_DISP", x: 57, w: 30, offx: 17 + 10 + 16, offy: 0),                                # ay
-        CDoom::MenuCustomTextSeg.new(lump: "M_RDTHIS", x: 99, w: 14, offx: 17 + 10 + 16 + 30, offy: 0),                         # s
-        CDoom::MenuCustomTextSeg.new(lump: "M_RDTHIS", x: 0, w: 16, offx: 17 + 10 + 16 + 30 + 14 + 7, offy: 0),                 # R
-        CDoom::MenuCustomTextSeg.new(lump: "M_SFXVOL", x: 90, w: 15, offx: 17 + 10 + 16 + 30 + 14 + 7 + 16, offy: 0),           # u
-        CDoom::MenuCustomTextSeg.new(lump: "M_OPTION", x: 62, w: 15, offx: 17 + 10 + 16 + 30 + 14 + 7 + 16 + 15, offy: 0),      # n
-        CDoom::MenuCustomTextSeg.new(lump: "M_DETAIL", x: 169, w: 5, offx: 17 + 10 + 16 + 30 + 14 + 7 + 16 + 15 + 15, offy: 0), # :
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-        CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new, CDoom::MenuCustomTextSeg.new,
-      ])
-  )
-
-  CDoom.custom_texts_count = sizeof(typeof(CDoom.menu_custom_texts)) // sizeof(CDoom::MenuCustomText)
-
   c_array_strings(CDoom.detail_names,
     "M_GDHIGH", "M_GDLOW")
   c_array_strings(CDoom.msg_names,
@@ -5539,13 +5486,12 @@ module LibDoom
   c_array(CDoom.options_menu,
     CDoom::Menuitem.new(status: 1, name: "M_ENDGAM".to_unsafe, routine: ->CDoom.m_endgame(Int32), alpha_key: 'e'.ord),
     CDoom::Menuitem.new(status: 1, name: "M_MESSG".to_unsafe, routine: ->CDoom.m_change_messages(Int32), alpha_key: 'm'.ord),
-    CDoom::Menuitem.new(status: 1, name: "TXT_CROS".to_unsafe, routine: ->CDoom.m_change_crosshair(Int32), alpha_key: 'c'.ord),
-    CDoom::Menuitem.new(status: 1, name: "TXT_ARUN".to_unsafe, routine: ->CDoom.m_change_alwaysrun(Int32), alpha_key: 'r'.ord),
-    # CDoom::Menuitem.new(status: 1, name: "M_DETAIL".to_unsafe, routine: ->CDoom.m_change_detail(Int32), alpha_key: 'g'.ord),
     CDoom::Menuitem.new(status: 2, name: "M_SCRNSZ".to_unsafe, routine: ->CDoom.m_size_display(Int32), alpha_key: 's'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe),
-    CDoom::Menuitem.new(status: 1, name: "TXT_MOPT".to_unsafe, routine: ->CDoom.m_mouse_options(Int32), alpha_key: 'f'.ord),
+    CDoom::Menuitem.new(status: 2, name: "M_MSENS".to_unsafe, routine: ->CDoom.m_change_sensitivity(Int32), alpha_key: 'm'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe),
     CDoom::Menuitem.new(status: 1, name: "M_SVOL".to_unsafe, routine: ->CDoom.m_sound(Int32), alpha_key: 's'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_moreoptions(Int32), alpha_key: 'm'.ord),
   )
 
   pointerof(CDoom.optionsdef).value = CDoom::Menu.new(
@@ -5557,18 +5503,32 @@ module LibDoom
     last_on: 0
   )
 
-  c_array(CDoom.mouse_options_menu,
-    CDoom::Menuitem.new(status: 1, name: "TXT_MMOV".to_unsafe, routine: ->CDoom.m_mouse_move(Int32), alpha_key: 'f'.ord),
-    CDoom::Menuitem.new(status: 2, name: "M_MSENS".to_unsafe, routine: ->CDoom.m_change_sensitivity(Int32), alpha_key: 'm'.ord),
-    CDoom::Menuitem.new(status: 1, name: "".to_unsafe)
-  )
+  enum MoreoptionsEnum
+    Alwaysrun
+    Crosshair
+    Fullscreen
+    SmoothPan
+    Pitching
+    AmActive
+    End
+  end
 
-  pointerof(CDoom.mouseoptionsdef).value = CDoom::Menu.new(
-    numitems: CDoom::MouseoptionsEnum::MouseOptEnd.value,
+  @@moreoptions_menu = [
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->CDoom.m_change_alwaysrun(Int32), alpha_key: 'a'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->CDoom.m_change_crosshair(Int32), alpha_key: 'c'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_fullscreen(Int32), alpha_key: 't'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_smoothpan(Int32), alpha_key: 's'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_pitching(Int32), alpha_key: 'r'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_amactivedraw(Int32), alpha_key: 'a'.ord),
+
+  ]
+
+  @@moreoptions_def = CDoom::Menu.new(
+    numitems: MoreoptionsEnum::End.value,
     prev_menu: pointerof(CDoom.optionsdef),
-    menuitems: CDoom.mouse_options_menu.to_unsafe,
-    routine: ->CDoom.m_draw_mouse_options,
-    x: 60, y: 70,
+    menuitems: @@moreoptions_menu.to_unsafe,
+    routine: ->m_draw_moreoptions,
+    x: 70, y: 30,
     last_on: 0
   )
 
@@ -5650,56 +5610,64 @@ module LibDoom
     last_on: 0
   )
 
-  CDoom.defaults[0] = CDoom::Default.new(name: "mouse_sensitivity", location: pointerof(CDoom.mouse_sensitivity), defaultvalue: 5)
-  CDoom.defaults[1] = CDoom::Default.new(name: "sfx_volume", location: pointerof(CDoom.snd_sfx_volume), defaultvalue: 8)
-  CDoom.defaults[2] = CDoom::Default.new(name: "music_volume", location: pointerof(CDoom.snd_music_volume), defaultvalue: 8)
-  CDoom.defaults[3] = CDoom::Default.new(name: "show_messages", location: pointerof(CDoom.show_messages), defaultvalue: 1)
+  @@rlfullscreen = 0
+  @@midismoothpan = 1
+  @@randompitch = 0
+  @@amactivedraw = 1
 
-  CDoom.defaults[4] = CDoom::Default.new(name: "key_right", location: pointerof(CDoom.key_right), defaultvalue: CDoom::KEY_RIGHTARROW)
-  CDoom.defaults[5] = CDoom::Default.new(name: "key_left", location: pointerof(CDoom.key_left), defaultvalue: CDoom::KEY_LEFTARROW)
-  CDoom.defaults[6] = CDoom::Default.new(name: "key_up", location: pointerof(CDoom.key_up), defaultvalue: CDoom::KEY_UPARROW)
-  CDoom.defaults[7] = CDoom::Default.new(name: "key_down", location: pointerof(CDoom.key_down), defaultvalue: CDoom::KEY_DOWNARROW)
-  CDoom.defaults[8] = CDoom::Default.new(name: "key_strafeleft", location: pointerof(CDoom.key_strafeleft), defaultvalue: ','.ord)
-  CDoom.defaults[9] = CDoom::Default.new(name: "key_straferight", location: pointerof(CDoom.key_straferight), defaultvalue: '.'.ord)
+  @@defaults = [CDoom::Default.new(name: "mouse_sensitivity", location: pointerof(CDoom.mouse_sensitivity), defaultvalue: 5),
+                CDoom::Default.new(name: "sfx_volume", location: pointerof(CDoom.snd_sfx_volume), defaultvalue: 8),
+                CDoom::Default.new(name: "music_volume", location: pointerof(CDoom.snd_music_volume), defaultvalue: 8),
+                CDoom::Default.new(name: "show_messages", location: pointerof(CDoom.show_messages), defaultvalue: 1),
 
-  CDoom.defaults[10] = CDoom::Default.new(name: "key_fire", location: pointerof(CDoom.key_fire), defaultvalue: CDoom::KEY_RCTRL)
-  CDoom.defaults[11] = CDoom::Default.new(name: "key_use", location: pointerof(CDoom.key_use), defaultvalue: ' '.ord)
-  CDoom.defaults[12] = CDoom::Default.new(name: "key_strafe", location: pointerof(CDoom.key_strafe), defaultvalue: CDoom::KEY_RALT)
-  CDoom.defaults[13] = CDoom::Default.new(name: "key_speed", location: pointerof(CDoom.key_speed), defaultvalue: CDoom::KEY_RSHIFT)
+                CDoom::Default.new(name: "key_right", location: pointerof(CDoom.key_right), defaultvalue: CDoom::KEY_RIGHTARROW),
+                CDoom::Default.new(name: "key_left", location: pointerof(CDoom.key_left), defaultvalue: CDoom::KEY_LEFTARROW),
+                CDoom::Default.new(name: "key_up", location: pointerof(CDoom.key_up), defaultvalue: CDoom::DoomKey::W),
+                CDoom::Default.new(name: "key_down", location: pointerof(CDoom.key_down), defaultvalue: CDoom::DoomKey::S),
+                CDoom::Default.new(name: "key_strafeleft", location: pointerof(CDoom.key_strafeleft), defaultvalue: CDoom::DoomKey::A),
+                CDoom::Default.new(name: "key_straferight", location: pointerof(CDoom.key_straferight), defaultvalue: CDoom::DoomKey::D),
 
-  CDoom.defaults[14] = CDoom::Default.new(name: "use_mouse", location: pointerof(CDoom.usemouse), defaultvalue: 1)
-  CDoom.defaults[15] = CDoom::Default.new(name: "mouseb_fire", location: pointerof(CDoom.mousebfire), defaultvalue: 0)
-  CDoom.defaults[16] = CDoom::Default.new(name: "mouseb_strafe", location: pointerof(CDoom.mousebstrafe), defaultvalue: 1)
-  CDoom.defaults[17] = CDoom::Default.new(name: "mouseb_forward", location: pointerof(CDoom.mousebforward), defaultvalue: 2)
-  CDoom.defaults[18] = CDoom::Default.new(name: "mouse_move", location: pointerof(CDoom.mousemove), defaultvalue: 0)
+                CDoom::Default.new(name: "key_fire", location: pointerof(CDoom.key_fire), defaultvalue: CDoom::KEY_RCTRL),
+                CDoom::Default.new(name: "key_use", location: pointerof(CDoom.key_use), defaultvalue: ' '.ord),
+                CDoom::Default.new(name: "key_strafe", location: pointerof(CDoom.key_strafe), defaultvalue: CDoom::KEY_RALT),
+                CDoom::Default.new(name: "key_speed", location: pointerof(CDoom.key_speed), defaultvalue: CDoom::KEY_RSHIFT),
 
-  CDoom.defaults[19] = CDoom::Default.new(name: "use_joystick", location: pointerof(CDoom.usejoystick), defaultvalue: 0)
-  CDoom.defaults[20] = CDoom::Default.new(name: "joyb_fire", location: pointerof(CDoom.joybfire), defaultvalue: 0)
-  CDoom.defaults[21] = CDoom::Default.new(name: "joyb_strafe", location: pointerof(CDoom.joybstrafe), defaultvalue: 1)
-  CDoom.defaults[22] = CDoom::Default.new(name: "joyb_use", location: pointerof(CDoom.joybuse), defaultvalue: 3)
-  CDoom.defaults[23] = CDoom::Default.new(name: "joyb_speed", location: pointerof(CDoom.joybspeed), defaultvalue: 2)
+                CDoom::Default.new(name: "use_mouse", location: pointerof(CDoom.usemouse), defaultvalue: 1),
+                CDoom::Default.new(name: "mouseb_fire", location: pointerof(CDoom.mousebfire), defaultvalue: 0),
+                CDoom::Default.new(name: "mouseb_strafe", location: pointerof(CDoom.mousebstrafe), defaultvalue: 1),
+                CDoom::Default.new(name: "mouseb_forward", location: pointerof(CDoom.mousebforward), defaultvalue: 2),
+                CDoom::Default.new(name: "mouse_move", location: pointerof(CDoom.mousemove), defaultvalue: 0),
 
-  CDoom.defaults[24] = CDoom::Default.new(name: "screenblocks", location: pointerof(CDoom.screenblocks), defaultvalue: 9)
-  CDoom.defaults[25] = CDoom::Default.new(name: "detaillevel", location: pointerof(CDoom.detail_level), defaultvalue: 0)
-  CDoom.defaults[26] = CDoom::Default.new(name: "crosshair", location: pointerof(CDoom.crosshair), defaultvalue: 0)
-  CDoom.defaults[27] = CDoom::Default.new(name: "always_run", location: pointerof(CDoom.always_run), defaultvalue: 0)
+                CDoom::Default.new(name: "use_joystick", location: pointerof(CDoom.usejoystick), defaultvalue: 0),
+                CDoom::Default.new(name: "joyb_fire", location: pointerof(CDoom.joybfire), defaultvalue: 0),
+                CDoom::Default.new(name: "joyb_strafe", location: pointerof(CDoom.joybstrafe), defaultvalue: 1),
+                CDoom::Default.new(name: "joyb_use", location: pointerof(CDoom.joybuse), defaultvalue: 3),
+                CDoom::Default.new(name: "joyb_speed", location: pointerof(CDoom.joybspeed), defaultvalue: 2),
 
-  CDoom.defaults[28] = CDoom::Default.new(name: "snd_channels", location: pointerof(CDoom.num_channels), defaultvalue: 3)
+                CDoom::Default.new(name: "screenblocks", location: pointerof(CDoom.screenblocks), defaultvalue: 9),
+                CDoom::Default.new(name: "detaillevel", location: pointerof(CDoom.detail_level), defaultvalue: 0),
+                CDoom::Default.new(name: "crosshair", location: pointerof(CDoom.crosshair), defaultvalue: 0),
+                CDoom::Default.new(name: "always_run", location: pointerof(CDoom.always_run), defaultvalue: 0),
 
-  CDoom.defaults[29] = CDoom::Default.new(name: "usegamma", location: pointerof(CDoom.usegamma), defaultvalue: 0)
+                CDoom::Default.new(name: "snd_channels", location: pointerof(CDoom.num_channels), defaultvalue: 3),
 
-  CDoom.defaults[30] = CDoom::Default.new(name: "chatmacro0", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe, default_text_value: CDoom::HUSTR_CHATMACRO0)
-  CDoom.defaults[31] = CDoom::Default.new(name: "chatmacro1", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 1, default_text_value: CDoom::HUSTR_CHATMACRO1)
-  CDoom.defaults[32] = CDoom::Default.new(name: "chatmacro2", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 2, default_text_value: CDoom::HUSTR_CHATMACRO2)
-  CDoom.defaults[33] = CDoom::Default.new(name: "chatmacro3", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 3, default_text_value: CDoom::HUSTR_CHATMACRO3)
-  CDoom.defaults[34] = CDoom::Default.new(name: "chatmacro4", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 4, default_text_value: CDoom::HUSTR_CHATMACRO4)
-  CDoom.defaults[35] = CDoom::Default.new(name: "chatmacro5", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 5, default_text_value: CDoom::HUSTR_CHATMACRO5)
-  CDoom.defaults[36] = CDoom::Default.new(name: "chatmacro6", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 6, default_text_value: CDoom::HUSTR_CHATMACRO6)
-  CDoom.defaults[37] = CDoom::Default.new(name: "chatmacro7", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 7, default_text_value: CDoom::HUSTR_CHATMACRO7)
-  CDoom.defaults[38] = CDoom::Default.new(name: "chatmacro8", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 8, default_text_value: CDoom::HUSTR_CHATMACRO8)
-  CDoom.defaults[39] = CDoom::Default.new(name: "chatmacro9", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 9, default_text_value: CDoom::HUSTR_CHATMACRO9)
+                CDoom::Default.new(name: "usegamma", location: pointerof(CDoom.usegamma), defaultvalue: 0),
 
-  CDoom.numdefaults = sizeof(typeof(CDoom.defaults)) // sizeof(CDoom::Default)
+                CDoom::Default.new(name: "chatmacro0", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe, default_text_value: CDoom::HUSTR_CHATMACRO0),
+                CDoom::Default.new(name: "chatmacro1", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 1, default_text_value: CDoom::HUSTR_CHATMACRO1),
+                CDoom::Default.new(name: "chatmacro2", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 2, default_text_value: CDoom::HUSTR_CHATMACRO2),
+                CDoom::Default.new(name: "chatmacro3", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 3, default_text_value: CDoom::HUSTR_CHATMACRO3),
+                CDoom::Default.new(name: "chatmacro4", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 4, default_text_value: CDoom::HUSTR_CHATMACRO4),
+                CDoom::Default.new(name: "chatmacro5", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 5, default_text_value: CDoom::HUSTR_CHATMACRO5),
+                CDoom::Default.new(name: "chatmacro6", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 6, default_text_value: CDoom::HUSTR_CHATMACRO6),
+                CDoom::Default.new(name: "chatmacro7", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 7, default_text_value: CDoom::HUSTR_CHATMACRO7),
+                CDoom::Default.new(name: "chatmacro8", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 8, default_text_value: CDoom::HUSTR_CHATMACRO8),
+                CDoom::Default.new(name: "chatmacro9", defaultvalue: CDoom::STRING_VALUE, text_location: CDoom.chat_macros.to_unsafe + 9, default_text_value: CDoom::HUSTR_CHATMACRO9),
+                CDoom::Default.new(name: "fullscreen", location: pointerof(@@rlfullscreen), defaultvalue: 0),
+                CDoom::Default.new(name: "midismoothpan", location: pointerof(@@midismoothpan), defaultvalue: 1),
+                CDoom::Default.new(name: "randompitching", location: pointerof(@@randompitch), defaultvalue: 0),
+                CDoom::Default.new(name: "amactivedraw", location: pointerof(@@amactivedraw), defaultvalue: 1),
+  ]
 
   c_array(CDoom.rndtable,
     0, 8, 109, 220, 222, 241, 149, 107, 75, 248, 254, 140, 16, 66,

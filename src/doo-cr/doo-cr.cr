@@ -2,10 +2,6 @@ module LibDoom
   NULL_PROC   = Proc(Nil).new(Pointer(Void).null, Pointer(Void).null)
   NULL_PROCP1 = Proc(Int32, Nil).new(Pointer(Void).null, Pointer(Void).null)
 
-  def self.doom_print_impl(str : UInt8*)
-    print String.new(str)
-  end
-
   def self.doom_malloc_impl(size : Int32) : Void*
     return GC.malloc(size)
   end
@@ -162,35 +158,6 @@ module LibDoom
     return CDoom.doom_write.call(handle, str.as(Void*), doom_strlen(str))
   end
 
-  def self.get_default(name : UInt8*) : CDoom::Default*
-    base = CDoom.defaults.to_unsafe
-    CDoom.numdefaults.times do |i|
-      default = base + i
-      return default if doom_strcmp(default.value.name, name) == 0
-    end
-    return Pointer(CDoom::Default).null
-  end
-
-  def self.doom_set_resolution(width : Int32, height : Int32)
-    return if width <= 0 || height <= 0
-  end
-
-  def self.doom_set_default_int(name : UInt8*, value : Int32)
-    default = get_default(name)
-    return if default.null?
-    default.value.defaultvalue = value
-  end
-
-  def self.doom_set_default_string(name : UInt8*, value : UInt8*)
-    default = get_default(name)
-    return if default.null?
-    default.value.default_text_value = value
-  end
-
-  def self.doom_set_print(print_fn : CDoom::DoomPrintFn)
-    CDoom.doom_print = print_fn
-  end
-
   def self.doom_set_malloc(malloc_fn : CDoom::DoomMallocFn, free_fn : CDoom::DoomFreeFn)
     CDoom.doom_malloc = malloc_fn
     CDoom.doom_free = free_fn
@@ -225,7 +192,6 @@ module LibDoom
   end
 
   def self.doom_init(argc : Int32, argv : UInt8**, flags : Int32)
-    CDoom.doom_print = ->doom_print_impl(UInt8*) if CDoom.doom_print.pointer.null?
     CDoom.doom_malloc = ->doom_malloc_impl(Int32) if CDoom.doom_malloc.pointer.null?
     CDoom.doom_free = ->doom_free_impl(Void*) if CDoom.doom_free.pointer.null?
     CDoom.doom_open = ->doom_open_impl(UInt8*, UInt8*) if CDoom.doom_open.pointer.null?
@@ -700,6 +666,10 @@ module LibDoom
         end
       when CDoom::AM_FOLLOWKEY
         CDoom.followplayer = CDoom.followplayer != 0 ? 0 : 1
+        if CDoom.followplayer != 0 # Neat fix!
+          CDoom.m_paninc.x = 0
+          CDoom.m_paninc.y = 0
+        end
         CDoom.f_oldloc.x = Int32::MAX
         CDoom.plr.value.message = CDoom.followplayer != 0 ? CDoom::AMSTR_FOLLOWON : CDoom::AMSTR_FOLLOWOFF
       when CDoom::AM_GRIDKEY
@@ -955,10 +925,8 @@ module LibDoom
          fl.value.a.y < 0 || fl.value.a.y >= CDoom.f_h ||
          fl.value.b.x < 0 || fl.value.b.x >= CDoom.f_w ||
          fl.value.b.y < 0 || fl.value.b.y >= CDoom.f_h)
-        CDoom.doom_print("fuck ")
-        CDoom.doom_print(CDoom.doom_itoa(@@fuck, 10))
+        print "fuck #{fuck}\r"
         @@fuck += 1
-        CDoom.doom_print("\r")
         return
       end
     {% end %}
@@ -1313,7 +1281,7 @@ module LibDoom
     case CDoom.gamestate
     when CDoom::Gamestate::Level
       if CDoom.gametic != 0
-        CDoom.am_drawer if CDoom.automapactive != 0
+        CDoom.am_drawer if CDoom.automapactive != 0 && @@amactivedraw == 0
         redrawsbar = true if wipe || (CDoom.viewheight != 200 && @@fullscreen)
         redrawsbar = true if @@inhelpscreenstate && CDoom.inhelpscreens == 0 # just put away the help screen
         CDoom.st_drawer((CDoom.viewheight == 200).to_unsafe, redrawsbar.to_unsafe)
@@ -1331,8 +1299,15 @@ module LibDoom
     CDoom.i_update_no_blit
 
     # draw the view directly
-    if CDoom.gamestate == CDoom::Gamestate::Level && CDoom.automapactive == 0 && CDoom.gametic != 0
-      CDoom.r_render_player_view(CDoom.players.to_unsafe + CDoom.displayplayer)
+    if CDoom.gamestate == CDoom::Gamestate::Level && CDoom.gametic != 0
+      if CDoom.automapactive != 0
+        if @@amactivedraw != 0
+          CDoom.r_render_player_view(CDoom.players.to_unsafe + CDoom.displayplayer)
+          CDoom.am_drawer
+        end
+      else
+        CDoom.r_render_player_view(CDoom.players.to_unsafe + CDoom.displayplayer)
+      end
     end
 
     CDoom.hu_drawer if CDoom.gamestate == CDoom::Gamestate::Level && CDoom.gametic != 0
@@ -1582,6 +1557,44 @@ module LibDoom
     CDoom.doom_strcpy(CDoom.basedefault, home)
     CDoom.doom_concat(CDoom.basedefault, "/config.cfg")
 
+    # Custom. Prioritize over other parmgs
+    customwad = Pointer(UInt8*).null
+    force = false
+    p = CDoom.m_check_parm("-iwad")
+    if p == 0
+      p = CDoom.m_check_parm("-fwad")
+      forced = p != 0
+    end
+
+    if p != 0 && p < CDoom.myargc - 1
+      CDoom.modifiedgame = 1 # I hope so?
+      customwad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + CDoom.doom_strlen(CDoom.myargv[p + 1]) + 4 + 1).as(UInt8*)
+      CDoom.doom_strcpy(customwad, doomwaddir)
+      CDoom.doom_concat(customwad, "/".to_unsafe)
+      CDoom.doom_concat(customwad, CDoom.myargv[p + 1])
+      if (handle = CDoom.doom_open.call(customwad, "rb".to_unsafe)).null?
+        # Wad not found, give them a chance
+        CDoom.doom_concat(customwad, ".wad".to_unsafe)
+        if (handle = CDoom.doom_open.call(customwad, "rb".to_unsafe)).null?
+          CDoom.i_error("Error: identify_version: '-iwad #{String.new(customwad)}' could not find file specified")
+        end
+      end
+      # Wad is real. Check for IWAD unless forced
+      unless forced
+        header = CDoom::Wadinfo.new
+        CDoom.doom_read.call(handle, pointerof(header).as(Void*), sizeof(typeof(header)))
+        CDoom.doom_close.call(handle)
+        if CDoom.doom_strncmp(header.identification, "IWAD", 4) != 0
+          CDoom.i_error("Error: identify_version: '-iwad #{String.new(customwad)}' found, but is not an IWAD")
+        end
+      end
+
+      CDoom.gamemode = CDoom::GameMode::Indetermined
+      CDoom.gamemission = CDoom::GameMission::None
+      CDoom.d_add_file(customwad)
+      return
+    end
+
     if CDoom.m_check_parm("-shdev") != 0
       CDoom.gamemode = CDoom::GameMode::Shareware
       CDoom.gamemission = CDoom::GameMission::Doom
@@ -1624,7 +1637,7 @@ module LibDoom
       # C'est ridicule!
       # Let's handle languages in config files, okay?
       CDoom.language = CDoom::Language::French
-      CDoom.doom_print.call("French version\n".to_unsafe)
+      puts "French version"
       CDoom.d_add_file(doom2fwad)
       return
     end
@@ -1677,7 +1690,7 @@ module LibDoom
       return
     end
 
-    CDoom.doom_print.call("Game mode indeterminate.\n".to_unsafe)
+    puts "Game mode indeterminate."
     CDoom.gamemode = CDoom::GameMode::Indetermined
   end
 
@@ -1694,10 +1707,10 @@ module LibDoom
         # READ THE RESPONSE FILE INTO MEMORY
         handle = CDoom.doom_open.call(CDoom.myargv[i] + 1, "rb".to_unsafe)
         if handle.null?
-          CDoom.doom_print.call("\nNo such response file!".to_unsafe)
+          print "\nNo such response file!"
           CDoom.doom_exit.call(1)
         end
-        CDoom.doom_print.call("Found response file #{String.new(CDoom.myargv[i] + 1)}!\n".to_unsafe)
+        puts "Found response file #{String.new(CDoom.myargv[i] + 1)}!"
         CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
         size = CDoom.doom_tell.call(handle)
         CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_SET)
@@ -1748,12 +1761,10 @@ module LibDoom
         CDoom.myargc = indexinfile
 
         # DISPLAY ARGS
-        CDoom.doom_print.call(CDoom.doom_itoa(CDoom.myargc, 10))
-        CDoom.doom_print.call(" command-line args: \n".to_unsafe)
+        puts "#{CDoom.myargc} command-line args"
         k = 1
         while k < CDoom.myargc
-          CDoom.doom_print.call(CDoom.myargv[k])
-          CDoom.doom_print.call("\n".to_unsafe)
+          puts String.new(CDoom.myargv[k])
           k += 1
         end
 
@@ -1761,6 +1772,8 @@ module LibDoom
       end
     end
   end
+
+  @@title = ""
 
   #
   # d_doom_main
@@ -1784,63 +1797,36 @@ module LibDoom
       CDoom.deathmatch = 1
     end
 
+    @@title = "                         "
     case CDoom.gamemode
     when CDoom::GameMode::Retail
-      CDoom.doom_strcpy(CDoom.title, "                         " + "The Ultimate DOOM Startup v")
-      CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION // 100, 10))
-      CDoom.doom_concat(CDoom.title, ".")
-      CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION % 100, 10))
-      CDoom.doom_concat(CDoom.title, "                           ")
+      @@title += "The Ultimate DOOM Startup v"
     when CDoom::GameMode::Shareware
-      CDoom.doom_strcpy(CDoom.title, "                         " + "DOOM Shareware Startup v")
-      CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION // 100, 10))
-      CDoom.doom_concat(CDoom.title, ".")
-      CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION % 100, 10))
-      CDoom.doom_concat(CDoom.title, "                           ")
+      @@title += "DOOM Shareware Startup v"
     when CDoom::GameMode::Registered
-      CDoom.doom_strcpy(CDoom.title, "                         " + "DOOM Registered Startup v")
-      CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION // 100, 10))
-      CDoom.doom_concat(CDoom.title, ".")
-      CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION % 100, 10))
-      CDoom.doom_concat(CDoom.title, "                           ")
+      @@title += "DOOM Registered Startup v"
     when CDoom::GameMode::Commercial
       case CDoom.gamemission
       when CDoom::GameMission::PackPlut
-        CDoom.doom_strcpy(CDoom.title, "                         " + "Final Doom: The Plutonia Experiment v")
-        CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION // 100, 10))
-        CDoom.doom_concat(CDoom.title, ".")
-        CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION % 100, 10))
-        CDoom.doom_concat(CDoom.title, "                           ")
+        @@title += "Final Doom: The Plutonia Experiment v"
       when CDoom::GameMission::PackTnt
-        CDoom.doom_strcpy(CDoom.title, "                         " + "Final Doom: TNT: Evilution v")
-        CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION // 100, 10))
-        CDoom.doom_concat(CDoom.title, ".")
-        CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION % 100, 10))
-        CDoom.doom_concat(CDoom.title, "                           ")
+        @@title += "Final Doom: TNT: Evilution v"
       else
-        CDoom.doom_strcpy(CDoom.title, "                         " + "DOOM 2: Hell on Earth v")
-        CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION // 100, 10))
-        CDoom.doom_concat(CDoom.title, ".")
-        CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION % 100, 10))
-        CDoom.doom_concat(CDoom.title, "                           ")
+        @@title += "DOOM 2: Hell on Earth v"
       end
     else
-      CDoom.doom_strcpy(CDoom.title, "                         " + "Public DOOM - v")
-      CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION // 100, 10))
-      CDoom.doom_concat(CDoom.title, ".")
-      CDoom.doom_concat(CDoom.title, CDoom.doom_itoa(CDoom::VERSION % 100, 10))
-      CDoom.doom_concat(CDoom.title, "                           ")
+      @@title += "Public DOOM - v"
     end
 
-    CDoom.doom_print.call(CDoom.title.to_unsafe)
-    CDoom.doom_print.call("\n".to_unsafe)
+    @@title += "#{CDoom::VERSION // 100}.#{CDoom::VERSION % 100}" + "                           "
+    puts @@title
 
-    CDoom.doom_print.call(CDoom::D_DEVSTR.to_unsafe) if CDoom.devparm != 0
+    print CDoom::D_DEVSTR if CDoom.devparm != 0
 
     {% if false %}
       # [pd] Ignore cdrom
       if CDoom.m_check_parm("-cdrom") != 0
-        CDoom.doom_print.call(CDoom::D_CDROM.to_unsafe)
+        print CDoom::D_CDROM
         Dir.mkdir("c:\\doomdata")
         CDoom.doom_strcpy(CDoom.basedefault, "c:/doomdata/default.cfg")
       end
@@ -1855,9 +1841,7 @@ module LibDoom
       end
       scale = 10 if scale < 10
       scale = 400 if scale > 400
-      CDoom.doom_print.call("turbo scale: ".to_unsafe)
-      CDoom.doom_print.call(CDoom.doom_itoa(scale, 10))
-      CDoom.doom_print.call("%\n".to_unsafe)
+      puts "turbo scale: #{scale}%"
       CDoom.forwardmove[0] = CDoom.forwardmove[0] * scale // 100
       CDoom.forwardmove[1] = CDoom.forwardmove[1] * scale // 100
       CDoom.sidemove[0] = CDoom.sidemove[0] * scale // 100
@@ -1881,12 +1865,8 @@ module LibDoom
         CDoom.doom_concat(file, "M")
         CDoom.doom_concat(file, CDoom.doom_ctoa(CDoom.myargv[p + 2][0]))
         CDoom.doom_concat(file, ".wad")
-
-        CDoom.doom_print.call("Warping to Episode ".to_unsafe)
-        CDoom.doom_print.call(CDoom.myargv[p + 1])
-        CDoom.doom_print.call(", Map ".to_unsafe)
-        CDoom.doom_print.call(CDoom.myargv[p + 2])
-        CDoom.doom_print.call(".\n".to_unsafe)
+        puts "Warping to Episode #{String.new(CDoom.myargv[p + 1])}" +
+             ", Map #{String.new(CDoom.myargv[p + 2])}."
         # when CDoom::GameMode::Commercial
       else
         p = CDoom.doom_atoi(CDoom.myargv[p + 1])
@@ -1921,9 +1901,7 @@ module LibDoom
       CDoom.doom_strcpy(file, CDoom.myargv[p + 1])
       CDoom.doom_concat(file, ".lmp")
       CDoom.d_add_file(file)
-      CDoom.doom_print.call("Playing demo ".to_unsafe)
-      CDoom.doom_print.call(CDoom.myargv[p + 1])
-      CDoom.doom_print.call(".lmp.\n".to_unsafe)
+      puts "Playing demo #{String.new(CDoom.myargv[p + 1])}.lmp."
     end
 
     # get skill / episode / map from parms
@@ -1948,16 +1926,12 @@ module LibDoom
     CDoom.m_check_parm("-timer")
     if p != 0 && p < CDoom.myargc - 1 && CDoom.deathmatch != 0
       time = CDoom.doom_atoi(CDoom.myargv[p + 1])
-      CDoom.doom_print.call("Levels will end after ".to_unsafe)
-      CDoom.doom_print.call(CDoom.doom_itoa(time, 10))
-      CDoom.doom_print.call(" minute".to_unsafe)
-      CDoom.doom_print.call("s".to_unsafe) if time > 1
-      CDoom.doom_print.call(".\n".to_unsafe)
+      puts "Levels will end after #{time} minute" + (time > 1 ? "s" : "") + "."
     end
 
     p = CDoom.m_check_parm("-avg")
     if p != 0 && p < CDoom.myargc - 1 && CDoom.deathmatch != 0
-      CDoom.doom_print.call("Austin Virtual Gaming: Levels will end after 20 minutes\n".to_unsafe)
+      puts "Austin Virtual Gaming: Levels will end after 20 minutes"
     end
 
     p = CDoom.m_check_parm("-warp")
@@ -1972,16 +1946,16 @@ module LibDoom
     end
 
     # init subsystems
-    CDoom.doom_print.call("v_init: allocate screens.\n".to_unsafe)
+    puts "v_init: allocate screens."
     CDoom.v_init
 
-    CDoom.doom_print.call("m_load_defaults: Load system defaults.\n".to_unsafe)
+    puts "m_load_defaults: Load system defaults."
     CDoom.m_load_defaults # load before initing other systems
 
-    CDoom.doom_print.call("z_init: Init zone memory allocation daemon. \n".to_unsafe)
+    puts "z_init: Init zone memory allocation daemon. "
     CDoom.z_init
 
-    CDoom.doom_print.call("w_init: Init Wadfiles.\n".to_unsafe)
+    puts "w_init: Init Wadfiles."
     CDoom.w_init_multiple_files(CDoom.wadfiles)
 
     # Check for -file in shareware
@@ -2011,59 +1985,55 @@ module LibDoom
 
     # Iff additonal PWAD files are used, print modified banner
     if CDoom.modifiedgame != 0
-      CDoom.doom_print.call(
-        ("===========================================================================\n" +
-         "ATTENTION:  This version of DOOM has been modified.  If you would like to\n" +
-         "get a copy of the original game, call 1-800-IDGAMES or see the readme file.\n" +
-         "        You will not receive technical support for modified games.\n" +
-         # "                      press enter to continue\n" +
-         "===========================================================================\n").to_unsafe
-      )
+      puts
+      ("===========================================================================\n" +
+        "ATTENTION:  This version of DOOM has been modified.  If you would like to\n" +
+        "get a copy of the original game, call 1-800-IDGAMES or see the readme file.\n" +
+        "        You will not receive technical support for modified games.\n" +
+        "===========================================================================")
     end
 
     # Check and print which version is executed.
     case CDoom.gamemode
     when CDoom::GameMode::Shareware, CDoom::GameMode::Indetermined
-      CDoom.doom_print.call(
-        ("===========================================================================\n" +
-         "                                Shareware!\n" +
-         "===========================================================================\n").to_unsafe
-      )
+      puts
+      ("===========================================================================\n" +
+        "                                Shareware!\n" +
+        "===========================================================================")
     when CDoom::GameMode::Registered, CDoom::GameMode::Retail, CDoom::GameMode::Commercial
-      CDoom.doom_print.call(
-        ("===========================================================================\n" +
-         "                 Commercial product - do not distribute!\n" +
-         "         Please report software piracy to the SPA: 1-800-388-PIR8\n" +
-         "===========================================================================\n").to_unsafe
-      )
+      puts
+      ("===========================================================================\n" +
+        "                 Commercial product - do not distribute!\n" +
+        "         Please report software piracy to the SPA: 1-800-388-PIR8\n" +
+        "===========================================================================")
     else
       # Ouch
     end
 
     Raylib.set_trace_log_level(Raylib::TraceLogLevel::Warning)
 
-    CDoom.doom_print.call("m_init: Init miscellaneous info.\n".to_unsafe)
+    puts "m_init: Init miscellaneous info."
     CDoom.m_init
 
-    CDoom.doom_print.call("r_init: Init DOOM refresh daemon".to_unsafe)
+    print "r_init: Init DOOM refresh daemon"
     CDoom.r_init
 
-    CDoom.doom_print.call("\np_init: Init Playloop state.\n".to_unsafe)
+    puts "\np_init: Init Playloop state."
     CDoom.p_init
 
-    CDoom.doom_print.call("i_init: Setting up machine state.\n".to_unsafe)
+    puts "i_init: Setting up machine state."
     CDoom.i_init
 
-    CDoom.doom_print.call("d_check_net_game: Checking network game status.\n".to_unsafe)
+    puts "d_check_net_game: Checking network game status."
     CDoom.d_check_net_game
 
-    CDoom.doom_print.call("s_init: Setting up sound.\n".to_unsafe)
+    puts "s_init: Setting up sound."
     CDoom.s_init(CDoom.snd_sfx_volume, CDoom.snd_music_volume)
 
-    CDoom.doom_print.call("hu_init: Setting up heads up display.\n".to_unsafe)
+    puts "hu_init: Setting up heads up display."
     CDoom.hu_init
 
-    CDoom.doom_print.call("st_init: Init status bar.\n".to_unsafe)
+    puts "st_init: Init status bar."
     CDoom.st_init
 
     # check for a driver that wants intermission stats
@@ -2073,7 +2043,7 @@ module LibDoom
       if p != 0 && p < CDoom.myargc - 1
         # for statistics driver
         CDoom.statcopy = String.new(CDoom.myargv[p + 1]).to_i64.as(Void*)
-        CDoom.doom_print.call("External statistics registered.\n".to_unsafe)
+        puts "External statistics registered."
       end
     {% end %}
 
@@ -2131,10 +2101,7 @@ module LibDoom
       CDoom.doom_strcpy(filename, "debug")
       CDoom.doom_concat(filename, CDoom.doom_itoa(CDoom.consoleplayer, 10))
       CDoom.doom_concat(filename, ".txt")
-
-      CDoom.doom_print.call("debug output to: ".to_unsafe)
-      CDoom.doom_print.call(filename.to_unsafe)
-      CDoom.doom_print.call("\n".to_unsafe)
+      puts "debug output to: #{String.new(filename.to_unsafe)}"
       CDoom.debugfile = CDoom.doom_open.call(filename.to_unsafe, "w".to_unsafe)
     end
 
@@ -2172,11 +2139,7 @@ module LibDoom
       return (CDoom.maketic & ~0xff) + 256 + low
     end
 
-    CDoom.doom_strcpy(CDoom.error_buf, "Error: expand_tics: strange value ")
-    CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(low, 10))
-    CDoom.doom_concat(CDoom.error_buf, " at maketic ")
-    CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.maketic, 10))
-    CDoom.i_error(CDoom.error_buf)
+    CDoom.i_error("Error: expand_tics: strange value #{low} at maketic #{CDoom.maketic}")
     return 0
   end
 
@@ -2480,7 +2443,7 @@ module LibDoom
 
     if CDoom.doomcom.value.consoleplayer != 0
       # listen for setup info from key player
-      CDoom.doom_print.call("listening for network start info...\n".to_unsafe)
+      puts "listening for network start info..."
       while true
         CDoom.check_abort
         next if CDoom.h_get_packet == 0
@@ -2499,7 +2462,7 @@ module LibDoom
       end
     else
       # key player, send the setup info
-      CDoom.doom_print.call("sending network start info...\n".to_unsafe)
+      puts "sending network start info..."
       loop do
         CDoom.check_abort
         CDoom.doomcom.value.numnodes.times do |i|
@@ -2564,16 +2527,8 @@ module LibDoom
     CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
     CDoom.displayplayer = CDoom.consoleplayer
     CDoom.d_arbitrate_net_start if CDoom.netgame != 0
-
-    CDoom.doom_print.call("startskill ".to_unsafe)
-    CDoom.doom_print.call(CDoom.doom_itoa(CDoom.startskill, 10))
-    CDoom.doom_print.call("  deathmatch: ".to_unsafe)
-    CDoom.doom_print.call(CDoom.doom_itoa(CDoom.deathmatch, 10))
-    CDoom.doom_print.call("  startmap: ".to_unsafe)
-    CDoom.doom_print.call(CDoom.doom_itoa(CDoom.startmap, 10))
-    CDoom.doom_print.call("  startepisode: ".to_unsafe)
-    CDoom.doom_print.call(CDoom.doom_itoa(CDoom.startepisode, 10))
-    CDoom.doom_print.call("\n".to_unsafe)
+    puts "startskill #{CDoom.startskill} deathmatch: #{CDoom.deathmatch}" +
+         " startmap: #{CDoom.startmap} startepisode: #{CDoom.startepisode}"
 
     # read values out of doomcom
     CDoom.ticdup = CDoom.doomcom.value.ticdup
@@ -2583,13 +2538,8 @@ module LibDoom
     CDoom.doomcom.value.numplayers.times { |i| CDoom.playeringame[i] = 1 }
     CDoom.doomcom.value.numnodes.times { |i| CDoom.nodeingame[i] = 1 }
 
-    CDoom.doom_print.call("player ".to_unsafe)
-    CDoom.doom_print.call(CDoom.doom_itoa(CDoom.consoleplayer + 1, 10))
-    CDoom.doom_print.call(" of ".to_unsafe)
-    CDoom.doom_print.call(CDoom.doom_itoa(CDoom.doomcom.value.numplayers, 10))
-    CDoom.doom_print.call(" (".to_unsafe)
-    CDoom.doom_print.call(CDoom.doom_itoa(CDoom.doomcom.value.numnodes, 10))
-    CDoom.doom_print.call(" nodes)\n".to_unsafe)
+    puts "player #{CDoom.consoleplayer + 1} of #{CDoom.doomcom.value.numplayers}" +
+         " (#{CDoom.doomcom.value.numnodes} nodes)"
   end
 
   #
@@ -3021,7 +2971,8 @@ module LibDoom
   end
 
   def self.f_cast_responder(ev : CDoom::Event*) : CDoom::DoomBool
-    return 0 if ev.value.type != CDoom::Evtype::Keydown
+    return 0 if ev.value.type != CDoom::Evtype::Keydown &&
+                (ev.value.type != CDoom::Evtype::Mouse || ev.value.data1 == 0)
 
     return 1 if CDoom.castdeath != 0 # already in dying frames
 
@@ -3502,15 +3453,17 @@ module LibDoom
     @@mousex = 0
     @@mousey = 0
 
-    if forward > CDoom::MAXPLMOVE
-      forward = CDoom::MAXPLMOVE
-    elsif forward < -CDoom::MAXPLMOVE
-      forward = -CDoom::MAXPLMOVE
+    maxplmove = CDoom.forwardmove[1]
+
+    if forward > maxplmove
+      forward = maxplmove
+    elsif forward < -maxplmove
+      forward = -maxplmove
     end
-    if side > CDoom::MAXPLMOVE
-      side = CDoom::MAXPLMOVE
-    elsif side < -CDoom::MAXPLMOVE
-      side = -CDoom::MAXPLMOVE
+    if side > maxplmove
+      side = maxplmove
+    elsif side < -maxplmove
+      side = -maxplmove
     end
 
     cmd.value.forwardmove = cmd.value.forwardmove + forward
@@ -3718,12 +3671,7 @@ module LibDoom
         if CDoom.netgame != 0 && CDoom.netdemo == 0 && (CDoom.gametic % CDoom.ticdup) == 0
           if CDoom.gametic > CDoom::BACKUPTICS &&
              CDoom.consistancy[i][buf] != cmd.value.consistancy
-            CDoom.doom_strcpy(CDoom.error_buf, "Error: consistency failure (")
-            CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(cmd.value.consistancy, 10))
-            CDoom.doom_concat(CDoom.error_buf, " should be ")
-            CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.consistancy[i][buf], 10))
-            CDoom.doom_concat(CDoom.error_buf, ")")
-            CDoom.i_error(CDoom.error_buf)
+            CDoom.i_error("Error: consistency failure (#{cmd.value.consistancy} should be #{CDoom.consistancy[i][buf]})")
           end
           if !CDoom.players[i].mo.null?
             CDoom.consistancy[i][buf] = CDoom.players[i].mo.value.x.to_i16!
@@ -3874,10 +3822,7 @@ module LibDoom
   def self.g_deathmatch_spawn_player(playernum : Int32)
     selections = (CDoom.deathmatch_p - CDoom.deathmatchstarts.to_unsafe).to_i32!
     if selections < 4
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: Only ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(selections, 10))
-      CDoom.doom_concat(CDoom.error_buf, " deathmatch spots, 4 required")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: Only #{selections} deathmatch spots, 4 required")
     end
 
     20.times do |j|
@@ -4423,11 +4368,7 @@ module LibDoom
     demo_version = CDoom.demo_p.value
     CDoom.demo_p += 1
     if demo_version != CDoom::VERSION && demo_version != 109 # Demos seem to run fine with version 109
-      CDoom.doom_print.call("Demo is from a different game version! Demo Verson = ".to_unsafe)
-      CDoom.doom_print.call(CDoom.doom_itoa(demo_version, 10))
-      CDoom.doom_print.call(", this version = ".to_unsafe)
-      CDoom.doom_print.call(CDoom.doom_itoa(CDoom::VERSION, 10))
-      CDoom.doom_print.call("\n".to_unsafe)
+      puts "Demo is from a different game version! Demo Verson = #{demo_version}, this version = #{CDoom::VERSION}"
       CDoom.gameaction = CDoom::Gameaction::Nothing
       return
     end
@@ -4491,12 +4432,7 @@ module LibDoom
     if CDoom.timingdemo != 0
       endtime = CDoom.i_get_time
 
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: timed ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.gametic, 10))
-      CDoom.doom_concat(CDoom.error_buf, " gametics in ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(endtime - CDoom.starttime, 10))
-      CDoom.doom_concat(CDoom.error_buf, " realtics")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: timed #{CDoom.gametic} gametics in #{endtime - CDoom.starttime} realtics")
     end
 
     if CDoom.demoplayback != 0
@@ -4525,10 +4461,7 @@ module LibDoom
       CDoom.z_free(CDoom.demobuffer)
       CDoom.demorecording = 0
 
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: Demo ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.demoname)
-      CDoom.doom_concat(CDoom.error_buf, " recorded")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: Demo #{CDoom.demoname} recorded")
     end
 
     return 0
@@ -5060,17 +4993,13 @@ module LibDoom
     p = CDoom.m_check_parm("-port")
     if p != 0 && p < CDoom.myargc - 1
       @@doomport = CDoom.doom_atoi(CDoom.myargv[p + 1])
-      CDoom.doom_print.call("using alternate port ".to_unsafe)
-      CDoom.doom_print.call(CDoom.doom_itoa(@@doomport, 10))
-      CDoom.doom_print.call("\n".to_unsafe)
+      puts "using alternate port #{@@doomport}"
     end
 
     p = CDoom.m_check_parm("-port")
     if p != 0 && p < CDoom.myargc - 1
       @@doomport_send = CDoom.doom_atoi(CDoom.myargv[p + 1])
-      CDoom.doom_print.call("using alternate send port ".to_unsafe)
-      CDoom.doom_print.call(CDoom.doom_itoa(@@doomport_send, 10))
-      CDoom.doom_print.call("\n".to_unsafe)
+      puts "using alternate send port #{@@doomport_send}"
     end
 
     # parse network game options,
@@ -5322,6 +5251,7 @@ module LibDoom
   #
   def self.i_start_sound(id : Int32, vol : Int32, sep : Int32, pitch : Int32, priority : Int32) : Int32
     # Returns a handle (not used).
+    pitch = 128 if @@randompitch == 0
     id = CDoom.addsfx(id, vol, CDoom.steptable[pitch], sep)
     return id
   end
@@ -5441,6 +5371,7 @@ module LibDoom
     CDoom::NUM_CHANNELS.times do |chan|
       # Found channel
       if CDoom.channelhandles[chan] == handle
+        pitch = 128 if @@randompitch == 0
         step = CDoom.steptable[pitch]
         CDoom.channelstep[chan] = step.to_u32
         CDoom.channelstart[chan] = CDoom.gametic
@@ -5467,7 +5398,7 @@ module LibDoom
     done = 0
 
     # FIXME (below).
-    CDoom.doom_print.call("i_shutdown_sound: NOT finishing pending sounds\n".to_unsafe)
+    puts "i_shutdown_sound: NOT finishing pending sounds"
 
     while done == 0
       8.times do |i|
@@ -5545,7 +5476,7 @@ module LibDoom
 
   def self.i_init_sound
     # Initialize external data (all sounds) at start, keep static.
-    CDoom.doom_print.call("i_init_sound: ".to_unsafe)
+    print "i_init_sound: "
 
     i = 1
     while i < CDoom::Sfxenum::NUMSFX.value
@@ -5562,7 +5493,7 @@ module LibDoom
       i += 1
     end
 
-    CDoom.doom_print.call(" pre-cached all sound data\n".to_unsafe)
+    puts " pre-cached all sound data"
 
     # Now initialize mixbuffer with zero.
     CDoom::MIXBUFFERSIZE.times { |i| CDoom.mixbuffer[i] = 0 }
@@ -5575,7 +5506,7 @@ module LibDoom
     RAudio.play_audio_stream(@@audio_stream.not_nil!)
 
     # Finished initialization.
-    CDoom.doom_print.call("i_init_sound: sound module ready\n".to_unsafe)
+    puts "i_init_sound: sound module ready"
   end
 
   #
@@ -5586,7 +5517,7 @@ module LibDoom
     ADLMIDI.adl_setNumChips(@@adl_player.not_nil!, 4)
     ADLMIDI.adl_setBank(@@adl_player.not_nil!, MIDI_BANK)
 
-    ADLMIDI.adl_setSoftPanEnabled(@@adl_player.not_nil!, 1)
+    ADLMIDI.adl_setSoftPanEnabled(@@adl_player.not_nil!, @@midismoothpan)
 
     RAudio.set_audio_stream_buffer_size_default(MIDI_BUFFER_SIZE // 2)
     @@music_stream = RAudio.load_audio_stream(MIDI_SAMPLE_RATE, 16, 2)
@@ -5877,11 +5808,10 @@ module LibDoom
   #
   # i_error
   #
-  def self.i_error(error : LibC::Char*)
+  def self.i_error(error : String)
     @@closing = true
     # Message first.
-    CDoom.doom_print.call(error) if !error.null?
-    CDoom.doom_print.call("\n".to_unsafe)
+    STDERR.puts error
 
     # Shutdown. Here might be other errors.
     CDoom.g_check_demo_status if CDoom.demorecording != 0
@@ -5953,7 +5883,7 @@ module LibDoom
     Raylib.init_window(1024, 768, "LibDoom")
     Raylib.set_exit_key(Raylib::KeyboardKey::Null)
     Raylib.disable_cursor
-    # Raylib.toggle_fullscreen
+    Raylib.toggle_fullscreen if @@rlfullscreen != 0
     # Raylib.set_target_fps(60)
 
     image = Raylib.gen_image_color(320, 200, Raylib::BLACK)
@@ -6068,25 +5998,6 @@ module LibDoom
 
     CDoom.i_error("Error: fixed_div: divide by zero") if c >= 2147483648.0 || c < -2147483648.0
     return c.to_i32!
-  end
-
-  #
-  # m_draw_custom_menu_text
-  #  Draw several segments of patches to make up new text
-  #
-  def self.m_draw_custom_menu_text(name : LibC::Char*, x : LibC::Int, y : LibC::Int)
-    CDoom.custom_texts_count.times do |i|
-      custom_text = CDoom.menu_custom_texts.to_unsafe + i
-      if CDoom.doom_strcmp(custom_text.value.name, name) == 0
-        seg = custom_text.value.segs.to_unsafe
-        while !seg.value.lump.null?
-          lump = CDoom.w_cache_lump_name(seg.value.lump, CDoom::PU_CACHE).as(CDoom::Patch*)
-          CDoom.v_draw_patch_rect_direct(x + seg.value.offx, y, 0, lump, seg.value.x, seg.value.w)
-          seg += 1
-        end
-        break
-      end
-    end
   end
 
   #
@@ -6328,10 +6239,6 @@ module LibDoom
     CDoom.m_setup_next_menu(pointerof(CDoom.sounddef))
   end
 
-  def self.m_mouse_options(choice : Int32)
-    CDoom.m_setup_next_menu(pointerof(CDoom.mouseoptionsdef))
-  end
-
   def self.m_sfxvol(choice : Int32)
     case choice
     when 0
@@ -6415,7 +6322,7 @@ module LibDoom
 
     # Yet another hack...
     if CDoom.gamemode == CDoom::GameMode::Registered && choice > 2
-      CDoom.doom_print.call("m_episode: 4th episode requires Ultimate DOOM\n".to_unsafe)
+      puts "m_episode: 4th episode requires Ultimate DOOM"
       choice = 0
     end
 
@@ -6431,21 +6338,15 @@ module LibDoom
 
     CDoom.v_draw_patch_direct(CDoom.optionsdef.x + 120, CDoom.optionsdef.y + CDoom::LINEHEIGHT * CDoom::OptionsEnum::Messages.value, 0, CDoom.w_cache_lump_name(CDoom.msg_names[CDoom.show_messages], CDoom::PU_CACHE).as(CDoom::Patch*))
 
-    CDoom.v_draw_patch_direct(CDoom.optionsdef.x + 131, CDoom.optionsdef.y + CDoom::LINEHEIGHT * CDoom::OptionsEnum::Crosshairopt.value, 0, CDoom.w_cache_lump_name(CDoom.msg_names[CDoom.crosshair], CDoom::PU_CACHE).as(CDoom::Patch*))
-
-    CDoom.v_draw_patch_direct(CDoom.optionsdef.x + 147, CDoom.optionsdef.y + CDoom::LINEHEIGHT * CDoom::OptionsEnum::Alwaysrunopt.value, 0, CDoom.w_cache_lump_name(CDoom.msg_names[CDoom.always_run], CDoom::PU_CACHE).as(CDoom::Patch*))
-
     CDoom.m_draw_thermo(CDoom.optionsdef.x, CDoom.optionsdef.y + CDoom::LINEHEIGHT * (CDoom::OptionsEnum::Scrnsize.value + 1),
       9, CDoom.screen_size)
-  end
 
-  def self.m_draw_mouse_options
-    CDoom.m_draw_custom_menu_text("TXT_MOPT", 74, 45)
-
-    CDoom.v_draw_patch_direct(CDoom.mouseoptionsdef.x + 149, CDoom.mouseoptionsdef.y + CDoom::LINEHEIGHT * CDoom::MouseoptionsEnum::Mousemov.value, 0, CDoom.w_cache_lump_name(CDoom.msg_names[CDoom.mousemove], CDoom::PU_CACHE).as(CDoom::Patch*))
-
-    CDoom.m_draw_thermo(CDoom.mouseoptionsdef.x, CDoom.mouseoptionsdef.y + CDoom::LINEHEIGHT * (CDoom::MouseoptionsEnum::Mousesens.value + 1),
+    CDoom.m_draw_thermo(CDoom.optionsdef.x, CDoom.optionsdef.y + CDoom::LINEHEIGHT * (CDoom::OptionsEnum::Mousesensitivity.value + 1),
       10, CDoom.mouse_sensitivity)
+
+    CDoom.m_write_text(CDoom.optionsdef.x, CDoom.optionsdef.y +
+                                           CDoom::LINEHEIGHT * CDoom::OptionsEnum::More.value + CDoom.hu_font[0].value.height // 2,
+      "more options")
   end
 
   def self.m_options(choice : Int32)
@@ -6469,6 +6370,38 @@ module LibDoom
     CDoom.message_dontfuckwithme = 1
   end
 
+  def self.m_moreoptions(choice : Int32)
+    CDoom.m_setup_next_menu(pointerof(@@moreoptions_def))
+  end
+
+  def self.m_draw_moreoptions
+    CDoom.v_draw_patch_direct(108, 8, 0, CDoom.w_cache_lump_name("M_OPTTTL", CDoom::PU_CACHE).as(CDoom::Patch*))
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::Alwaysrun.value + CDoom.hu_font[0].value.height // 2,
+      "always run: " + (CDoom.always_run != 0 ? "on" : "off"))
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::Crosshair.value + CDoom.hu_font[0].value.height // 2,
+      "crosshair: " + (CDoom.crosshair != 0 ? "on" : "off"))
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::Fullscreen.value + CDoom.hu_font[0].value.height // 2,
+      "toggle fullscreen")
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::SmoothPan.value + CDoom.hu_font[0].value.height // 2,
+      "smooth midi panning: " + (@@midismoothpan != 0 ? "on" : "off"))
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::Pitching.value + CDoom.hu_font[0].value.height // 2,
+      "random audio pitch: " + (@@randompitch != 0 ? "on" : "off"))
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::AmActive.value + CDoom.hu_font[0].value.height // 2,
+      "active automap drawing: " + (@@amactivedraw != 0 ? "on" : "off"))
+  end
+
   #
   # Toggle crosshair on/off
   #
@@ -6476,14 +6409,6 @@ module LibDoom
     # warning: unused parameter `choice : Int32'
     choice = 0
     CDoom.crosshair = 1 - CDoom.crosshair
-
-    if CDoom.crosshair == 0
-      (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message = CDoom::CROSSOFF
-    else
-      (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message = CDoom::CROSSON
-    end
-
-    CDoom.message_dontfuckwithme = 1
   end
 
   #
@@ -6493,14 +6418,24 @@ module LibDoom
     # warning: unused parameter `choice : Int32'
     choice = 0
     CDoom.always_run = 1 - CDoom.always_run
+  end
 
-    if CDoom.always_run == 0
-      (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message = CDoom::ALWAYSRUNOFF
-    else
-      (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message = CDoom::ALWAYSRUNON
-    end
+  def self.m_toggle_fullscreen(choice : Int32)
+    @@rlfullscreen = 1 - @@rlfullscreen
+    Raylib.toggle_fullscreen
+  end
 
-    CDoom.message_dontfuckwithme = 1
+  def self.m_toggle_smoothpan(choice : Int32)
+    @@midismoothpan = 1 - @@midismoothpan
+    @@adl_player.try { |ap| ADLMIDI.adl_setSoftPanEnabled(ap, @@midismoothpan) }
+  end
+
+  def self.m_toggle_pitching(choice : Int32)
+    @@randompitch = 1 - @@randompitch
+  end
+
+  def self.m_toggle_amactivedraw(choic : Int32)
+    @@amactivedraw = 1 - @@amactivedraw
   end
 
   #
@@ -6888,8 +6823,9 @@ module LibDoom
         CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_swtchn)
         return 1
       when CDoom::KEY_F5
-        CDoom.m_change_crosshair(0)
+        CDoom.m_start_control_panel
         CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_swtchn)
+        m_moreoptions(0)
         return 1
       when CDoom::KEY_F6 # Quicksave
         CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_swtchn)
@@ -7071,11 +7007,7 @@ module LibDoom
     max.times do |i|
       menuitem = (CDoom.current_menu.value.menuitems + i)
       if menuitem.value.name[0] != 0
-        if CDoom.doom_strncmp(menuitem.value.name, "TXT_", 4) == 0
-          CDoom.m_draw_custom_menu_text(menuitem.value.name, @@x, @@y)
-        else
-          CDoom.v_draw_patch_direct(@@x, @@y, 0, CDoom.w_cache_lump_name(menuitem.value.name, CDoom::PU_CACHE).as(CDoom::Patch*))
-        end
+        CDoom.v_draw_patch_direct(@@x, @@y, 0, CDoom.w_cache_lump_name(menuitem.value.name, CDoom::PU_CACHE).as(CDoom::Patch*))
       end
       @@y += CDoom::LINEHEIGHT
     end
@@ -7179,9 +7111,7 @@ module LibDoom
   def self.m_read_file(name : LibC::Char*, buffer : CDoom::Byte**) : LibC::Int
     handle = CDoom.doom_open.call(name, "rb".to_unsafe)
     if handle.null?
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: Couldn't read file ")
-      CDoom.doom_concat(CDoom.error_buf, name)
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: Couldn't read file #{name}")
     end
     CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
     length = CDoom.doom_tell.call(handle)
@@ -7191,9 +7121,7 @@ module LibDoom
     CDoom.doom_close.call(handle)
 
     if count < length
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: Couldn't read file ")
-      CDoom.doom_concat(CDoom.error_buf, name)
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: Couldn't read file #{name}")
     end
 
     buffer.value = buf.as(UInt8*)
@@ -7204,18 +7132,18 @@ module LibDoom
     f = CDoom.doom_open.call(CDoom.defaultfile, "w".to_unsafe)
     return if f.null? # can't write the file, but don't complain
 
-    CDoom.numdefaults.times do |i|
-      if CDoom.defaults[i].defaultvalue > -0xfff &&
-         CDoom.defaults[i].defaultvalue < 0xfff
-        v = CDoom.defaults[i].location.value
-        CDoom.doom_fprint(f, CDoom.defaults[i].name)
+    @@defaults.size.times do |i|
+      if @@defaults[i].defaultvalue > -0xfff &&
+         @@defaults[i].defaultvalue < 0xfff
+        v = @@defaults[i].location.value
+        CDoom.doom_fprint(f, @@defaults[i].name)
         CDoom.doom_fprint(f, "\t\t")
         CDoom.doom_fprint(f, CDoom.doom_itoa(v, 10))
         CDoom.doom_fprint(f, "\n")
       else
-        CDoom.doom_fprint(f, CDoom.defaults[i].name)
+        CDoom.doom_fprint(f, @@defaults[i].name)
         CDoom.doom_fprint(f, "\t\t\"")
-        CDoom.doom_fprint(f, CDoom.defaults[i].text_location.as(UInt8**).value)
+        CDoom.doom_fprint(f, @@defaults[i].text_location.as(UInt8**).value)
         CDoom.doom_fprint(f, "\"\n")
       end
     end
@@ -7227,11 +7155,11 @@ module LibDoom
     defa = uninitialized StaticArray(UInt8, 80)
     strparm = uninitialized StaticArray(UInt8, 100)
 
-    CDoom.numdefaults.times do |i|
-      if CDoom.defaults[i].defaultvalue == 0xffff
-        CDoom.defaults[i].text_location.value = CDoom.defaults[i].default_text_value
+    @@defaults.size.times do |i|
+      if @@defaults[i].defaultvalue == 0xffff
+        @@defaults[i].text_location.value = @@defaults[i].default_text_value
       else
-        CDoom.defaults[i].location.value = CDoom.defaults[i].defaultvalue.to_i32!
+        @@defaults[i].location.value = @@defaults[i].defaultvalue.to_i32!
       end
     end
 
@@ -7239,9 +7167,7 @@ module LibDoom
     i = CDoom.m_check_parm("-config")
     if i != 0 && i < CDoom.myargc - 1
       CDoom.defaultfile = CDoom.myargv[i + 1]
-      CDoom.doom_print.call("        default file: ".to_unsafe)
-      CDoom.doom_print.call(CDoom.defaultfile)
-      CDoom.doom_print.call("\n".to_unsafe)
+      puts "        default file: #{String.new(CDoom.defaultfile)}"
     else
       CDoom.defaultfile = CDoom.basedefault
     end
@@ -7304,12 +7230,12 @@ module LibDoom
           else
             parm = CDoom.doom_atoi(strparm.to_unsafe)
           end
-          CDoom.numdefaults.times do |i|
-            if CDoom.doom_strcmp(defa, CDoom.defaults[i].name) == 0
+          @@defaults.size.times do |i|
+            if CDoom.doom_strcmp(defa, @@defaults[i].name) == 0
               if !isstring
-                CDoom.defaults[i].location.value = parm
+                @@defaults[i].location.value = parm
               else
-                CDoom.defaults[i].text_location.value = newstring
+                @@defaults[i].text_location.value = newstring
               end
               break
             end
@@ -9637,9 +9563,7 @@ module LibDoom
     return 0 if ammo == CDoom::Ammotype::Noammo
 
     if ammo.value < 0 || ammo.value > CDoom::Ammotype::NUMAMMO.value
-      CDoom.doom_strcpy(CDoom.error_buf, "p_give_ammo: bad type ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(ammo, 10))
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("p_give_ammo: bad type #{ammo}")
     end
 
     return 0 if player.value.ammo[ammo.value] == player.value.maxammo[ammo.value]
@@ -12426,14 +12350,7 @@ module LibDoom
     end
 
     if i == CDoom::Mobjtype::NUMMOBJTYPES.value
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: p_spawn_map_thing: Unknown type ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(mthing.value.type, 10))
-      CDoom.doom_concat(CDoom.error_buf, " at (")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(mthing.value.x, 10))
-      CDoom.doom_concat(CDoom.error_buf, ", ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(mthing.value.y, 10))
-      CDoom.doom_concat(CDoom.error_buf, ")")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: p_spawn_map_thing: Unknown type #{mthing.value.type} at (#{mthing.value.x},#{mthing.value.y})")
     end
 
     # don't spawn keycards and players in deathmatch
@@ -13542,10 +13459,7 @@ module LibDoom
         (mobj.as(UInt8*) + offsetof(CDoom::Mobj, @thinker) + offsetof(CDoom::Thinker, @function)).as(CDoom::ActionfP1*).value = CDoom::ActionfP1.new((->CDoom.p_mobj_thinker).pointer, Pointer(Void).null)
         CDoom.p_add_thinker((mobj.as(UInt8*) + offsetof(CDoom::Mobj, @thinker)).as(CDoom::Thinker*))
       else
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: Unknown tclass ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(tclass, 10))
-        CDoom.doom_concat(CDoom.error_buf, " in savegame")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: Unknown tclass #{tclass} in savegame")
       end
     end
   end
@@ -13762,10 +13676,7 @@ module LibDoom
 
         CDoom.p_add_thinker((glow.as(UInt8*) + offsetof(CDoom::Glow, @thinker)).as(CDoom::Thinker*))
       else
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: p_unarchive_specials: Unknown tclass ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(tclass, 10))
-        CDoom.doom_concat(CDoom.error_buf, " in savegame")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: p_unarchive_specials: Unknown tclass #{tclass} in savegame")
       end
     end
   end
@@ -14295,11 +14206,7 @@ module LibDoom
   def self.p_cross_subsector(num : LibC::Int) : CDoom::DoomBool
     {% if flag?("RANGECHECK") %}
       if num >= CDoom.numsubsectors
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: p_cross_subsector: ss ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(num, 10))
-        CDoom.doom_concat(CDoom.error_buf, " with numss = ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.numsubsectors, 10))
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: p_cross_subsector: ss #{num} with numss = #{CDoom.numsubsectors}")
       end
     {% end %}
 
@@ -14509,11 +14416,7 @@ module LibDoom
       CDoom.lastanim.value.numpics = CDoom.lastanim.value.picnum - CDoom.lastanim.value.basepic + 1
 
       if CDoom.lastanim.value.numpics < 2
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: p_init_pic_anims: bad cycle from ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.animdefs[i].startname)
-        CDoom.doom_concat(CDoom.error_buf, " to ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.animdefs[i].endname)
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: p_init_pic_anims: bad cycle from #{CDoom.animdefs[i].startname} to #{CDoom.animdefs[i].endname}")
       end
 
       CDoom.lastanim.value.speed = CDoom.animdefs[i].speed
@@ -14620,7 +14523,7 @@ module LibDoom
 
       # Check for overflow. Exit.
       if h >= CDoom::MAX_ADJOINING_SECTORS
-        CDoom.doom_print.call("Sector with more than 20 adjoining sectors\n".to_unsafe)
+        puts "Sector with more than 20 adjoining sectors"
         break
       end
     end
@@ -15093,9 +14996,7 @@ module LibDoom
 
       CDoom.g_exit_level if player.value.health <= 10
     else
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: p_player_in_special_sector: unknown special ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(sector.value.special, 10))
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: p_player_in_special_sector: unknown special #{sector.value.special}")
     end
   end
 
@@ -15355,6 +15256,7 @@ module LibDoom
         (CDoom.buttonlist.to_unsafe + i).value.btexture = texture
         (CDoom.buttonlist.to_unsafe + i).value.btimer = time
         (CDoom.buttonlist.to_unsafe + i).value.soundorg = ((line.value.frontsector).as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*)
+
         return
       end
     end
@@ -15381,24 +15283,21 @@ module LibDoom
 
     (CDoom.numswitches * 2).times do |i|
       if CDoom.switchlist[i] == tex_top
-        CDoom.s_start_sound(((CDoom.buttonlist.to_unsafe + i).as(UInt8*) + offsetof(CDoom::Button, @soundorg)).as(CDoom::Mobj*),
-          sound)
+        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.toptexture = CDoom.switchlist[i ^ 1]
 
         CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
 
         return
       elsif CDoom.switchlist[i] == tex_mid
-        CDoom.s_start_sound(((CDoom.buttonlist.to_unsafe + i).as(UInt8*) + offsetof(CDoom::Button, @soundorg)).as(CDoom::Mobj*),
-          sound)
+        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.midtexture = CDoom.switchlist[i ^ 1]
 
         CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
 
         return
       elsif CDoom.switchlist[i] == tex_bot
-        CDoom.s_start_sound(((CDoom.buttonlist.to_unsafe + i).as(UInt8*) + offsetof(CDoom::Button, @soundorg)).as(CDoom::Mobj*),
-          sound)
+        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.bottomtexture = CDoom.switchlist[i ^ 1]
 
         CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
@@ -16433,11 +16332,7 @@ module LibDoom
   def self.r_subsector(num : LibC::Int)
     {% if flag?("RANGECHECK") %}
       if num >= CDoom.numsubsectors
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_subsector: ss ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(num, 10))
-        CDoom.doom_concat(CDoom.error_buf, " with numss = ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.numsubsectors, 10))
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_subsector: ss #{num} with numss = #{CDoom.numsubsectors}")
       end
     {% end %}
 
@@ -16642,9 +16537,7 @@ module LibDoom
 
     texture.value.width.times do |x|
       if patchcount[x] == 0
-        CDoom.doom_print.call("r_generate_lookup: column without a patch (".to_unsafe)
-        CDoom.doom_print.call(texture.value.name.to_unsafe)
-        CDoom.doom_print.call(")\n".to_unsafe)
+        puts "r_generate_lookup: column without a patch (#{String.new(texture.value.name.to_unsafe)})"
         return
       end
 
@@ -16654,10 +16547,7 @@ module LibDoom
         colofs[x] = CDoom.texturecompositesize[texnum].to_u16!
 
         if CDoom.texturecompositesize[texnum] > 0x10000 - texture.value.height
-          CDoom.doom_strcpy(CDoom.error_buf, "Error: r_generate_lookup: texture ")
-          CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(texnum, 10))
-          CDoom.doom_concat(CDoom.error_buf, " is >64k")
-          CDoom.i_error(CDoom.error_buf)
+          CDoom.i_error("Error: r_generate_lookup: texture #{texnum} is >64k")
         end
 
         CDoom.texturecompositesize[texnum] = CDoom.texturecompositesize[texnum] + texture.value.height
@@ -16730,13 +16620,13 @@ module LibDoom
     totalwidth = 0
 
     # Really complex printing shit...
-    CDoom.doom_print.call("[".to_unsafe)
-    ((CDoom.numtextures + 63) // 64).times { |i| CDoom.doom_print.call(" ".to_unsafe) }
-    CDoom.doom_print.call("]".to_unsafe)
-    (((CDoom.numtextures + 63) // 64) + 1).times { |i| CDoom.doom_print.call("\b".to_unsafe) }
+    print "["
+    ((CDoom.numtextures + 63) // 64).times { |i| print " " }
+    print "]"
+    (((CDoom.numtextures + 63) // 64) + 1).times { |i| print "\b" }
 
     CDoom.numtextures.times do |i|
-      CDoom.doom_print.call(".".to_unsafe) if i & 63 == 0
+      print "." if i & 63 == 0
 
       if i == numtextures1
         # Start looking in second texture file.
@@ -16769,9 +16659,7 @@ module LibDoom
         patch.value.originy = mpatch.value.originy
         patch.value.patch = patchlookup[mpatch.value.patch]
         if patch.value.patch == -1
-          CDoom.doom_strcpy(CDoom.error_buf, "Error: r_init_textures: Missing patch in texture ")
-          CDoom.doom_concat(CDoom.error_buf, texture.value.name)
-          CDoom.i_error(CDoom.error_buf)
+          CDoom.i_error("Error: r_init_textures: Missing patch in texture #{texture.value.name}")
         end
 
         mpatch += 1
@@ -16814,13 +16702,13 @@ module LibDoom
     # Create translation table for global animation.
     CDoom.flattranslation = CDoom.z_malloc((CDoom.numflats + 1) * sizeof(Int32), CDoom::PU_STATIC, Pointer(Void).null).as(Int32*)
 
-    CDoom.doom_print.call("[".to_unsafe)
-    ((CDoom.numflats + 63) // 64).times { |i| CDoom.doom_print.call(" ".to_unsafe) }
-    CDoom.doom_print.call("]".to_unsafe)
-    (((CDoom.numflats + 63) // 64) + 1).times { |i| CDoom.doom_print.call("\b".to_unsafe) }
+    print "["
+    ((CDoom.numflats + 63) // 64).times { |i| print " " }
+    print "]"
+    (((CDoom.numflats + 63) // 64) + 1).times { |i| print "\b" }
 
     CDoom.numflats.times do |i|
-      CDoom.doom_print.call(".".to_unsafe) if i & 63 == 0
+      print "." if i & 63 == 0
       CDoom.flattranslation[i] = i
     end
   end
@@ -16839,13 +16727,13 @@ module LibDoom
     CDoom.spriteoffset = CDoom.z_malloc(CDoom.numspritelumps * sizeof(CDoom::Fixed), CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Fixed*)
     CDoom.spritetopoffset = CDoom.z_malloc(CDoom.numspritelumps * sizeof(CDoom::Fixed), CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Fixed*)
 
-    CDoom.doom_print.call("[".to_unsafe)
-    ((CDoom.numspritelumps + 63) // 64).times { |i| CDoom.doom_print.call(" ".to_unsafe) }
-    CDoom.doom_print.call("]".to_unsafe)
-    (((CDoom.numspritelumps + 63) // 64) + 1).times { |i| CDoom.doom_print.call("\b".to_unsafe) }
+    print "["
+    ((CDoom.numspritelumps + 63) // 64).times { |i| print " " }
+    print "]"
+    (((CDoom.numspritelumps + 63) // 64) + 1).times { |i| print "\b" }
 
     CDoom.numspritelumps.times do |i|
-      CDoom.doom_print.call(".".to_unsafe) if i & 63 == 0
+      print "." if i & 63 == 0
 
       patch = CDoom.w_cache_lump_num(CDoom.firstspritelump + i, CDoom::PU_CACHE).as(CDoom::Patch*)
       CDoom.spritewidth[i] = patch.value.width.to_i32 << CDoom::FRACBITS
@@ -16862,7 +16750,7 @@ module LibDoom
     CDoom.colormaps = CDoom.z_malloc(length, CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Lighttable*)
     CDoom.colormaps = Pointer(CDoom::Lighttable).new(((CDoom.colormaps.address + 255) & ~0xff))
     CDoom.w_read_lump(lump, CDoom.colormaps)
-    CDoom.doom_print.call("x".to_unsafe)
+    print "x"
   end
 
   #
@@ -16871,13 +16759,13 @@ module LibDoom
   # Must be called after W_Init.
   #
   def self.r_init_data
-    CDoom.doom_print.call("\n  init_textures  - ".to_unsafe)
+    print "\n  init_textures  - "
     CDoom.r_init_textures
-    CDoom.doom_print.call("\n  init_flats     - ".to_unsafe)
+    print "\n  init_flats     - "
     CDoom.r_init_flats
-    CDoom.doom_print.call("\n  init_sprites   - ".to_unsafe)
+    print "\n  init_sprites   - "
     CDoom.r_init_sprite_lumps
-    CDoom.doom_print.call("\n  init_colormaps - ".to_unsafe)
+    print "\n  init_colormaps - "
     CDoom.r_init_colormaps
   end
 
@@ -16893,10 +16781,7 @@ module LibDoom
       namet[8] = 0
       CDoom.doom_memcpy(namet, name, 8)
 
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_flat_num_for_name: ")
-      CDoom.doom_concat(CDoom.error_buf, namet)
-      CDoom.doom_concat(CDoom.error_buf, " not found")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: r_flat_num_for_name #{namet} not found")
     end
     return i - CDoom.firstflat
   end
@@ -16922,10 +16807,7 @@ module LibDoom
     i = CDoom.r_check_texture_num_for_name(name)
 
     if i == -1
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_texture_num_for_name: ")
-      CDoom.doom_concat(CDoom.error_buf, name)
-      CDoom.doom_concat(CDoom.error_buf, " not found")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: r_texture_num_for_name: #{name} not found")
     end
 
     return i
@@ -17044,13 +16926,7 @@ module LibDoom
     {% if flag?("RANGECHECK") %}
       if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
          CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_column: ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10))
-        CDoom.doom_concat(CDoom.error_buf, " to ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10))
-        CDoom.doom_concat(CDoom.error_buf, " at ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10))
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_column: #{CDoom.dc_yl} to #{CDoom.dc_yh} at #{CDoom.dc_x}")
       end
     {% end %}
 
@@ -17107,13 +16983,7 @@ module LibDoom
     {% if flag?("RANGECHECK") %}
       if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
          CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_fuzz_column: ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10))
-        CDoom.doom_concat(CDoom.error_buf, " to ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10))
-        CDoom.doom_concat(CDoom.error_buf, " at ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10))
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_fuzz_column: #{CDoom.dc_yl} to #{CDoom.dc_yh} at #{CDoom.dc_x}")
       end
     {% end %}
 
@@ -17160,13 +17030,7 @@ module LibDoom
     {% if flag?("RANGECHECK") %}
       if CDoom.dc_x.to_u32! >= CDoom::SCREENWIDTH ||
          CDoom.dc_yl < 0 || CDoom.dc_yh >= CDoom::SCREENHEIGHT
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_column: ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yl, 10))
-        CDoom.doom_concat(CDoom.error_buf, " to ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_yh, 10))
-        CDoom.doom_concat(CDoom.error_buf, " at ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.dc_x, 10))
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_column: #{CDoom.dc_yl} to #{CDoom.dc_yh} at #{CDoom.dc_x}")
       end
     {% end %}
 
@@ -17240,13 +17104,7 @@ module LibDoom
          CDoom.ds_x1 < 0 ||
          CDoom.ds_x2 >= CDoom::SCREENWIDTH ||
          CDoom.ds_y.to_u32! > CDoom::SCREENHEIGHT
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_span: ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_x1, 10))
-        CDoom.doom_concat(CDoom.error_buf, " to ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_x2, 10))
-        CDoom.doom_concat(CDoom.error_buf, " at ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(CDoom.ds_y, 10))
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_span: #{CDoom.ds_x1} to #{CDoom.ds_x2} at #{CDoom.ds_y}")
       end
     {% end %}
 
@@ -17799,20 +17657,20 @@ module LibDoom
   end
 
   def self.r_init
-    CDoom.doom_print.call("\nr_init_data".to_unsafe)
+    print "\nr_init_data"
     CDoom.r_init_data
 
     # viewwidth / viewheight / detailLevel are set by the defaults
-    CDoom.doom_print.call("\nr_init_tables".to_unsafe)
+    print "\nr_init_tables"
     CDoom.r_init_tables
 
     CDoom.r_set_view_size(CDoom.screenblocks, CDoom.detail_level)
 
-    CDoom.doom_print.call("\nr_init_light_tables".to_unsafe)
+    print "\nr_init_light_tables"
     CDoom.r_init_light_tables
-    CDoom.doom_print.call("\nr_init_sky_map".to_unsafe)
+    print "\nr_init_sky_map"
     CDoom.r_init_sky_map
-    CDoom.doom_print.call("\nr_init_translation_tables".to_unsafe)
+    print "\nr_init_translation_tables"
     CDoom.r_init_translation_tables
 
     CDoom.framecount = 0
@@ -17909,13 +17767,7 @@ module LibDoom
          x1 < 0 ||
          x2 >= CDoom.viewwidth ||
          y.to_u32! > CDoom.viewheight.to_u32!
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_map_plane: ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(x1, 10))
-        CDoom.doom_concat(CDoom.error_buf, " to ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(x2, 10))
-        CDoom.doom_concat(CDoom.error_buf, " at ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(y, 10))
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_map_plane: #{x1} to #{x2} at #{y}")
       end
     {% end %}
 
@@ -18085,24 +17937,15 @@ module LibDoom
   def self.r_draw_planes
     {% if flag?("RANGECHECK") %}
       if CDoom.ds_p - CDoom.drawsegs.to_unsafe > CDoom::MAXDRAWSEGS
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_planes: drawsegs overflow (")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa((CDoom.ds_p - CDoom.drawsegs.to_unsafe), 10))
-        CDoom.doom_concat(CDoom.error_buf, ")")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_planes: drawsegs overflow (#{CDoom.ds_p - CDoom.drawsegs.to_unsafe})")
       end
 
       if CDoom.lastvisplane - CDoom.visplanes.to_unsafe > CDoom::MAXVISPLANES
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_planes: visplane overflow (")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa((CDoom.lastvisplane - CDoom.visplanes.to_unsafe), 10))
-        CDoom.doom_concat(CDoom.error_buf, ")")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_planes: visplane overflow (#{CDoom.lastvisplane - CDoom.visplanes.to_unsafe})")
       end
 
       if CDoom.lastopening - CDoom.openings.to_unsafe > CDoom::MAXOPENINGS
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_planes: opening overflow (")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa((CDoom.lastopening - CDoom.openings.to_unsafe), 10))
-        CDoom.doom_concat(CDoom.error_buf, ")")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_planes: opening overflow (#{CDoom.lastopening - CDoom.openings.to_unsafe})")
       end
     {% end %}
 
@@ -18389,11 +18232,7 @@ module LibDoom
 
     {% if flag?("RANGECHECK") %}
       if start >= CDoom.viewwidth || start > stop
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: Bad r_render_wall_range: ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(start, 10))
-        CDoom.doom_concat(CDoom.error_buf, " to ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(stop, 10))
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: bad r_render_wall_range: #{start} to #{stop}")
       end
     {% end %}
 
@@ -18699,9 +18538,7 @@ module LibDoom
   #
   def self.r_install_sprite_lump(lump : LibC::Int, frame : LibC::UInt, rotation : LibC::UInt, flipped : CDoom::DoomBool)
     if frame >= 29 || rotation > 8
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Bad frame characters in lump ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(lump, 10))
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: r_install_sprite_lump: Bad frame characters in lump #{lump}")
     end
 
     CDoom.maxframe = frame if frame.to_i32! > CDoom.maxframe
@@ -18709,21 +18546,11 @@ module LibDoom
     if rotation == 0
       # the lump should be used for all rotations
       if CDoom.sprtemp[frame].rotate == 0
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Sprite ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.spritename)
-        CDoom.doom_concat(CDoom.error_buf, " frame ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('A'.ord + frame))
-        CDoom.doom_concat(CDoom.error_buf, " has multip rot=0 lump")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has multip rot=0 lump")
       end
 
       if CDoom.sprtemp[frame].rotate == 1
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Sprite ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.spritename)
-        CDoom.doom_concat(CDoom.error_buf, " frame ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('A'.ord + frame))
-        CDoom.doom_concat(CDoom.error_buf, " has rotations ")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has rotations")
       end
 
       (CDoom.sprtemp.to_unsafe + frame).value.rotate = 0
@@ -18736,12 +18563,7 @@ module LibDoom
 
     # the lump is only used for one rotation
     if CDoom.sprtemp[frame].rotate == 0
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Sprite ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.spritename)
-      CDoom.doom_concat(CDoom.error_buf, " frame ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('A'.ord + frame))
-      CDoom.doom_concat(CDoom.error_buf, " has rotations ")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has rotations")
     end
 
     (CDoom.sprtemp.to_unsafe + frame).value.rotate = 1
@@ -18749,14 +18571,7 @@ module LibDoom
     # make - based
     rotation -= 1
     if CDoom.sprtemp[frame].lump[rotation] != -1
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: r_install_sprite_lump: Sprite ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.spritename)
-      CDoom.doom_concat(CDoom.error_buf, " : ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('A'.ord + frame))
-      CDoom.doom_concat(CDoom.error_buf, " : ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa('1'.ord + rotation))
-      CDoom.doom_concat(CDoom.error_buf, " ")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: r_install_sprite_lump: Sprite #{CDoom.spritename} : #{'A' + frame} : #{'1' + rotation} ")
     end
 
     ((CDoom.sprtemp.to_unsafe + frame).value.lump.to_unsafe + rotation).value = (lump - CDoom.firstspritelump).to_i16!
@@ -18840,23 +18655,14 @@ module LibDoom
       CDoom.maxframe.times do |frame|
         case CDoom.sprtemp[frame].rotate
         when -1
-          CDoom.doom_strcpy(CDoom.error_buf, "Error: r_init_sprite_defs: No patches found for ")
-          CDoom.doom_concat(CDoom.error_buf, namelist[i])
-          CDoom.doom_concat(CDoom.error_buf, " frame ")
-          CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa(frame + 'A'.ord))
-          CDoom.i_error(CDoom.error_buf)
+          CDoom.i_error("Error: r_init_sprite_defs: No patches found for #{namelist[i]} frame #{'A' + frame}")
         when 0
           # only the first rotation is needed
         when 1
           # must have all 8 frames
           8.times do |rotation|
             if CDoom.sprtemp[frame].lump[rotation] == -1
-              CDoom.doom_strcpy(CDoom.error_buf, "Error: r_init_sprite_defs: Sprite ")
-              CDoom.doom_concat(CDoom.error_buf, namelist[i])
-              CDoom.doom_concat(CDoom.error_buf, " frame ")
-              CDoom.doom_concat(CDoom.error_buf, CDoom.doom_ctoa(frame + 'A'.ord))
-              CDoom.doom_concat(CDoom.error_buf, " is missing rotations")
-              CDoom.i_error(CDoom.error_buf)
+              CDoom.i_error("Error: r_init_sprite_defs: Sprite #{namelist[i]} frame #{'A' + frame} is missing rotations")
             end
           end
         end
@@ -18996,21 +18802,13 @@ module LibDoom
     # decide which patch to use for sprite relative to player
     {% if flag?("RANGECHECK") %}
       if thing.value.sprite.to_u32! >= CDoom.numsprites.to_u32!
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_project_sprite: invalid sprite number ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(thing.value.sprite.value, 10))
-        CDoom.doom_concat(CDoom.error_buf, " ")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_project_sprite: invalid sprite number #{thing.value.sprite.value} ")
       end
     {% end %}
     sprdef = CDoom.sprites + thing.value.sprite.value
     {% if flag?("RANGECHECK") %}
       if thing.value.frame & CDoom::FF_FRAMEMASK >= sprdef.value.numframes
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_project_sprite: invalid sprite frame ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(thing.value.sprite.value, 10))
-        CDoom.doom_concat(CDoom.error_buf, " : ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(thing.value.frame, 10))
-        CDoom.doom_concat(CDoom.error_buf, " ")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_project_sprite: invalid sprite frame #{thing.value.sprite.value} : #{thing.value.frame} ")
       end
     {% end %}
     sprframe = sprdef.value.spriteframes + (thing.value.frame & CDoom::FF_FRAMEMASK)
@@ -19121,21 +18919,13 @@ module LibDoom
     # decide which patch to use
     {% if flag?("RANGECHECK") %}
       if psp.value.state.value.sprite.value >= CDoom.numsprites
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_psprite: invalid sprite number ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(psp.value.state.value.sprite.value, 10))
-        CDoom.doom_concat(CDoom.error_buf, " ")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_psprite: invalid sprite number #{psp.value.state.value.sprite.value} ")
       end
     {% end %}
     sprdef = CDoom.sprites + psp.value.state.value.sprite.value
     {% if flag?("RANGECHECK") %}
       if psp.value.state.value.frame & CDoom::FF_FRAMEMASK >= sprdef.value.numframes
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: r_draw_psprite: invalid sprite frame ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(psp.value.state.value.sprite.value, 10))
-        CDoom.doom_concat(CDoom.error_buf, " : ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(psp.value.state.value.frame, 10))
-        CDoom.doom_concat(CDoom.error_buf, " ")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: r_draw_psprite: invalid sprite frame #{psp.value.state.value.sprite.value} : #{psp.value.state.value.frame} ")
       end
     {% end %}
     sprframe = sprdef.value.spriteframes + (psp.value.state.value.frame & CDoom::FF_FRAMEMASK)
@@ -19397,9 +19187,7 @@ module LibDoom
   #  allocates channel buffer, sets S_sfx lookup.
   #
   def self.s_init(sfx_volume : LibC::Int, music_volume : LibC::Int)
-    CDoom.doom_print.call("s_init: default sfx volume ".to_unsafe)
-    CDoom.doom_print.call(CDoom.doom_itoa(sfx_volume, 10))
-    CDoom.doom_print.call("\n".to_unsafe)
+    puts "s_init: default sfx volume #{sfx_volume}"
 
     # Whatever these did with DMX, these are rather dummies now. [ds] or are they...
     CDoom.i_set_channels
@@ -19480,9 +19268,7 @@ module LibDoom
 
     # check for bogus sound #
     if sfx_id < 1 || sfx_id > CDoom::Sfxenum::NUMSFX.value
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: Bad sfx #: ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(sfx_id, 10))
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: Bad sfx #: #{sfx_id}")
     end
 
     sfx = CDoom.s_sfx + sfx_id
@@ -19657,9 +19443,7 @@ module LibDoom
 
   def self.s_set_music_volume(volume : LibC::Int)
     if volume < 0 || volume > 127
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: Attempt to set music volume at ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(volume, 10))
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: Attempt to set music volume at #{volume}")
     end
 
     CDoom.i_set_music_volume(127)
@@ -19669,9 +19453,7 @@ module LibDoom
 
   def self.s_set_sfx_volume(volume : LibC::Int)
     if volume < 0 || volume > 127
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: Attempt to set sfx volume at ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(volume, 10))
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: Attempt to set sfx volume at #{volume}")
     end
 
     CDoom.snd_sfx_volume = volume
@@ -19689,9 +19471,7 @@ module LibDoom
 
     if musicnum <= CDoom::Musicenum::MUS_None.value ||
        musicnum >= CDoom::Musicenum::NUMMUSIC.value
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: Bad music number ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(musicnum, 10))
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: Bad music number #{musicnum}")
     end
 
     return if CDoom.mus_playing_s_sound == music
@@ -20911,13 +20691,9 @@ module LibDoom
          y < 0 ||
          y + patch.value.height > CDoom::SCREENHEIGHT ||
          scrn.to_u32! > 4
-        CDoom.doom_print.call("Patch at ".to_unsafe)
-        CDoom.doom_print.call(CDoom.doom_itoa(x, 10))
-        CDoom.doom_print.call(",".to_unsafe)
-        CDoom.doom_print.call(CDoom.doom_itoa(y, 10))
-        CDoom.doom_print.call(" exceeds LFB\n".to_unsafe)
         # No i_error abort - what is up with TNT.WAD?
-        CDoom.doom_print.call("v_draw_patch: bad patch (ignored)\n".to_unsafe)
+        puts "Patch at #{x},#{y}, exceeds LFB"
+        puts "v_draw_patch: bad patch (ignored)"
         return
       end
     {% end %}
@@ -20971,11 +20747,7 @@ module LibDoom
          y < 0 ||
          y + patch.value.height > CDoom::SCREENHEIGHT ||
          scrn.to_u32! > 4
-        CDoom.doom_print.call("Patch origin ".to_unsafe)
-        CDoom.doom_print.call(CDoom.doom_itoa(x, 10))
-        CDoom.doom_print.call(",".to_unsafe)
-        CDoom.doom_print.call(CDoom.doom_itoa(y, 10))
-        CDoom.doom_print.call(" exceeds LFB\n".to_unsafe)
+        puts "Patch origin #{x},#{y} exceeds LFB"
         CDoom.i_error("Error: Bad v_draw_patch in v_draw_patch_flipped")
       end
     {% end %}
@@ -21022,13 +20794,9 @@ module LibDoom
          y < 0 ||
          y + patch.value.height > CDoom::SCREENHEIGHT ||
          scrn.to_u32! > 4
-        CDoom.doom_print.call("Patch at ".to_unsafe)
-        CDoom.doom_print.call(CDoom.doom_itoa(x, 10))
-        CDoom.doom_print.call(",".to_unsafe)
-        CDoom.doom_print.call(CDoom.doom_itoa(y, 10))
-        CDoom.doom_print.call(" exceeds LFB\n".to_unsafe)
+        puts "Patch at #{x},#{y}, exceeds LFB"
         # No i_error abort - what is up with TNT.WAD?
-        CDoom.doom_print.call("v_draw_patch_rect_direct: bad patch (ignored)\n".to_unsafe)
+        puts "v_draw_patch_rect_direct: bad patch (ignored)"
         return
       end
     {% end %}
@@ -21167,10 +20935,7 @@ module LibDoom
     while src.value != 0 && src.value != '.'.ord
       length += 1
       if length == 9
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: Filename base of ")
-        CDoom.doom_concat(CDoom.error_buf, path)
-        CDoom.doom_concat(CDoom.error_buf, " >8 chars")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: Filename base of #{path} >8 chars")
       end
 
       dest.value = CDoom.doom_toupper(src.value).to_u8!
@@ -21210,15 +20975,11 @@ module LibDoom
     end
 
     if (handle = CDoom.doom_open.call(filename, "rb".to_unsafe)) == 0
-      CDoom.doom_print.call(" couldn't open ".to_unsafe)
-      CDoom.doom_print.call(filename)
-      CDoom.doom_print.call("\n".to_unsafe)
+      puts " couldn't open #{String.new(filename)}"
       return
     end
 
-    CDoom.doom_print.call(" adding ".to_unsafe)
-    CDoom.doom_print.call(filename)
-    CDoom.doom_print.call("\n".to_unsafe)
+    puts " adding #{String.new(filename)}"
     startlump = CDoom.numlumps
 
     header = CDoom::Wadinfo.new
@@ -21239,10 +21000,7 @@ module LibDoom
       if CDoom.doom_strncmp(header.identification, "IWAD", 4) != 0
         # Homebrew levels?
         if CDoom.doom_strncmp(header.identification, "PWAD", 4) != 0
-          CDoom.doom_strcpy(CDoom.error_buf, "Error: Wad file ")
-          CDoom.doom_concat(CDoom.error_buf, filename)
-          CDoom.doom_concat(CDoom.error_buf, " doesn't have IWAD or PWAD id\n")
-          CDoom.i_error(CDoom.error_buf)
+          CDoom.i_error("Error: Wad file #{filename} doesn't have IWAD or PWAD id")
         end
 
         # ???CDoom.modifiedgame = 1
@@ -21294,9 +21052,7 @@ module LibDoom
     return if CDoom.reloadname.null?
 
     if (handle = CDoom.doom_open.call(CDoom.reloadname, "rb".to_unsafe)) == 0
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: w_reload: couldn't open ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.reloadname)
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: w_reload: couldn't open #{CDoom.reloadname}")
     end
 
     header = CDoom::Wadinfo.new
@@ -21419,10 +21175,7 @@ module LibDoom
         i = CDoom.w_check_num_for_name(name)
       end
       if i == -1
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: w_get_num_for_name: ")
-        CDoom.doom_concat(CDoom.error_buf, name)
-        CDoom.doom_concat(CDoom.error_buf, " not found!")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: w_get_num_for_name: #{name} not found!")
       end
     end
 
@@ -21434,10 +21187,7 @@ module LibDoom
   #
   def self.w_lump_length(lump : LibC::Int) : LibC::Int
     if lump >= CDoom.numlumps
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: w_lump_length: ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(lump, 10))
-      CDoom.doom_concat(CDoom.error_buf, " >= CDoom.numlumps")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: w_lump_length: #{lump} >= numlumps")
     end
 
     return CDoom.lumpinfo[lump].size
@@ -21449,10 +21199,7 @@ module LibDoom
   #
   def self.w_read_lump(lump : LibC::Int, dest : Void*)
     if lump >= CDoom.numlumps
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: w_read_lump: ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(lump, 10))
-      CDoom.doom_concat(CDoom.error_buf, " >= CDoom.numlumps")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: w_read_lump: #{lump} >= numlumps")
     end
 
     l = CDoom.lumpinfo + lump
@@ -21460,9 +21207,7 @@ module LibDoom
     if l.value.handle.null?
       # reloadable file, so use open / read / close
       if (handle = CDoom.doom_open.call(CDoom.reloadname, "rb".to_unsafe)) == 0
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: w_read_lump: couldn't open ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.reloadname)
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: w_read_lump: couldn't open #{CDoom.reloadname}")
       end
     else
       handle = l.value.handle
@@ -21472,13 +21217,7 @@ module LibDoom
     c = CDoom.doom_read.call(handle, dest, l.value.size)
 
     if c < l.value.size
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: w_read_lump: only read ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(c, 10))
-      CDoom.doom_strcpy(CDoom.error_buf, " of ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(l.value.size, 10))
-      CDoom.doom_strcpy(CDoom.error_buf, " on lump ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(lump, 10))
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: w_read_lump: only read #{c} of #{l.value.size} on lump #{lump}")
     end
 
     CDoom.doom_close.call(handle) if l.value.handle.null?
@@ -21486,10 +21225,7 @@ module LibDoom
 
   def self.w_cache_lump_num(lump : LibC::Int, tag : LibC::Int) : Void*
     if lump.to_u32! >= CDoom.numlumps.to_u32!
-      CDoom.doom_strcpy(CDoom.error_buf, "Error: w_cache_lump_num: ")
-      CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(lump, 10))
-      CDoom.doom_concat(CDoom.error_buf, " >= CDoom.numlumps")
-      CDoom.i_error(CDoom.error_buf)
+      CDoom.i_error("Error: w_cache_lump_num #{lump} >= numlumps")
     end
 
     if CDoom.lumpcache[lump].null?
@@ -21575,9 +21311,7 @@ module LibDoom
         CDoom::FB, c[i])
     else
       # DEBUG
-      CDoom.doom_print.call("Could not place patch on level ".to_unsafe)
-      CDoom.doom_print.call(CDoom.doom_itoa(n + 1, 10))
-      CDoom.doom_print.call("\n".to_unsafe)
+      puts "Could not place patch on level #{n + 1}"
     end
   end
 
@@ -22703,10 +22437,7 @@ module LibDoom
     loop do
       if rover == start
         # scanned all the way around the list
-        CDoom.doom_strcpy(CDoom.error_buf, "Error: z_malloc: failed on allocation of ")
-        CDoom.doom_concat(CDoom.error_buf, CDoom.doom_itoa(size, 10))
-        CDoom.doom_concat(CDoom.error_buf, " bytes")
-        CDoom.i_error(CDoom.error_buf)
+        CDoom.i_error("Error: z_malloc: failed on allocation of #{size} bytes")
       end
 
       if !rover.value.user.null?

@@ -34,8 +34,8 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" ./bin/libdoom
 	install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" ./bin/libdoom
 
-	cd ./bin && \
-	./libdoom
+# 	cd ./bin && \
+# 	./libdoom
 
 clean:
 	rm -rf raylib

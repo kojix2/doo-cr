@@ -31,10 +31,6 @@ macro poll_button(doombutton, raylibbutton)
 end
 
 def run
-  CDoom.doom_set_default_int("key_up", CDoom::DoomKey::W.value)
-  CDoom.doom_set_default_int("key_down", CDoom::DoomKey::S.value)
-  CDoom.doom_set_default_int("key_strafeleft", CDoom::DoomKey::A.value)
-  CDoom.doom_set_default_int("key_straferight", CDoom::DoomKey::D.value)
   CDoom.doom_init(ARGC_UNSAFE, ARGV_UNSAFE, 0)
 
   until Raylib.close_window?

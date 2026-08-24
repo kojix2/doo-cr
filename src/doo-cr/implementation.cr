@@ -1,7 +1,3 @@
-fun doom_print_impl(str : UInt8*)
-  LibDoom.doom_print_impl(str)
-end
-
 fun doom_malloc_impl(size : Int32) : Void*
   LibDoom.doom_malloc_impl(size)
 end
@@ -110,26 +106,6 @@ end
 
 fun doom_fprint(handle : Void*, str : UInt8*) : Int32
   LibDoom.doom_fprint(handle, str)
-end
-
-fun get_default(name : UInt8*) : CDoom::Default*
-  LibDoom.get_default(name)
-end
-
-fun doom_set_resolution(width : Int32, height : Int32)
-  LibDoom.doom_set_resolution(width, height)
-end
-
-fun doom_set_default_int(name : UInt8*, value : Int32)
-  LibDoom.doom_set_default_int(name, value)
-end
-
-fun doom_set_default_string(name : UInt8*, value : UInt8*)
-  LibDoom.doom_set_default_string(name, value)
-end
-
-fun doom_set_print(print_fn : CDoom::DoomPrintFn)
-  LibDoom.doom_set_print(print_fn)
 end
 
 fun doom_set_malloc(malloc_fn : CDoom::DoomMallocFn, free_fn : CDoom::DoomFreeFn)
@@ -962,7 +938,7 @@ fun i_alloc_low = I_AllocLow(length : LibC::Int) : CDoom::Byte*
 end
 
 fun i_error = I_Error(error : LibC::Char*)
-  LibDoom.i_error(error)
+  LibDoom.i_error(String.new(error))
 end
 
 fun i_shutdown_graphics = I_ShutdownGraphics
@@ -1027,10 +1003,6 @@ end
 
 fun fixed_div2 = FixedDiv2(a : CDoom::Fixed, b : CDoom::Fixed) : CDoom::Fixed
   LibDoom.fixed_div2(a, b)
-end
-
-fun m_draw_custom_menu_text = M_DrawCustomMenuText(name : LibC::Char*, x : LibC::Int, y : LibC::Int)
-  LibDoom.m_draw_custom_menu_text(name, x, y)
 end
 
 fun m_read_save_strings = M_ReadSaveStrings
@@ -1101,10 +1073,6 @@ fun m_sound = M_Sound(choice : LibC::Int)
   LibDoom.m_sound(choice)
 end
 
-fun m_mouse_options = M_MouseOptions(choice : LibC::Int)
-  LibDoom.m_mouse_options(choice)
-end
-
 fun m_sfxvol = M_SfxVol(choice : LibC::Int)
   LibDoom.m_sfxvol(choice)
 end
@@ -1143,10 +1111,6 @@ end
 
 fun m_draw_options = M_DrawOptions
   LibDoom.m_draw_options
-end
-
-fun m_draw_mouse_options = M_DrawMouseOptions
-  LibDoom.m_draw_mouse_options
 end
 
 fun m_options = M_Options(choice : LibC::Int)

@@ -4162,9 +4162,6 @@ cliprange_t solidsegs[MAXSEGS];
 
 cliprange_t* newend;
 
-// default_t
-
-default_t defaults[40];
 
 // dirtype_t
 

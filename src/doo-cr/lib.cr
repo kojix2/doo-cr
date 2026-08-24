@@ -203,13 +203,6 @@ lib CDoom
     MIDDLE = 2
   end
 
-  # For the software renderer. Default is 320x200
-  fun doom_set_resolution(width : LibC::Int, height : LibC::Int)
-
-  # Set default configurations. Lets say, changing arrows to WASD as default controls
-  fun doom_set_default_int(name : LibC::Char*, value : LibC::Int)
-  fun doom_set_default_string(name : LibC::Char*, value : LibC::Char*)
-
   # set callbacks
   fun doom_set_print(print_fn : DoomPrintFn)
   fun doom_set_malloc(malloc_fn : DoomMallocFn, free_fn : DoomFreeFn)
@@ -941,8 +934,6 @@ lib CDoom
     DOOM_LINUX = true
   {% end %}
 
-  $error_buf : LibC::Char[260]
-  $doom_print : DoomPrintFn
   $doom_malloc : DoomMallocFn
   $doom_free : DoomFreeFn
   $doom_open : DoomOpenFn
@@ -6012,8 +6003,6 @@ lib CDoom
   SCREEN_PALETTE_SIZE = 256 * 3
   $screen_palette : LibC::UChar[SCREEN_PALETTE_SIZE]
   $is_wiping_screen : DoomBool
-  $defaults : Default[40]
-  $numdefaults : LibC::Int
   $mixbuffer : LibC::Short[2048]
 
   $screen_buffer : LibC::UChar*
@@ -6022,8 +6011,6 @@ lib CDoom
   $button_states : LibC::Int[3]
   $itoa_buf : LibC::Char[20]
 
-  $error_buf : LibC::Char[260]
-  $doom_print : DoomPrintFn
   $doom_malloc : DoomMallocFn
   $doom_free : DoomFreeFn
   $doom_open : DoomOpenFn
@@ -6360,7 +6347,6 @@ lib CDoom
   fun r_execute_set_view_size = R_ExecuteSetViewSize
 
   # print title for every printed line
-  $title : LibC::Char[128]
 
   $inhelpscreens : DoomBool
   $setsizeneeded : DoomBool
@@ -6602,13 +6588,12 @@ lib CDoom
 
   SAVEGAMESIZE   = 0x2c000
   SAVESTRINGSIZE =      24
-  MAXPLMOVE      = CDoom.forwardmove[1]
-  TURBOTHRESHOLD = 0x32
-  SLOWTURNTICS   =    6
-  NUMKEYS        =  256
-  BODYQUESIZE    =   32
-  VERSIONSIZE    =   16
-  DEMOMARKER     = 0x80
+  TURBOTHRESHOLD =    0x32
+  SLOWTURNTICS   =       6
+  NUMKEYS        =     256
+  BODYQUESIZE    =      32
+  VERSIONSIZE    =      16
+  DEMOMARKER     =    0x80
 
   # Prototypes
   fun g_check_demo_status = G_CheckDemoStatus : DoomBool
@@ -7229,13 +7214,12 @@ lib CDoom
   enum OptionsEnum
     Endgame
     Messages
-    Crosshairopt
-    Alwaysrunopt
-    # Detail, # Details do nothing?
     Scrnsize
     Optionempty1
-    Mouseoptions
+    Mousesensitivity
+    Optionempty2
     Soundvol
+    More
     OptEnd
   end
 
