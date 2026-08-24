@@ -14,7 +14,7 @@ module LibDoom
   @@doomport : Int32 = CDoom::IPPORT_USERRESERVED + 0x1d
   @@doomport_send : Int32 = CDoom::IPPORT_USERRESERVED + 0x1e
 
-  closing = false
+  @@closing = false
 
   @@screen_texture : Raylib::Texture?
   @@audio_stream : RAudio::AudioStream?
