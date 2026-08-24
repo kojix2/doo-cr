@@ -21,7 +21,7 @@ ifeq ($(DETECTED_OS),Windows)
 	AMMAKE := cmake --build .
 	RLOUT := libraylib.dll
 	AMOUT := libADLMIDI.dll
-	CHANGE_LIB_NAMES := none
+	CHANGE_LIB_NAMES := 
 else ifeq ($(DETECTED_OS),Linux)
 	LIB_EXT := so
 	RLMAKE := make -Bj4 SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
