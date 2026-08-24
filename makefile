@@ -33,8 +33,8 @@ else ifeq ($(DETECTED_OS),macOS)
 	LIB_EXT := dylib
 	RLMAKE := make -Bj4 SHAREDLIBS="-lglfw -framework OpenGL -framework OpenAL -framework Cocoa" SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
 	AMMAKE := make
-	RLOUT := libraylib.6.0.0.so
-	AMOUT := libADLMIDI.1.6.3.so
+	RLOUT := libraylib.6.0.0.dylib
+	AMOUT := libADLMIDI.1.6.3.dylib
 	CHANGE_LIB_NAMES := install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" ./bin/$(EXEC) && install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" ./bin/$(EXEC)
 endif
 
@@ -48,6 +48,9 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
 	$(CHANGE_LIB_NAMES)
+
+	cd ./bin && \
+	./doo-cr
 
 
 

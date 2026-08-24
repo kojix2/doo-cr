@@ -5504,6 +5504,7 @@ module LibDoom
   )
 
   enum MoreoptionsEnum
+    EditControls
     Alwaysrun
     Crosshair
     Fullscreen
@@ -5516,8 +5517,9 @@ module LibDoom
   end
 
   @@moreoptions_menu = [
-    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->CDoom.m_change_alwaysrun(Int32), alpha_key: 'a'.ord),
-    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->CDoom.m_change_crosshair(Int32), alpha_key: 'c'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_controls(Int32), alpha_key: 'e'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_change_alwaysrun(Int32), alpha_key: 'a'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_change_crosshair(Int32), alpha_key: 'c'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_fullscreen(Int32), alpha_key: 't'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_smoothpan(Int32), alpha_key: 's'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_toggle_pitching(Int32), alpha_key: 'r'.ord),
@@ -5532,6 +5534,42 @@ module LibDoom
     prev_menu: pointerof(CDoom.optionsdef),
     menuitems: @@moreoptions_menu.to_unsafe,
     routine: ->m_draw_moreoptions,
+    x: 70, y: 30,
+    last_on: 0
+  )
+
+  enum Editcontrolenum
+    Forward
+    Back
+    SLeft
+    SRight
+    TLeft
+    TRight
+    Sprint
+    Shoot
+    Use
+
+    End
+  end
+
+  @@editcontrols_menu = [
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_forward(Int32), alpha_key: 'f'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_backward(Int32), alpha_key: 'b'.ord),
+        CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_sleft(Int32), alpha_key: 's'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_sright(Int32), alpha_key: 's'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_tleft(Int32), alpha_key: 't'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_tright(Int32), alpha_key: 't'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_sprint(Int32), alpha_key: 's'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_shoot(Int32), alpha_key: 's'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_use(Int32), alpha_key: 'u'.ord)
+
+  ]
+
+  @@editcontrols_def = CDoom::Menu.new(
+    numitems: MoreoptionsEnum::End.value,
+    prev_menu: pointerof(@@moreoptions_def),
+    menuitems: @@editcontrols_menu.to_unsafe,
+    routine: ->m_draw_edit_controls,
     x: 70, y: 30,
     last_on: 0
   )

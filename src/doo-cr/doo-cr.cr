@@ -6394,6 +6394,10 @@ module LibDoom
     CDoom.v_draw_patch_direct(108, 8, 0, CDoom.w_cache_lump_name("M_OPTTTL", CDoom::PU_CACHE).as(CDoom::Patch*))
 
     CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * MoreoptionsEnum::EditControls.value + CDoom.hu_font[0].value.height // 2,
+      "Edit controls ->")
+
+    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
                                             CDoom::LINEHEIGHT * MoreoptionsEnum::Alwaysrun.value + CDoom.hu_font[0].value.height // 2,
       "always run: " + (CDoom.always_run != 0 ? "on" : "off"))
 
@@ -6424,6 +6428,173 @@ module LibDoom
     CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
                                             CDoom::LINEHEIGHT * MoreoptionsEnum::MosMove.value + CDoom.hu_font[0].value.height // 2,
       "Mouse Y movement: " + (CDoom.mousemove != 0 ? "on" : "off"))
+  end
+
+  def self.m_edit_controls(choice : Int32)
+    CDoom.m_setup_next_menu(pointerof(@@editcontrols_def))
+  end
+
+  @@selected_edit = Pointer(Int32).null
+
+  def self.m_draw_key(key : Pointer(Int32)) : String
+    str = "NIL"
+
+    dch = key.value
+      dch += 0x80 if dch == 0x1d ||
+      dch == 0x36 || 
+      dch == 0x38 ||
+      dch == 0x3b ||
+      dch == 0x3c ||
+    dch == 0x3d ||
+    dch == 0x3e ||
+   dch == 0x3f ||
+    dch ==  0x40 ||
+    dch ==  0x41 ||
+    dch ==  0x42 ||
+   dch ==  0x43 ||
+   dch ==  0x44 ||
+    dch == 0x57 ||
+    dch == 0x58
+
+    CDoom::DoomKey.from_value(dch).try do |dkey|
+      case dkey
+      when CDoom::DoomKey::UNKNOWN
+      when CDoom::DoomKey::TAB
+        str = "TAB"
+      when CDoom::DoomKey::ENTER
+        str = "ENTER"
+        when CDoom::DoomKey::ESCAPE
+        str = "ESCAPE"
+        when CDoom::DoomKey::SPACE
+        str = "SPACE"
+        when CDoom::DoomKey::BACKSPACE
+        str = "BACKSPACE"
+        when CDoom::DoomKey::CTRL
+        str = "CTRL"
+        when CDoom::DoomKey::LEFT_ARROW
+        str = "LEFT ARROW"
+        when CDoom::DoomKey::UP_ARROW
+        str = "UP ARROW"
+        when CDoom::DoomKey::RIGHT_ARROW
+        str = "RIGHT ARROW"
+        when CDoom::DoomKey::DOWN_ARROW
+        str = "DOWN ARROW"
+        when CDoom::DoomKey::SHIFT
+        str = "SHIFT"
+        when CDoom::DoomKey::ALT
+        str = "ALT"
+        when CDoom::DoomKey::F1
+        str = "F1"
+        when CDoom::DoomKey::F2
+        str = "F2"
+        when CDoom::DoomKey::F3
+        str = "F3"
+        when CDoom::DoomKey::F4
+        str = "F4"
+        when CDoom::DoomKey::F5
+        str = "F5"
+        when CDoom::DoomKey::F6
+        str = "F6"
+        when CDoom::DoomKey::F7
+        str = "F7"
+        when CDoom::DoomKey::F8
+        str = "F8"
+        when CDoom::DoomKey::F9
+        str = "F0"
+        when CDoom::DoomKey::F10
+        str = "F10"
+        when CDoom::DoomKey::F11
+        str = "F11"
+        when CDoom::DoomKey::F12
+        str = "F12"
+        when CDoom::DoomKey::PAUSE
+        str = "PAUSE"
+        else
+          str = "#{key.value.chr.upcase}"
+        end
+    end
+
+    str = @@selected_edit == key ? "-#{str}-" : " #{str}"
+    return str
+  end
+
+  def self.m_draw_edit_controls
+    CDoom.m_write_text(CDoom::SCREENWIDTH // 2 - CDoom.m_string_width("Controls") // 2, @@editcontrols_def.y +
+                                            - CDoom::LINEHEIGHT + CDoom.hu_font[0].value.height // 2,
+      "Controls")
+
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::Forward.value + CDoom.hu_font[0].value.height // 2,
+      "Forward =" + m_draw_key(pointerof(CDoom.key_up)))
+
+     CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::Back.value + CDoom.hu_font[0].value.height // 2,
+      "Backward =" + m_draw_key(pointerof(CDoom.key_down)))
+
+      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::TLeft.value + CDoom.hu_font[0].value.height // 2,
+      "Turn Left =" + m_draw_key(pointerof(CDoom.key_left)))
+
+      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::TRight.value + CDoom.hu_font[0].value.height // 2,
+      "Turn Right =" + m_draw_key(pointerof(CDoom.key_right)))
+
+      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::SLeft.value + CDoom.hu_font[0].value.height // 2,
+      "Strafe Left =" + m_draw_key(pointerof(CDoom.key_strafeleft)))
+
+      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::SRight.value + CDoom.hu_font[0].value.height // 2,
+      "Strafe Right =" + m_draw_key(pointerof(CDoom.key_straferight)))
+
+      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::Sprint.value + CDoom.hu_font[0].value.height // 2,
+      "Sprint =" + m_draw_key(pointerof(CDoom.key_speed)))
+
+      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::Shoot.value + CDoom.hu_font[0].value.height // 2,
+      "Shoot =" + m_draw_key(pointerof(CDoom.key_fire)))
+
+      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * Editcontrolenum::Use.value + CDoom.hu_font[0].value.height // 2,
+      "Use =" + m_draw_key(pointerof(CDoom.key_use)))
+  end 
+
+
+  def self.m_edit_forward(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_up)
+  end
+
+  def self.m_edit_backward(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_down)
+  end
+
+  def self.m_edit_tleft(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_left)
+  end
+
+  def self.m_edit_tright(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_right)
+  end
+
+  def self.m_edit_sleft(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_strafeleft)
+  end
+
+  def self.m_edit_sright(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_straferight)
+  end
+
+  def self.m_edit_sprint(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_speed)
+  end
+
+  def self.m_edit_shoot(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_fire)
+  end
+
+  def self.m_edit_use(choice : Int32)
+    @@selected_edit = pointerof(CDoom.key_use)
   end
 
   #
@@ -6758,6 +6929,32 @@ module LibDoom
     end
 
     return 0 if ch == -1
+
+    # Edit selected control
+    if !@@selected_edit.null?
+      dch = ch
+      dch += 0x80 if dch == 0x1d ||
+      dch == 0x36 || 
+      dch == 0x38 ||
+      dch == 0x3b ||
+      dch == 0x3c ||
+    dch == 0x3d ||
+    dch == 0x3e ||
+   dch == 0x3f ||
+    dch ==  0x40 ||
+    dch ==  0x41 ||
+    dch ==  0x42 ||
+   dch ==  0x43 ||
+   dch ==  0x44 ||
+    dch == 0x57 ||
+    dch == 0x58
+
+      unless CDoom::DoomKey.from_value(dch).nil?
+        @@selected_edit.value = dch
+        @@selected_edit = Pointer(Int32).null
+        return 1
+      end
+    end
 
     # Save Game string input
     if CDoom.save_string_enter != 0
