@@ -2013,37 +2013,6 @@ fun p_move_psprites = P_MovePsprites(curplayer : CDoom::Player*)
   LibDoom.p_move_psprites(curplayer)
 end
 
-fun p_archive_players = P_ArchivePlayers
-  LibDoom.p_archive_players
-end
-
-fun p_unarchive_players = P_UnArchivePlayers
-  LibDoom.p_unarchive_players
-end
-
-fun p_archive_world = P_ArchiveWorld
-  LibDoom.p_archive_world
-end
-
-fun p_unarchive_world = P_UnArchiveWorld
-  LibDoom.p_unarchive_world
-end
-
-fun p_archive_thinkers = P_ArchiveThinkers
-  LibDoom.p_archive_thinkers
-end
-
-fun p_unarchive_thinkers = P_UnArchiveThinkers
-  LibDoom.p_unarchive_thinkers
-end
-
-fun p_archive_specials = P_ArchiveSpecials
-  LibDoom.p_archive_specials
-end
-
-fun p_unarchive_specials = P_UnArchiveSpecials
-  LibDoom.p_unarchive_specials
-end
 
 fun p_load_vertexes = P_LoadVertexes(lump : LibC::Int)
   LibDoom.p_load_vertexes(lump)

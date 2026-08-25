@@ -4036,7 +4036,7 @@ doom_boolean* joybuttons = &joyarray[1];
 
 // void*
 
-void* debugfile = 0;
+void* debugfile;
 
 void* statcopy;
 

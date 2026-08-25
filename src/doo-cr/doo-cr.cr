@@ -1263,6 +1263,15 @@ module LibDoom
   #  draw current display, possibly wiping it from the previous
   #
   def self.d_display
+    if @@was_focused != Raylib.window_focused?
+      
+      if (@@was_focused = Raylib.window_focused?)
+        Raylib.disable_cursor
+      else
+        Raylib.enable_cursor
+      end
+    end
+
     return if CDoom.nodrawers != 0 # for comparative timing / profiling
 
     redrawsbar = false
@@ -4041,51 +4050,36 @@ module LibDoom
   def self.g_do_load_game
     CDoom.gameaction = CDoom::Gameaction::Nothing
 
-    length = CDoom.m_read_file(CDoom.savename, pointerof(CDoom.savebuffer))
-    CDoom.save_p = CDoom.savebuffer + CDoom::SAVESTRINGSIZE
+    File.open(String.new(CDoom.savename.to_unsafe), "rb") do |file|
+      file.pos += CDoom::SAVESTRINGSIZE
+      # skip the description field
+      vcheck = "version #{CDoom::VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
+      return if CDoom.doom_strcmp(file.read_string(CDoom::VERSIONSIZE).to_unsafe, vcheck.to_unsafe) != 0 # bad version
 
-    vcheck = uninitialized StaticArray(UInt8, CDoom::VERSIONSIZE)
+      CDoom.gameskill = CDoom::Skill.new(file.read_bytes(UInt8))
+      CDoom.gameepisode = file.read_bytes(UInt8)
+      CDoom.gamemap = file.read_bytes(UInt8)
+      CDoom::MAXPLAYERS.times do |i|
+        CDoom.playeringame[i] = file.read_bytes(UInt8)
+      end
 
-    # skip the description field
-    CDoom.doom_memset(vcheck.to_unsafe, 0, sizeof(typeof(vcheck)))
-    CDoom.doom_strcpy(vcheck.to_unsafe, "version ")
-    CDoom.doom_concat(vcheck.to_unsafe, CDoom.doom_itoa(CDoom::VERSION, 10))
-    return if CDoom.doom_strcmp(CDoom.save_p.as(UInt8*), vcheck.to_unsafe) != 0 # bad version
-    CDoom.save_p += CDoom::VERSIONSIZE
+      # load a base level
+      CDoom.g_init_new(CDoom.gameskill, CDoom.gameepisode, CDoom.gamemap)
 
-    CDoom.gameskill = CDoom::Skill.new(CDoom.save_p.value)
-    CDoom.save_p += 1
-    CDoom.gameepisode = CDoom.save_p.value
-    CDoom.save_p += 1
-    CDoom.gamemap = CDoom.save_p.value
-    CDoom.save_p += 1
-    CDoom::MAXPLAYERS.times do |i|
-      CDoom.playeringame[i] = CDoom.save_p.value
-      CDoom.save_p += 1
+      # get the times
+      a = file.read_bytes(UInt8)
+      b = file.read_bytes(UInt8)
+      c = file.read_bytes(UInt8)
+      CDoom.leveltime = (a << 16) + (b << 8) + c
+
+      # dearchive all the modifications
+      p_unarchive_players(file)
+      p_unarchive_world(file)
+      p_unarchive_thinkers(file)
+      p_unarchive_specials(file)
+
+      CDoom.i_error("Error: Bad savegame") if file.read_bytes(UInt8) != 0x1d
     end
-
-    # load a base level
-    CDoom.g_init_new(CDoom.gameskill, CDoom.gameepisode, CDoom.gamemap)
-
-    # get the times
-    a = CDoom.save_p.value
-    CDoom.save_p += 1
-    b = CDoom.save_p.value
-    CDoom.save_p += 1
-    c = CDoom.save_p.value
-    CDoom.save_p += 1
-    CDoom.leveltime = (a << 16) + (b << 8) + c
-
-    # dearchive all the modifications
-    CDoom.p_unarchive_players
-    CDoom.p_unarchive_world
-    CDoom.p_unarchive_thinkers
-    CDoom.p_unarchive_specials
-
-    CDoom.i_error("Error: Bad savegame") if CDoom.save_p.value != 0x1d
-
-    # done
-    CDoom.z_free(CDoom.savebuffer)
 
     CDoom.r_execute_set_view_size if CDoom.setsizeneeded != 0
 
@@ -4105,53 +4099,32 @@ module LibDoom
   end
 
   def self.g_do_save_game
-    name = uninitialized StaticArray(UInt8, 100)
-    name2 = uninitialized StaticArray(UInt8, CDoom::VERSIONSIZE)
+    name = "#{CDoom::SAVEGAMENAME}#{CDoom.savegameslot}.dsg"
+    description = CDoom.savedescription.to_slice
+    File.open(name, "wb") do |file|
+      file.write_string(description[0...CDoom::SAVESTRINGSIZE])
 
-    CDoom.doom_strcpy(name, CDoom::SAVEGAMENAME)
-    CDoom.doom_concat(name, CDoom.doom_itoa(CDoom.savegameslot, 10))
-    CDoom.doom_concat(name, ".dsg")
-    description = CDoom.savedescription
+      name2 = "version #{CDoom::VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
+      file.write_string(name2.to_slice)
 
-    CDoom.save_p = CDoom.screens[1] + 0x4000
-    CDoom.savebuffer = CDoom.save_p
+      file.write_byte(CDoom.gameskill.value.to_u8!)  
+    file.write_byte(CDoom.gameepisode.to_u8!)
+      file.write_byte(CDoom.gamemap.to_u8!)
 
-    CDoom.doom_memcpy(CDoom.save_p, description, CDoom::SAVESTRINGSIZE)
-    CDoom.save_p += CDoom::SAVESTRINGSIZE
-    CDoom.doom_memset(name2, 0, sizeof(typeof(name2)))
-    CDoom.doom_strcpy(name2, "version ")
-    CDoom.doom_concat(name2, CDoom.doom_itoa(CDoom::VERSION, 10))
-    CDoom.doom_memcpy(CDoom.save_p, name2, CDoom::VERSIONSIZE)
-    CDoom.save_p += CDoom::VERSIONSIZE
+      CDoom::MAXPLAYERS.times do |i|
+        file.write_byte(CDoom.playeringame[i].to_u8!)
+      end
+      file.write_byte((CDoom.leveltime >> 16).to_u8!)
+      file.write_byte((CDoom.leveltime >> 8).to_u8!)
+      file.write_byte((CDoom.leveltime).to_u8!)
 
-    CDoom.save_p.value = CDoom.gameskill.value.to_u8!
-    CDoom.save_p += 1
-    CDoom.save_p.value = CDoom.gameepisode.to_u8!
-    CDoom.save_p += 1
-    CDoom.save_p.value = CDoom.gamemap.to_u8!
-    CDoom.save_p += 1
-    CDoom::MAXPLAYERS.times do |i|
-      CDoom.save_p.value = CDoom.playeringame[i].to_u8!
-      CDoom.save_p += 1
+      p_archive_players(file)
+      p_archive_world(file)
+      p_archive_thinkers(file)
+      p_archive_specials(file)
+
+      file.write_byte(0x1d) # consistancy marker
     end
-    CDoom.save_p.value = (CDoom.leveltime >> 16).to_u8!
-    CDoom.save_p += 1
-    CDoom.save_p.value = (CDoom.leveltime >> 8).to_u8!
-    CDoom.save_p += 1
-    CDoom.save_p.value = (CDoom.leveltime).to_u8!
-    CDoom.save_p += 1
-
-    CDoom.p_archive_players
-    CDoom.p_archive_world
-    CDoom.p_archive_thinkers
-    CDoom.p_archive_specials
-
-    CDoom.save_p.value = 0x1d # consistancy marker
-    CDoom.save_p += 1
-
-    length = (CDoom.save_p - CDoom.savebuffer).to_i32!
-    CDoom.i_error("Error: Savegame buffer overrun") if length > CDoom::SAVEGAMESIZE
-    CDoom.m_write_file(name, CDoom.savebuffer, length)
     CDoom.gameaction = CDoom::Gameaction::Nothing
     CDoom.savedescription[0] = 0
 
@@ -5892,13 +5865,14 @@ module LibDoom
     end
   end
 
+  @@was_focused = false
   def self.i_init_graphics
     CDoom.screens[0] = CDoom.doom_malloc.call(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
 
     Raylib.set_config_flags(Raylib::ConfigFlags::WindowResizable)
     Raylib.init_window(1024, 768, "LibDoom")
     Raylib.set_exit_key(Raylib::KeyboardKey::Null)
-    Raylib.disable_cursor
+    @@was_focused = false
     Raylib.toggle_fullscreen if @@rlfullscreen != 0
     # Raylib.set_target_fps(35)
 
@@ -13467,32 +13441,27 @@ module LibDoom
     (player.value.psprites.to_unsafe + CDoom::Psprnum::Flash.value).value.sy = player.value.psprites[CDoom::Psprnum::Weapon.value].sy
   end
 
-  def self.p_archive_players
+  def self.p_archive_players(file : File)
     CDoom::MAXPLAYERS.times do |i|
       next if CDoom.playeringame[i] == 0
 
-      padsavep
-
-      dest = CDoom.save_p.as(CDoom::Player*)
-      CDoom.doom_memcpy(dest, CDoom.players.to_unsafe + i, sizeof(CDoom::Player))
-      CDoom.save_p += sizeof(CDoom::Player)
+      player = CDoom.players[i]
       CDoom::Psprnum::NUMPSPRITES.value.times do |j|
-        if !dest.value.psprites[j].state.null?
-          (dest.value.psprites.to_unsafe + j).value.state =
-            Pointer(CDoom::State).new((dest.value.psprites[j].state - CDoom.states).to_u64!)
+        if !player.psprites[j].state.null?
+          (player.psprites.to_unsafe + j).value.state =
+            Pointer(CDoom::State).new((player.psprites[j].state - CDoom.states).to_u64!)
         end
       end
+      file.write(pointerof(player).as(UInt8*).to_slice(sizeof(CDoom::Player)))
     end
   end
 
-  def self.p_unarchive_players
+  def self.p_unarchive_players(file : File)
     CDoom::MAXPLAYERS.times do |i|
       next if CDoom.playeringame[i] == 0
 
-      padsavep
-
-      CDoom.doom_memcpy(CDoom.players.to_unsafe + i, CDoom.save_p, sizeof(CDoom::Player))
-      CDoom.save_p += sizeof(CDoom::Player)
+      player = Slice.new((CDoom.players.to_unsafe + i).as(UInt8*), sizeof(CDoom::Player))
+      file.read_fully(player)
 
       # will be set when unarc thinker
       (CDoom.players.to_unsafe + i).value.mo = Pointer(CDoom::Mobj).null
@@ -13508,26 +13477,18 @@ module LibDoom
     end
   end
 
-  def self.p_archive_world
-    put = CDoom.save_p.as(Int16*)
+  def self.p_archive_world(file : File)
 
     sec = CDoom.sectors
     # do sectors
     CDoom.numsectors.times do |i|
-      put.value = (sec.value.floorheight >> CDoom::FRACBITS).to_i16!
-      put += 1
-      put.value = (sec.value.ceilingheight >> CDoom::FRACBITS).to_i16!
-      put += 1
-      put.value = sec.value.floorpic
-      put += 1
-      put.value = sec.value.ceilingpic
-      put += 1
-      put.value = sec.value.lightlevel
-      put += 1
-      put.value = sec.value.special # needed?
-      put += 1
-      put.value = sec.value.tag # needed?
-      put += 1
+      file.write_bytes((sec.value.floorheight >> CDoom::FRACBITS).to_i16!)
+      file.write_bytes((sec.value.ceilingheight >> CDoom::FRACBITS).to_i16!)
+      file.write_bytes(sec.value.floorpic)
+      file.write_bytes(sec.value.ceilingpic)
+      file.write_bytes(sec.value.lightlevel)
+      file.write_bytes(sec.value.special) # needed?
+      file.write_bytes(sec.value.tag) # needed?
 
       sec += 1
     end
@@ -13535,54 +13496,36 @@ module LibDoom
     li = CDoom.lines
     # do lines
     CDoom.numlines.times do |i|
-      put.value = li.value.flags
-      put += 1
-      put.value = li.value.special
-      put += 1
-      put.value = li.value.tag
-      put += 1
+      file.write_bytes(li.value.flags)
+      file.write_bytes(li.value.special)
+      file.write_bytes(li.value.tag)
       2.times do |j|
         next if li.value.sidenum[j] == -1
 
         si = CDoom.sides + li.value.sidenum[j]
 
-        put.value = (si.value.textureoffset >> CDoom::FRACBITS).to_i16!
-        put += 1
-        put.value = (si.value.rowoffset >> CDoom::FRACBITS).to_i16!
-        put += 1
-        put.value = si.value.toptexture
-        put += 1
-        put.value = si.value.bottomtexture
-        put += 1
-        put.value = si.value.midtexture
-        put += 1
+        file.write_bytes((si.value.textureoffset >> CDoom::FRACBITS).to_i16!)
+        file.write_bytes((si.value.rowoffset >> CDoom::FRACBITS).to_i16!)
+        file.write_bytes(si.value.toptexture)
+        file.write_bytes(si.value.bottomtexture)
+        file.write_bytes(si.value.midtexture)
       end
       li += 1
     end
-
-    CDoom.save_p = put.as(CDoom::Byte*)
   end
 
-  def self.p_unarchive_world
-    get = CDoom.save_p.as(Int16*)
+  def self.p_unarchive_world(file : File)
 
     sec = CDoom.sectors
     # do sectors
     CDoom.numsectors.times do |i|
-      sec.value.floorheight = get.value.to_i32 << CDoom::FRACBITS
-      get += 1
-      sec.value.ceilingheight = get.value.to_i32 << CDoom::FRACBITS
-      get += 1
-      sec.value.floorpic = get.value
-      get += 1
-      sec.value.ceilingpic = get.value
-      get += 1
-      sec.value.lightlevel = get.value
-      get += 1
-      sec.value.special = get.value # needed?
-      get += 1
-      sec.value.tag = get.value # needed?
-      get += 1
+      sec.value.floorheight = file.read_bytes(Int16).to_i32 << CDoom::FRACBITS
+      sec.value.ceilingheight = file.read_bytes(Int16).to_i32 << CDoom::FRACBITS
+      sec.value.floorpic = file.read_bytes(Int16)
+      sec.value.ceilingpic = file.read_bytes(Int16)
+      sec.value.lightlevel = file.read_bytes(Int16)
+      sec.value.special = file.read_bytes(Int16) # needed?
+      sec.value.tag = file.read_bytes(Int16) # needed?
       sec.value.specialdata = Pointer(Void).null
       sec.value.soundtarget = Pointer(CDoom::Mobj).null
 
@@ -13592,58 +13535,45 @@ module LibDoom
     li = CDoom.lines
     # do lines
     CDoom.numlines.times do |i|
-      li.value.flags = get.value
-      get += 1
-      li.value.special = get.value
-      get += 1
-      li.value.tag = get.value
-      get += 1
+      li.value.flags = file.read_bytes(Int16)
+      li.value.special = file.read_bytes(Int16)
+      li.value.tag = file.read_bytes(Int16)
       2.times do |j|
         next if li.value.sidenum[j] == -1
         si = CDoom.sides + li.value.sidenum[j]
-        si.value.textureoffset = get.value.to_i32 << CDoom::FRACBITS
-        get += 1
-        si.value.rowoffset = get.value.to_i32 << CDoom::FRACBITS
-        get += 1
-        si.value.toptexture = get.value
-        get += 1
-        si.value.bottomtexture = get.value
-        get += 1
-        si.value.midtexture = get.value
-        get += 1
+        si.value.textureoffset = file.read_bytes(Int16).to_i32 << CDoom::FRACBITS
+        si.value.rowoffset = file.read_bytes(Int16).to_i32 << CDoom::FRACBITS
+        si.value.toptexture = file.read_bytes(Int16)
+        si.value.bottomtexture = file.read_bytes(Int16)
+        si.value.midtexture = file.read_bytes(Int16)
       end
 
       li += 1
     end
-
-    CDoom.save_p = get.as(CDoom::Byte*)
   end
 
-  def self.p_archive_thinkers
+  def self.p_archive_thinkers(file : File)
     # save off the current thinkers
     th = CDoom.thinkercap.next
     while th != pointerof(CDoom.thinkercap)
       if th.value.function.acp1.pointer == (->CDoom.p_mobj_thinker).pointer
-        CDoom.save_p.value = CDoom::Thinkerclass::Mobj.value
-        CDoom.save_p += 1
-        padsavep
-        mobj = CDoom.save_p.as(CDoom::Mobj*)
-        CDoom.doom_memcpy(mobj, th, sizeof(CDoom::Mobj))
-        CDoom.save_p += sizeof(CDoom::Mobj)
-        mobj.value.state = Pointer(CDoom::State).new((mobj.value.state - CDoom.states).to_u64!)
+        file.write_byte(CDoom::Thinkerclass::Mobj.value)
+        mobj = th.as(CDoom::Mobj*).value
+        mobj.state = Pointer(CDoom::State).new((mobj.state - CDoom.states).to_u64!)
 
-        mobj.value.player = Pointer(CDoom::Player).new(((mobj.value.player - CDoom.players.to_unsafe) + 1).to_u64!) if !mobj.value.player.null?
+        mobj.player = Pointer(CDoom::Player).new(((mobj.player - CDoom.players.to_unsafe) + 1).to_u64!) if !mobj.player.null?
+
+        file.write(pointerof(mobj).as(UInt8*).to_slice(sizeof(CDoom::Mobj)))
       end
 
       th = th.value.next
     end
 
     # add a terminating marker
-    CDoom.save_p.value = CDoom::Thinkerclass::End.value
-    CDoom.save_p += 1
+    file.write_byte(CDoom::Thinkerclass::End.value)
   end
 
-  def self.p_unarchive_thinkers
+  def self.p_unarchive_thinkers(file : File)
     # remove all the current thinkers
     currentthinker = CDoom.thinkercap.next
     while currentthinker != pointerof(CDoom.thinkercap)
@@ -13660,16 +13590,14 @@ module LibDoom
 
     # read in saved thinkers
     loop do
-      tclass = CDoom::Thinkerclass.new(CDoom.save_p.value)
-      CDoom.save_p += 1
+      tclass = CDoom::Thinkerclass.new(file.read_bytes(UInt8))
       case tclass
       when CDoom::Thinkerclass::End
         return # end of list
       when CDoom::Thinkerclass::Mobj
-        padsavep
         mobj = CDoom.z_malloc(sizeof(CDoom::Mobj), CDoom::PU_LEVEL, Pointer(Void).null).as(CDoom::Mobj*)
-        CDoom.doom_memcpy(mobj, CDoom.save_p, sizeof(CDoom::Mobj))
-        CDoom.save_p += sizeof(CDoom::Mobj)
+        mjslice = Slice.new(mobj.as(UInt8*), sizeof(CDoom::Mobj))
+        file.read_fully(mjslice)
         mobj.value.state = CDoom.states + mobj.value.state.address
         mobj.value.target = Pointer(CDoom::Mobj).null
         if !mobj.value.player.null?
@@ -13699,7 +13627,7 @@ module LibDoom
   # T_Glow, (glow_t: sector_t *),
   # T_PlatRaise, (plat_t: sector_t *), - active list
   #
-  def self.p_archive_specials
+  def self.p_archive_specials(file : File)
     # save off the current thinkers
     th = CDoom.thinkercap.next
     while th != pointerof(CDoom.thinkercap)
@@ -13711,99 +13639,77 @@ module LibDoom
         end
 
         if i < CDoom::MAXCEILINGS
-          CDoom.save_p.value = CDoom::Specials::Ceiling.value
-          CDoom.save_p += 1
-          padsavep
-          ceiling = CDoom.save_p.as(CDoom::Ceiling*)
-          CDoom.doom_memcpy(ceiling, th, sizeof(CDoom::Ceiling))
-          CDoom.save_p += sizeof(CDoom::Ceiling)
-          ceiling.value.sector = Pointer(CDoom::Sector).new((ceiling.value.sector - CDoom.sectors).to_u64!)
+          file.write_byte(CDoom::Specials::Ceiling.value)
+          ceiling = th.as(CDoom::Ceiling*).value
+          ceiling.sector = Pointer(CDoom::Sector).new((ceiling.sector - CDoom.sectors).to_u64!)
+          file.write(pointerof(ceiling).as(UInt8*).to_slice(sizeof(CDoom::Ceiling)))
         end
         th = th.value.next
         next
       end
 
       if th.value.function.acp1.pointer == (->CDoom.t_move_ceiling).pointer
-        CDoom.save_p.value = CDoom::Specials::Ceiling.value
-        CDoom.save_p += 1
-        padsavep
-        ceiling = CDoom.save_p.as(CDoom::Ceiling*)
-        CDoom.doom_memcpy(ceiling, th, sizeof(CDoom::Ceiling))
-        CDoom.save_p += sizeof(CDoom::Ceiling)
-        ceiling.value.sector = Pointer(CDoom::Sector).new((ceiling.value.sector - CDoom.sectors).to_u64!)
+        file.write_byte(CDoom::Specials::Ceiling.value)
+                  ceiling = th.as(CDoom::Ceiling*).value
+        ceiling.sector = Pointer(CDoom::Sector).new((ceiling.sector - CDoom.sectors).to_u64!)
         th = th.value.next
+          file.write(pointerof(ceiling).as(UInt8*).to_slice(sizeof(CDoom::Ceiling)))
         next
       end
 
       if th.value.function.acp1.pointer == (->CDoom.t_vertical_door).pointer
-        CDoom.save_p.value = CDoom::Specials::Door.value
-        CDoom.save_p += 1
-        padsavep
-        door = CDoom.save_p.as(CDoom::Vldoor*)
-        CDoom.doom_memcpy(door, th, sizeof(CDoom::Vldoor))
-        CDoom.save_p += sizeof(CDoom::Vldoor)
-        door.value.sector = Pointer(CDoom::Sector).new((door.value.sector - CDoom.sectors).to_u64!)
+        file.write_byte(CDoom::Specials::Door.value)
+        door = th.as(CDoom::Vldoor*).value
+        door.sector = Pointer(CDoom::Sector).new((door.sector - CDoom.sectors).to_u64!)
         th = th.value.next
+          file.write(pointerof(door).as(UInt8*).to_slice(sizeof(CDoom::Vldoor)))
         next
       end
 
       if th.value.function.acp1.pointer == (->CDoom.t_move_floor).pointer
-        CDoom.save_p.value = CDoom::Specials::Floor.value
-        CDoom.save_p += 1
-        padsavep
-        floor = CDoom.save_p.as(CDoom::Floormove*)
-        CDoom.doom_memcpy(floor, th, sizeof(CDoom::Floormove))
-        CDoom.save_p += sizeof(CDoom::Floormove)
-        floor.value.sector = Pointer(CDoom::Sector).new((floor.value.sector - CDoom.sectors).to_u64!)
+        file.write_byte(CDoom::Specials::Floor.value)
+        floor = th.as(CDoom::Floormove*).value
+        floor.sector = Pointer(CDoom::Sector).new((floor.sector - CDoom.sectors).to_u64!)
         th = th.value.next
+          file.write(pointerof(floor).as(UInt8*).to_slice(sizeof(CDoom::Floormove)))
+
         next
       end
 
       if th.value.function.acp1.pointer == (->CDoom.t_plat_raise).pointer
-        CDoom.save_p.value = CDoom::Specials::Plat.value
-        CDoom.save_p += 1
-        padsavep
-        plat = CDoom.save_p.as(CDoom::Plat*)
-        CDoom.doom_memcpy(plat, th, sizeof(CDoom::Plat))
-        CDoom.save_p += sizeof(CDoom::Plat)
-        plat.value.sector = Pointer(CDoom::Sector).new((plat.value.sector - CDoom.sectors).to_u64!)
+        file.write_byte(CDoom::Specials::Plat.value)
+        plat = th.as(CDoom::Plat*).value
+        plat.sector = Pointer(CDoom::Sector).new((plat.sector - CDoom.sectors).to_u64!)
         th = th.value.next
+          file.write(pointerof(plat).as(UInt8*).to_slice(sizeof(CDoom::Plat)))
         next
       end
 
       if th.value.function.acp1.pointer == (->CDoom.t_light_flash).pointer
-        CDoom.save_p.value = CDoom::Specials::Flash.value
-        CDoom.save_p += 1
-        padsavep
-        flash = CDoom.save_p.as(CDoom::Lightflash*)
-        CDoom.doom_memcpy(flash, th, sizeof(CDoom::Lightflash))
-        CDoom.save_p += sizeof(CDoom::Lightflash)
-        flash.value.sector = Pointer(CDoom::Sector).new((flash.value.sector - CDoom.sectors).to_u64!)
+        file.write_byte(CDoom::Specials::Flash.value)
+        flash = th.as(CDoom::Lightflash*).value
+        flash.sector = Pointer(CDoom::Sector).new((flash.sector - CDoom.sectors).to_u64!)
         th = th.value.next
+          file.write(pointerof(flash).as(UInt8*).to_slice(sizeof(CDoom::Lightflash)))
         next
       end
 
       if th.value.function.acp1.pointer == (->CDoom.t_strobe_flash).pointer
-        CDoom.save_p.value = CDoom::Specials::Strobe.value
-        CDoom.save_p += 1
-        padsavep
-        strobe = CDoom.save_p.as(CDoom::Strobe*)
-        CDoom.doom_memcpy(strobe, th, sizeof(CDoom::Strobe))
-        CDoom.save_p += sizeof(CDoom::Strobe)
-        strobe.value.sector = Pointer(CDoom::Sector).new((strobe.value.sector - CDoom.sectors).to_u64!)
+        file.write_byte(CDoom::Specials::Strobe.value)
+        strobe = th.as(CDoom::Strobe*).value
+        strobe.sector = Pointer(CDoom::Sector).new((strobe.sector - CDoom.sectors).to_u64!)
         th = th.value.next
+          file.write(pointerof(strobe).as(UInt8*).to_slice(sizeof(CDoom::Strobe)))
+
         next
       end
 
       if th.value.function.acp1.pointer == (->CDoom.t_glow).pointer
-        CDoom.save_p.value = CDoom::Specials::Glow.value
-        CDoom.save_p += 1
-        padsavep
-        glow = CDoom.save_p.as(CDoom::Glow*)
-        CDoom.doom_memcpy(glow, th, sizeof(CDoom::Glow))
-        CDoom.save_p += sizeof(CDoom::Glow)
-        glow.value.sector = Pointer(CDoom::Sector).new((glow.value.sector - CDoom.sectors).to_u64!)
+        file.write_byte(CDoom::Specials::Glow.value)
+        glow = th.as(CDoom::Glow*).value
+        glow.sector = Pointer(CDoom::Sector).new((glow.sector - CDoom.sectors).to_u64!)
         th = th.value.next
+          file.write(pointerof(glow).as(UInt8*).to_slice(sizeof(CDoom::Glow)))
         next
       end
 
@@ -13811,23 +13717,21 @@ module LibDoom
     end
 
     # add a terminating marker
-    CDoom.save_p.value = CDoom::Specials::End.value
-    CDoom.save_p += 1
+    file.write_byte(CDoom::Specials::End.value)
   end
 
-  def self.p_unarchive_specials
+  def self.p_unarchive_specials(file : File)
     # read in saved thinkers
     loop do
-      tclass = CDoom::Specials.new(CDoom.save_p.value)
-      CDoom.save_p += 1
+      tclass = CDoom::Specials.new(file.read_bytes(UInt8))
       case tclass
       when CDoom::Specials::End
         return # end of list
       when CDoom::Specials::Ceiling
         padsavep
         ceiling = CDoom.z_malloc(sizeof(CDoom::Ceiling), CDoom::PU_LEVEL, Pointer(Void).null).as(CDoom::Ceiling*)
-        CDoom.doom_memcpy(ceiling, CDoom.save_p, sizeof(CDoom::Ceiling))
-        CDoom.save_p += sizeof(CDoom::Ceiling)
+        slice = Slice.new(ceiling.as(UInt8*), sizeof(CDoom::Ceiling))
+        file.read_fully(slice)
 
         ceiling.value.sector = CDoom.sectors + ceiling.value.sector.address
 
@@ -13842,8 +13746,8 @@ module LibDoom
       when CDoom::Specials::Door
         padsavep
         door = CDoom.z_malloc(sizeof(CDoom::Vldoor), CDoom::PU_LEVEL, Pointer(Void).null).as(CDoom::Vldoor*)
-        CDoom.doom_memcpy(door, CDoom.save_p, sizeof(CDoom::Vldoor))
-        CDoom.save_p += sizeof(CDoom::Vldoor)
+        slice = Slice.new(door.as(UInt8*), sizeof(CDoom::Vldoor))
+        file.read_fully(slice)
         door.value.sector = CDoom.sectors + door.value.sector.address
         door.value.sector.value.specialdata = door
         (door.as(UInt8*) + offsetof(CDoom::Vldoor, @thinker) + offsetof(CDoom::Thinker, @function)).as(CDoom::ActionfP1*).value = CDoom::ActionfP1.new((->CDoom.t_vertical_door).pointer, Pointer(Void).null)
@@ -13852,8 +13756,8 @@ module LibDoom
       when CDoom::Specials::Floor
         padsavep
         floor = CDoom.z_malloc(sizeof(CDoom::Floormove), CDoom::PU_LEVEL, Pointer(Void).null).as(CDoom::Floormove*)
-        CDoom.doom_memcpy(floor, CDoom.save_p, sizeof(CDoom::Floormove))
-        CDoom.save_p += sizeof(CDoom::Floormove)
+        slice = Slice.new(floor.as(UInt8*), sizeof(CDoom::Floormove))
+        file.read_fully(slice)
         floor.value.sector = CDoom.sectors + floor.value.sector.address
         floor.value.sector.value.specialdata = floor
         (floor.as(UInt8*) + offsetof(CDoom::Floormove, @thinker) + offsetof(CDoom::Thinker, @function)).as(CDoom::ActionfP1*).value = CDoom::ActionfP1.new((->CDoom.t_move_floor).pointer, Pointer(Void).null)
@@ -13862,8 +13766,8 @@ module LibDoom
       when CDoom::Specials::Plat
         padsavep
         plat = CDoom.z_malloc(sizeof(CDoom::Plat), CDoom::PU_LEVEL, Pointer(Void).null).as(CDoom::Plat*)
-        CDoom.doom_memcpy(plat, CDoom.save_p, sizeof(CDoom::Plat))
-        CDoom.save_p += sizeof(CDoom::Plat)
+        slice = Slice.new(plat.as(UInt8*), sizeof(CDoom::Plat))
+        file.read_fully(slice)
         plat.value.sector = CDoom.sectors + plat.value.sector.address
         plat.value.sector.value.specialdata = plat
         if !plat.value.thinker.function.acp1.pointer.null?
@@ -13875,8 +13779,8 @@ module LibDoom
       when CDoom::Specials::Flash
         padsavep
         flash = CDoom.z_malloc(sizeof(CDoom::Lightflash), CDoom::PU_LEVEL, Pointer(Void).null).as(CDoom::Lightflash*)
-        CDoom.doom_memcpy(flash, CDoom.save_p, sizeof(CDoom::Lightflash))
-        CDoom.save_p += sizeof(CDoom::Lightflash)
+        slice = Slice.new(flash.as(UInt8*), sizeof(CDoom::Lightflash))
+        file.read_fully(slice)
         flash.value.sector = CDoom.sectors + flash.value.sector.address
         (flash.as(UInt8*) + offsetof(CDoom::Lightflash, @thinker) + offsetof(CDoom::Thinker, @function)).as(CDoom::ActionfP1*).value = CDoom::ActionfP1.new((->CDoom.t_light_flash).pointer, Pointer(Void).null)
 
@@ -13884,8 +13788,8 @@ module LibDoom
       when CDoom::Specials::Strobe
         padsavep
         strobe = CDoom.z_malloc(sizeof(CDoom::Strobe), CDoom::PU_LEVEL, Pointer(Void).null).as(CDoom::Strobe*)
-        CDoom.doom_memcpy(strobe, CDoom.save_p, sizeof(CDoom::Strobe))
-        CDoom.save_p += sizeof(CDoom::Strobe)
+        slice = Slice.new(strobe.as(UInt8*), sizeof(CDoom::Strobe))
+        file.read_fully(slice)
         strobe.value.sector = CDoom.sectors + strobe.value.sector.address
         (strobe.as(UInt8*) + offsetof(CDoom::Strobe, @thinker) + offsetof(CDoom::Thinker, @function)).as(CDoom::ActionfP1*).value = CDoom::ActionfP1.new((->CDoom.t_strobe_flash).pointer, Pointer(Void).null)
 
@@ -13893,8 +13797,8 @@ module LibDoom
       when CDoom::Specials::Glow
         padsavep
         glow = CDoom.z_malloc(sizeof(CDoom::Glow), CDoom::PU_LEVEL, Pointer(Void).null).as(CDoom::Glow*)
-        CDoom.doom_memcpy(glow, CDoom.save_p, sizeof(CDoom::Glow))
-        CDoom.save_p += sizeof(CDoom::Glow)
+        slice = Slice.new(glow.as(UInt8*), sizeof(CDoom::Glow))
+        file.read_fully(slice)
         glow.value.sector = CDoom.sectors + glow.value.sector.address
         (glow.as(UInt8*) + offsetof(CDoom::Glow, @thinker) + offsetof(CDoom::Thinker, @function)).as(CDoom::ActionfP1*).value = CDoom::ActionfP1.new((->CDoom.t_glow).pointer, Pointer(Void).null)
 
