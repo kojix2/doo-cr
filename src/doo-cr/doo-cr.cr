@@ -5076,6 +5076,28 @@ module LibDoom
 
     sfx = CDoom.w_cache_lump_num(sfxlump, CDoom::PU_STATIC).as(UInt8*)
 
+    samplerate = (sfx + 0x02).as(UInt16*).value
+     # Do we need to resample?
+    if (resample_div = samplerate // CDoom::DOOM_SAMPLERATE) > 1
+      # Boy do we!
+      # Downsample multiples of DOOM_SAMPLERATE.
+      #  If it's inbetween, too bad.
+      src_len = size - 8 - 16 - 16
+      out_len = src_len // resample_div
+      src = Bytes.new(src_len)
+      src.copy_from(sfx + 8 + 16, src_len)
+      size = 8 + 16 + out_len + 16
+      out_len.times do |i|
+        avg = 0
+        resample_div.times do |res|
+          avg += src[i * resample_div + res].to_u16!
+        end
+        sfx[i + 8 + 16] = (avg // resample_div).to_u8!
+      end
+    end
+
+
+
     # Pads the sound effect out to the mixing buffer size.
     # The original realloc would interfere with zone memory.
     paddedsize = ((size - 8 + (CDoom::SAMPLECOUNT - 1)) // CDoom::SAMPLECOUNT) * CDoom::SAMPLECOUNT
@@ -5279,7 +5301,7 @@ module LibDoom
   #
   def self.i_start_sound(id : Int32, vol : Int32, sep : Int32, pitch : Int32, priority : Int32) : Int32
     # Returns a handle (not used).
-    pitch = 128 if @@randompitch == 0
+    pitch = CDoom::NORM_PITCH if @@randompitch == 0
     id = CDoom.addsfx(id, vol, CDoom.steptable[pitch], sep)
     return id
   end
@@ -5388,9 +5410,6 @@ module LibDoom
     end
   end
 
-  def self.i_submit_sound
-  end
-
   def self.i_update_sound_params(handle : LibC::Int, vol : LibC::Int, sep : LibC::Int, pitch : LibC::Int)
     # I fail too see that this is used.
     # Would be using the handle to identify
@@ -5423,17 +5442,27 @@ module LibDoom
 
   def self.i_shutdown_sound
     # Wait till all pending sounds are finished.
-    done = false
+    hopetill = i_get_time + 2*70 # Give 2 seconds to finish
 
     # FIXME (below).
-    puts "i_shutdown_sound: Finishing pending sounds"
+    print "i_shutdown_sound: Finishing pending sounds..."
 
-    until done
-      done = false
+    loop do
+      done = true
 
       CDoom.num_channels.times do |i|
-        break unless CDoom.channels[i].null?
-        done = true
+        next if CDoom.channels[i].null?
+        done = false
+      end
+
+      if done
+        puts " finished!" 
+        break
+      end
+
+      if i_get_time > hopetill
+        puts " couldn't finish."
+        break
       end
 
       update_audio
