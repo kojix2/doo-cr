@@ -5019,24 +5019,33 @@ def self.packet_send
 end
 
   @@first = true
+@@recv_attempts = 0
+@@recv_timeouts = 0
 
-  def self.packet_get
-    sock = @@insocket
-    unless sock
-      CDoom.doomcom.value.remotenode = -1
-      return
+def self.packet_get
+  sock = @@insocket
+  unless sock
+    CDoom.doomcom.value.remotenode = -1
+    return
+  end
+
+  sw = uninitialized CDoom::Doomdata
+  buf = Bytes.new(pointerof(sw).as(UInt8*), sizeof(CDoom::Doomdata))
+  fromaddress = uninitialized Socket::IPAddress
+
+  @@recv_attempts += 1
+  begin
+    c, fromaddress = sock.receive(buf)
+  rescue ex
+    @@recv_timeouts += 1
+    if @@recv_timeouts <= 5 || @@recv_timeouts % 500 == 0
+      puts "GET: #{ex.class} (attempt ##{@@recv_attempts}, timeouts=#{@@recv_timeouts})"
     end
+    CDoom.doomcom.value.remotenode = -1
+    return
+  end
 
-    sw = uninitialized CDoom::Doomdata
-    buf = Bytes.new(pointerof(sw).as(UInt8*), sizeof(CDoom::Doomdata))
-
-    fromaddress = uninitialized Socket::IPAddress
-    begin
-      c, fromaddress = sock.receive(buf)
-    rescue ex
-      CDoom.doomcom.value.remotenode = -1
-      return
-    end
+  puts "GET: got #{c}b from #{fromaddress}"
 
     if @@first
       puts "len=#{c}:p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
