@@ -37,8 +37,8 @@ module LibDoom
   @@litelevels : StaticArray(Int32, 8) = StaticArray[0, 4, 7, 10, 12, 14, 15, 15]
   @@litelevelscnt = 0
 
-  @@doomport : Int32 = CDoom::IPPORT_USERRESERVED + 0x1d
-  @@doomport_send : Int32 = CDoom::IPPORT_USERRESERVED + 0x1e
+  @@doomport : Int32 = 5029 #CDoom::IPPORT_USERRESERVED + 0x1d
+  @@doomport_send : Int32 = 5030#CDoom::IPPORT_USERRESERVED + 0x1e
 
   @@insocket : UDPSocket? = nil
   @@sendsocket : UDPSocket? = nil
@@ -243,7 +243,7 @@ module LibDoom
     flashstate: CDoom::Statenum::S_DSGUNFLASH1
   )
 
-  CDoom.singletics = 1
+  CDoom.singletics = 0
 
   CDoom.is_wiping_screen = 0
 

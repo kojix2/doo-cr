@@ -2437,9 +2437,9 @@ module LibDoom
   #
   def self.check_abort
     stoptic = CDoom.i_get_time + 2
-    while CDoom.i_get_time < stoptic
-      CDoom.i_start_tic
-    end
+  while CDoom.i_get_time < stoptic
+    CDoom.i_start_tic
+  end
 
     CDoom.i_start_tic
     while CDoom.eventtail != CDoom.eventhead
@@ -4974,13 +4974,13 @@ module LibDoom
   end
 
   def self.bind_to_local_port(socket : UDPSocket, port : Int32)
-    begin
+  begin
     socket.bind("0.0.0.0", port)
-    puts "insocket bound 0.0.0.0:#{port}"
+    puts "insocket bound: #{socket.local_address}"
   rescue ex
     i_error("Error: bind_to_local_port: bind: #{ex.message}")
   end
-  end
+end
 
   @@send_count = 0
 
@@ -5172,7 +5172,7 @@ puts "sendaddress[#{CDoom.doomcom.value.numnodes}] = #{@@sendaddress[CDoom.doomc
 
     @@insocket = udp_socket()
     bind_to_local_port(@@insocket.not_nil!, @@doomport)
-    @@insocket.not_nil!.read_timeout = 1.millisecond
+@@insocket.not_nil!.read_timeout = 250.milliseconds
 
     @@sendsocket = udp_socket()
   end
