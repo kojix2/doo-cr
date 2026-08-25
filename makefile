@@ -49,9 +49,6 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
 	$(CHANGE_LIB_NAMES)
 
-	cd ./bin && \
-	./doo-cr -file Und_rats.wad
-
 
 
 clean:

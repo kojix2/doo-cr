@@ -5610,7 +5610,13 @@ module LibDoom
 
   # Is the song playing?
   def self.i_tick_song : LibC::ULong
-    return 0_u64 if @@mus_is_midi
+    if @@mus_is_midi
+      {% if sizeof(LibC::ULong) == 8 %}
+        return 0_u64
+      {% else %}
+        return 0_u32
+      {% end %}
+    end
     midi_event : UInt64 | UInt32 = 0
 
     # Dequeue MIDI events
