@@ -5172,7 +5172,7 @@ module LibDoom
     when CDoom::Command::GET
       @@netget.call
     else
-      i_error("Error: Bad net cmd: #{CDoom.doomcom.value.command}")
+      i_error("Error: Bad net cmd: #{CDoom::Command.new(CDoom.doomcom.value.command.to_i32)}")
     end
   end
 
