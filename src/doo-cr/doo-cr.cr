@@ -4975,40 +4975,48 @@ module LibDoom
 
   def self.bind_to_local_port(socket : UDPSocket, port : Int32)
     begin
-      socket.bind("0.0.0.0", port)
-    rescue ex
-      i_error("Error: bind_to_local_port: bind: #{ex.message}")
-    end
+    socket.bind("0.0.0.0", port)
+    puts "insocket bound 0.0.0.0:#{port}"
+  rescue ex
+    i_error("Error: bind_to_local_port: bind: #{ex.message}")
+  end
   end
 
-  def self.packet_send
-    sock = @@sendsocket
-    return unless sock
-    dest = @@sendaddress[CDoom.doomcom.value.remotenode]
-    return unless dest
+  @@send_count = 0
 
-    sw = CDoom::Doomdata.new
+def self.packet_send
+  sock = @@sendsocket
+  return unless sock
+  node = CDoom.doomcom.value.remotenode
+  dest = @@sendaddress[node]
+  return unless dest
 
-    # byte swap
-    sw.checksum = doom_htonl(CDoom.netbuffer.value.checksum)
-    sw.player = CDoom.netbuffer.value.player
-    sw.retransmitfrom = CDoom.netbuffer.value.retransmitfrom
-    sw.starttic = CDoom.netbuffer.value.starttic
-    sw.numtics = CDoom.netbuffer.value.numtics
-    c = 0
-    while c < CDoom.netbuffer.value.numtics
-      (sw.cmds.to_unsafe + c).value.forwardmove = CDoom.netbuffer.value.cmds[c].forwardmove
-      (sw.cmds.to_unsafe + c).value.sidemove = CDoom.netbuffer.value.cmds[c].sidemove
-      (sw.cmds.to_unsafe + c).value.angleturn = doom_htons(CDoom.netbuffer.value.cmds[c].angleturn)
-      (sw.cmds.to_unsafe + c).value.consistancy = doom_htons(CDoom.netbuffer.value.cmds[c].consistancy)
-      (sw.cmds.to_unsafe + c).value.chatchar = CDoom.netbuffer.value.cmds[c].chatchar
-      (sw.cmds.to_unsafe + c).value.buttons = CDoom.netbuffer.value.cmds[c].buttons
-      c += 1
-    end
-
-    bytes = Bytes.new(pointerof(sw).as(UInt8*), CDoom.doomcom.value.datalength)
-    c = sock.send(bytes, to: dest)
+  sw = CDoom::Doomdata.new
+  sw.checksum = doom_htonl(CDoom.netbuffer.value.checksum)
+  sw.player = CDoom.netbuffer.value.player
+  sw.retransmitfrom = CDoom.netbuffer.value.retransmitfrom
+  sw.starttic = CDoom.netbuffer.value.starttic
+  sw.numtics = CDoom.netbuffer.value.numtics
+  c = 0
+  while c < CDoom.netbuffer.value.numtics
+    (sw.cmds.to_unsafe + c).value.forwardmove = CDoom.netbuffer.value.cmds[c].forwardmove
+    (sw.cmds.to_unsafe + c).value.sidemove = CDoom.netbuffer.value.cmds[c].sidemove
+    (sw.cmds.to_unsafe + c).value.angleturn = doom_htons(CDoom.netbuffer.value.cmds[c].angleturn)
+    (sw.cmds.to_unsafe + c).value.consistancy = doom_htons(CDoom.netbuffer.value.cmds[c].consistancy)
+    (sw.cmds.to_unsafe + c).value.chatchar = CDoom.netbuffer.value.cmds[c].chatchar
+    (sw.cmds.to_unsafe + c).value.buttons = CDoom.netbuffer.value.cmds[c].buttons
+    c += 1
   end
+
+  bytes = Bytes.new(pointerof(sw).as(UInt8*), CDoom.doomcom.value.datalength)
+  begin
+    sock.send(bytes, to: dest)
+    @@send_count += 1
+    puts "send ##{@@send_count} -> #{dest} (#{bytes.size}b, node=#{node})" if @@send_count <= 20
+  rescue ex
+    puts "SEND FAILED -> #{dest}: #{ex.class}: #{ex.message}"
+  end
+end
 
   @@first = true
 
@@ -5136,16 +5144,17 @@ module LibDoom
       arg = String.new(CDoom.myargv[i])
 
       @@sendaddress[CDoom.doomcom.value.numnodes] =
-      if arg[0] == '.'
-        Socket::IPAddress.new(arg[1..], @@doomport)
-      else
-        hostentry = Socket::Addrinfo.resolve(arg, nil,
-          family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
+if arg[0] == '.'
+  Socket::IPAddress.new(arg[1..], @@doomport)
+else
+  hostentry = Socket::Addrinfo.resolve(arg, nil,
+    family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
 
-        CDoom.i_error("Error: gethostbyname: couldn't find #{arg}") unless hostentry
+  CDoom.i_error("Error: gethostbyname: couldn't find #{arg}") unless hostentry
 
-        Socket::IPAddress.new(hostentry.not_nil!.ip_address.address, @@doomport)
-      end
+  Socket::IPAddress.new(hostentry.not_nil!.ip_address.address, @@doomport)
+end
+puts "sendaddress[#{CDoom.doomcom.value.numnodes}] = #{@@sendaddress[CDoom.doomcom.value.numnodes]}"
     CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
     end
 
@@ -5154,7 +5163,7 @@ module LibDoom
 
     @@insocket = udp_socket()
     bind_to_local_port(@@insocket.not_nil!, @@doomport)
-    @@insocket.not_nil!.blocking = false
+    @@insocket.not_nil!.read_timeout = 1.millisecond
 
     @@sendsocket = udp_socket()
   end
