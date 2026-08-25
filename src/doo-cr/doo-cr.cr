@@ -535,8 +535,7 @@ module LibDoom
     namebuf = uninitialized StaticArray(UInt8, 9)
 
     10.times do |i|
-      CDoom.doom_concat(CDoom.doom_strcpy(namebuf, "AMMNUM"), CDoom.doom_itoa(i, 10))
-      CDoom.marknums[i] = CDoom.w_cache_lump_name(namebuf, CDoom::PU_STATIC).as(CDoom::Patch*)
+      CDoom.marknums[i] = CDoom.w_cache_lump_name("AMMNUM#{i}", CDoom::PU_STATIC).as(CDoom::Patch*)
     end
   end
 
@@ -681,10 +680,7 @@ module LibDoom
         CDoom.grid = CDoom.grid != 0 ? 0 : 1
         CDoom.plr.value.message = CDoom.grid != 0 ? CDoom::AMSTR_GRIDON : CDoom::AMSTR_GRIDOFF
       when CDoom::AM_MARKKEY
-        CDoom.doom_strcpy(@@buffer, CDoom::AMSTR_MARKEDSPOT)
-        CDoom.doom_concat(@@buffer, " ")
-        CDoom.doom_concat(@@buffer, CDoom.doom_itoa(CDoom.markpointnum, 10))
-        CDoom.plr.value.message = @@buffer
+        CDoom.plr.value.message = "#{CDoom::AMSTR_MARKEDSPOT} #{CDoom.markpointnum}"
         CDoom.am_add_mark
       when CDoom::AM_CLEARMARKKEY
         CDoom.am_clear_marks
@@ -1559,39 +1555,30 @@ module LibDoom
     doomwaddir = ".".to_unsafe if doomwaddir.null?
 
     # Commercial.
-    doom2wad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + 9 + 1).as(UInt8*)
-    CDoom.doom_strcpy(doom2wad, doomwaddir)
-    CDoom.doom_concat(doom2wad, "/doom2.wad")
+    doom2wad = String.new(doomwaddir) + "/doom2.wad"
 
     # Retail.
-    doomuwad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + 9 + 1).as(UInt8*)
-    CDoom.doom_strcpy(doomuwad, doomwaddir)
-    CDoom.doom_concat(doomuwad, "/doomu.wad")
+    doomuwad = String.new(doomwaddir) + "/doomu.wad"
 
     # Registered.
-    doomwad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + 8 + 1).as(UInt8*)
-    CDoom.doom_strcpy(doomwad, doomwaddir)
-    CDoom.doom_concat(doomwad, "/doom.wad")
+    doomwad = String.new(doomwaddir) + "/doom.wad"
+
 
     # Shareware.
-    doom1wad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + 9 + 1).as(UInt8*)
-    CDoom.doom_strcpy(doom1wad, doomwaddir)
-    CDoom.doom_concat(doom1wad, "/doom1.wad")
+    doom1wad = String.new(doomwaddir) + "/doom1.wad"
+
 
     # Bug, dear Shawn.
     # Insufficient malloc, caused spurious realloc errors.
-    plutoniawad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + 12 + 1).as(UInt8*)
-    CDoom.doom_strcpy(plutoniawad, doomwaddir)
-    CDoom.doom_concat(plutoniawad, "/plutonia.wad")
+    plutoniawad = String.new(doomwaddir) + "/plutonia.wad"
 
-    tntwad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + 9 + 1).as(UInt8*)
-    CDoom.doom_strcpy(tntwad, doomwaddir)
-    CDoom.doom_concat(tntwad, "/tnt.wad")
+
+    tntwad = String.new(doomwaddir) + "/tnt.wad"
+
 
     # French stuff
-    doom2fwad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + 10 + 1).as(UInt8*)
-    CDoom.doom_strcpy(doom2fwad, doomwaddir)
-    CDoom.doom_concat(doom2fwad, "/doom2f.wad")
+    doom2fwad = String.new(doomwaddir) + "/doom2f.wad"
+
 
     {% if !CDoom.has_constant?("DOOM_WIN32") %}
       home = CDoom.doom_getenv.call("HOME".to_unsafe)
@@ -1617,15 +1604,12 @@ module LibDoom
 
     if p != 0 && p < CDoom.myargc - 1
       CDoom.modifiedgame = 1 # I hope so?
-      customwad = CDoom.doom_malloc.call(CDoom.doom_strlen(doomwaddir) + 1 + CDoom.doom_strlen(CDoom.myargv[p + 1]) + 4 + 1).as(UInt8*)
-      CDoom.doom_strcpy(customwad, doomwaddir)
-      CDoom.doom_concat(customwad, "/".to_unsafe)
-      CDoom.doom_concat(customwad, CDoom.myargv[p + 1])
-      if (handle = CDoom.doom_open.call(customwad, "rb".to_unsafe)).null?
+      customwad = String.new(doomwaddir) + "/" + String.new(CDoom.myargv[p + 1])
+      if (handle = CDoom.doom_open.call(customwad.to_unsafe, "rb".to_unsafe)).null?
         # Wad not found, give them a chance
         CDoom.doom_concat(customwad, ".wad".to_unsafe)
-        if (handle = CDoom.doom_open.call(customwad, "rb".to_unsafe)).null?
-          CDoom.i_error("Error: identify_version: '-iwad #{String.new(customwad)}' could not find file specified")
+        if (handle = CDoom.doom_open.call(customwad.to_unsafe, "rb".to_unsafe)).null?
+          CDoom.i_error("Error: identify_version: '-iwad #{customwad}' could not find file specified")
         end
       end
       # Wad is real. Check for IWAD unless forced
@@ -1634,7 +1618,7 @@ module LibDoom
         CDoom.doom_read.call(handle, pointerof(header).as(Void*), sizeof(typeof(header)))
         CDoom.doom_close.call(handle)
         if CDoom.doom_strncmp(header.identification, "IWAD", 4) != 0
-          CDoom.i_error("Error: identify_version: '-iwad #{String.new(customwad)}' found, but is not an IWAD")
+          CDoom.i_error("Error: identify_version: '-iwad #{customwad}' found, but is not an IWAD")
         end
       end
 
@@ -1679,7 +1663,7 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(doom2fwad, "rb".to_unsafe)).null?
+    if !(f = CDoom.doom_open.call(doom2fwad.to_unsafe, "rb".to_unsafe)).null?
       CDoom.doom_close.call(f)
       CDoom.gamemode = CDoom::GameMode::Commercial
       CDoom.gamemission = CDoom::GameMission::Doom2
@@ -1691,7 +1675,7 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(doom2wad, "rb".to_unsafe)).null?
+    if !(f = CDoom.doom_open.call(doom2wad.to_unsafe, "rb".to_unsafe)).null?
       CDoom.doom_close.call(f)
       CDoom.gamemode = CDoom::GameMode::Commercial
       CDoom.gamemission = CDoom::GameMission::Doom2
@@ -1699,7 +1683,7 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(plutoniawad, "rb".to_unsafe)).null?
+    if !(f = CDoom.doom_open.call(plutoniawad.to_unsafe, "rb".to_unsafe)).null?
       CDoom.doom_close.call(f)
       CDoom.gamemode = CDoom::GameMode::Commercial
       CDoom.gamemission = CDoom::GameMission::PackPlut
@@ -1707,7 +1691,7 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(tntwad, "rb".to_unsafe)).null?
+    if !(f = CDoom.doom_open.call(tntwad.to_unsafe, "rb".to_unsafe)).null?
       CDoom.doom_close.call(f)
       CDoom.gamemode = CDoom::GameMode::Commercial
       CDoom.gamemission = CDoom::GameMission::PackTnt
@@ -1715,7 +1699,7 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(doomuwad, "rb".to_unsafe)).null?
+    if !(f = CDoom.doom_open.call(doomuwad.to_unsafe, "rb".to_unsafe)).null?
       CDoom.doom_close.call(f)
       CDoom.gamemode = CDoom::GameMode::Retail
       CDoom.gamemission = CDoom::GameMission::Doom
@@ -1723,7 +1707,7 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(doomwad, "rb".to_unsafe)).null?
+    if !(f = CDoom.doom_open.call(doomwad.to_unsafe, "rb".to_unsafe)).null?
       CDoom.doom_close.call(f)
       CDoom.gamemode = CDoom::GameMode::Registered
       CDoom.gamemission = CDoom::GameMission::Doom
@@ -1731,7 +1715,7 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(doom1wad, "rb".to_unsafe)).null?
+    if !(f = CDoom.doom_open.call(doom1wad.to_unsafe, "rb".to_unsafe)).null?
       CDoom.doom_close.call(f)
       CDoom.gamemode = CDoom::GameMode::Shareware
       CDoom.gamemission = CDoom::GameMission::Doom

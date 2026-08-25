@@ -833,10 +833,6 @@ fun i_update_sound = I_UpdateSound
   LibDoom.i_update_sound
 end
 
-fun i_submit_sound = I_SubmitSound
-  LibDoom.i_submit_sound
-end
-
 fun i_update_sound_params = I_UpdateSoundParams(handle : LibC::Int, vol : LibC::Int, sep : LibC::Int, pitch : LibC::Int)
   LibDoom.i_update_sound_params(handle, vol, sep, pitch)
 end
