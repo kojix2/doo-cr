@@ -2402,7 +2402,7 @@ module LibDoom
       end
 
       # send the packet to the other nodes
-      CDoom.numnodes.times do |i|
+      CDoom.doomcom.value.numnodes.times do |i|
         if CDoom.nodeingame[i] != 0
           CDoom.netbuffer.value.starttic = CDoom.resendto[i]
           realstart = CDoom.resendto[i]
@@ -2502,7 +2502,6 @@ module LibDoom
           CDoom.h_send_packet(i, CDoom::NCMD_SETUP)
         end
 
-        {% if true %}
           i = 10
           while i != 0 && CDoom.h_get_packet != 0
             if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
@@ -2510,11 +2509,6 @@ module LibDoom
               i -= 1
             end
           end
-        {% else %}
-          while CDoom.h_get_packet
-            CDoom.gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
-          end
-        {% end %}
 
         i = 1
         while i < CDoom.doomcom.value.numnodes
