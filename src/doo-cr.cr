@@ -1,3 +1,5 @@
+require "socket"
+
 require "./doo-cr/lib.cr"
 require "./doo-cr/variables.cr"
 require "./doo-cr/doo-cr.cr"

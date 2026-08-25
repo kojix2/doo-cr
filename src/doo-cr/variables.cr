@@ -21,6 +21,9 @@ module LibDoom
   ANG180 = 0x80000000
   ANG270 = 0xc0000000
 
+  NEEDS_BYTE_SWAP = IO::ByteFormat::SystemEndian != IO::ByteFormat::NetworkEndian
+
+
 
   CDoom.precache = 1
 
@@ -36,6 +39,13 @@ module LibDoom
 
   @@doomport : Int32 = CDoom::IPPORT_USERRESERVED + 0x1d
   @@doomport_send : Int32 = CDoom::IPPORT_USERRESERVED + 0x1e
+
+  @@insocket : UDPSocket? = nil
+  @@sendsocket : UDPSocket? = nil
+  @@sendaddress = Array(Socket::IPAddress?).new(CDoom::MAXNETNODES, nil)
+
+  @@netget : Proc(Nil) = ->{ nil }
+  @@netsend : Proc(Nil) = ->{ nil }
 
   @@closing = false
 

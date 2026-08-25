@@ -4962,6 +4962,127 @@ module LibDoom
     return eatkey
   end
 
+  def self.doom_htons(x : Int16) : Int16
+    NEEDS_BYTE_SWAP ? x.byte_swap : x
+  end
+
+  def self.doom_htonl(x : UInt32) : UInt32
+    NEEDS_BYTE_SWAP ? x.byte_swap : x
+  end
+  
+  def self.udp_socket : UDPSocket
+    begin
+      UDPSocket.new(Socket::Family::INET)
+    rescue ex
+      i_error("Error: can't create socket: #{ex.message}")
+      raise ex
+    end
+  end
+
+  def self.bind_to_local_port(socket : UDPSocket, port : Int32)
+    begin
+      socket.bind("0.0.0.0", port)
+    rescue ex
+      i_error("Error: bind_to_local_port: bind: #{ex.message}")
+    end
+  end
+
+  def self.packet_send
+    sock = @@sendsocket
+    return unless sock
+    dest = @@sendaddress[CDoom.doomcom.value.remotenode]
+    return unless dest
+
+    sw = CDoom::Doomdata.new
+
+    # byte swap
+    sw.checksum = doom_htonl(CDoom.netbuffer.value.checksum)
+    sw.player = CDoom.netbuffer.value.player
+    sw.retransmitfrom = CDoom.netbuffer.value.retransmitfrom
+    sw.starttic = CDoom.netbuffer.value.starttic
+    sw.numtics = CDoom.netbuffer.value.numtics
+    c = 0
+    while c < CDoom.netbuffer.value.numtics
+      (sw.cmds.to_unsafe + c).value.forwardmove = CDoom.netbuffer.value.cmds[c].forwardmove
+      (sw.cmds.to_unsafe + c).value.sidemove = CDoom.netbuffer.value.cmds[c].sidemove
+      (sw.cmds.to_unsafe + c).value.angleturn = doom_htons(CDoom.netbuffer.value.cmds[c].angleturn)
+      (sw.cmds.to_unsafe + c).value.consistancy = doom_htons(CDoom.netbuffer.value.cmds[c].consistancy)
+      (sw.cmds.to_unsafe + c).value.chatchar = CDoom.netbuffer.value.cmds[c].chatchar
+      (sw.cmds.to_unsafe + c).value.buttons = CDoom.netbuffer.value.cmds[c].buttons
+      c += 1
+    end
+
+    bytes = Bytes.new(pointerof(sw).as(UInt8*), CDoom.doomcom.value.datalength)
+    c = sock.send(bytes, to: dest)
+  end
+
+  @@first = true
+
+  def self.packet_get
+    sock = @@insocket
+    unless sock
+      CDoom.doomcom.value.remotenode = -1
+      return
+    end
+
+    sw = uninitialized CDoom::Doomdata
+    buf = Bytes.new(pointerof(sw).as(UInt8*), sizeof(CDoom::Doomdata))
+
+    fromaddress = uninitialized Socket::IPAddress
+    begin
+      c, fromaddress = sock.receive(buf)
+    rescue ex
+      CDoom.doomcom.value.remotenode = -1
+      return
+    end
+
+    if @@first
+      puts "len=#{c}:p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
+    end
+      @@first = false
+
+      i = 0
+      while i < CDoom.doomcom.value.numnodes
+        addr = @@sendaddress[i]
+        break if addr && addr.address == fromaddress.address
+        i += 1
+      end
+
+      if i == CDoom.doomcom.value.numnodes
+        CDoom.doomcom.value.remotenode = -1
+        return
+      end
+
+      CDoom.doomcom.value.remotenode = i
+      CDoom.doomcom.value.datalength = c
+
+      CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
+      CDoom.netbuffer.value.player = sw.player
+      CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
+      CDoom.netbuffer.value.starttic = sw.starttic
+      CDoom.netbuffer.value.numtics = sw.numtics
+
+      CDoom.netbuffer.value.numtics.times do |c|
+        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
+        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
+        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
+        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
+        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
+        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
+      end
+  end
+
+  def self.get_local_address : Int32
+    hostname = System.hostname
+    hostentry = Socket::Addrinfo.resolve(hostname, nil,
+    family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
+
+    i_error("Error: get_local_address : get_host_by_name: couldn't get local host") unless hostentry
+
+    octets = hostentry.not_nil!.ip_address.address.split('.').map(&.to_u32)
+    (octets[0] | (octets[1] << 8) | (octets[2] << 16) | (octets[3] << 24)).to_i32!
+  end
+
   def self.i_init_network
     CDoom.doomcom = GC.malloc(sizeof(typeof(CDoom.doomcom.value))).as(Pointer(CDoom::Doomcom))
     CDoom.doom_memset(CDoom.doomcom, 0, sizeof(typeof(CDoom.doomcom.value)))
@@ -4988,7 +5109,7 @@ module LibDoom
       puts "using alternate port #{@@doomport}"
     end
 
-    p = CDoom.m_check_parm("-port")
+    p = CDoom.m_check_parm("-sendport")
     if p != 0 && p < CDoom.myargc - 1
       @@doomport_send = CDoom.doom_atoi(CDoom.myargv[p + 1])
       puts "using alternate send port #{@@doomport_send}"
@@ -5007,9 +5128,52 @@ module LibDoom
       CDoom.consoleplayer = 0
       return
     end
+
+    @@netsend = ->packet_send
+    @@netget = ->packet_get
+    CDoom.netgame = 1
+
+    CDoom.doomcom.value.consoleplayer = CDoom.myargv[i + 1][0] - '1'.ord
+
+    CDoom.doomcom.value.numnodes = 1 # this node for sure
+
+    i += 1
+    while (i += 1) < CDoom.myargc && CDoom.myargv[i][0] != '-'.ord
+      arg = String.new(CDoom.myargv[i])
+
+      @@sendaddress[CDoom.doomcom.value.numnodes] =
+      if arg[0] == '.'
+        Socket::IPAddress.new(arg[1..], @@doomport)
+      else
+        hostentry = Socket::Addrinfo.resolve(arg, nil,
+          family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
+
+        CDoom.i_error("Error: gethostbyname: couldn't find #{arg}") unless hostentry
+
+        Socket::IPAddress.new(hostentry.not_nil!.ip_address.address, @@doomport)
+      end
+    CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
+    end
+
+    CDoom.doomcom.value.id = CDoom::DOOMCOM_ID
+    CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numnodes
+
+    @@insocket = udp_socket()
+    bind_to_local_port(@@insocket.not_nil!, @@doomport)
+    @@insocket.not_nil!.blocking = false
+
+    @@sendsocket = udp_socket()
   end
 
   def self.i_net_cmd
+    case CDoom::Command.new(CDoom.doomcom.value.command.to_i32)
+    when CDoom::Command::SEND
+      @@netsend.call
+    when CDoom::Command::GET
+      @@netget.call
+    else
+      i_error("Error: Bad net cmd: #{CDoom.doomcom.value.command}")
+    end
   end
 
   #
