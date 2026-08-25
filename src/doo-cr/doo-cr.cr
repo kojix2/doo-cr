@@ -2502,12 +2502,12 @@ module LibDoom
           CDoom.h_send_packet(i, CDoom::NCMD_SETUP)
         end
 
-          i = 10
+         i = 10
           while i != 0 && CDoom.h_get_packet != 0
             if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
               gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
-              i -= 1
             end
+            i -= 1
           end
 
         i = 1
