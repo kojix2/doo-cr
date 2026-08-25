@@ -1,11 +1,3 @@
-fun doom_malloc_impl(size : Int32) : Void*
-  LibDoom.doom_malloc_impl(size)
-end
-
-fun doom_free_impl(ptr : Void*)
-  LibDoom.doom_free_impl(ptr)
-end
-
 fun doom_open_impl(filename : UInt8*, mode : UInt8*) : Void*
   LibDoom.doom_open_impl(filename, mode)
 end
@@ -106,10 +98,6 @@ end
 
 fun doom_fprint(handle : Void*, str : UInt8*) : Int32
   LibDoom.doom_fprint(handle, str)
-end
-
-fun doom_set_malloc(malloc_fn : CDoom::DoomMallocFn, free_fn : CDoom::DoomFreeFn)
-  LibDoom.doom_set_malloc(malloc_fn, free_fn)
 end
 
 fun doom_set_file_io(open_fn : CDoom::DoomOpenFn,

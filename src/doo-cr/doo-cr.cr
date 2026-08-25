@@ -2,14 +2,6 @@ module LibDoom
   NULL_PROC   = Proc(Nil).new(Pointer(Void).null, Pointer(Void).null)
   NULL_PROCP1 = Proc(Int32, Nil).new(Pointer(Void).null, Pointer(Void).null)
 
-  def self.doom_malloc_impl(size : Int32) : Void*
-    return GC.malloc(size)
-  end
-
-  def self.doom_free_impl(ptr : Void*)
-    GC.free(ptr)
-  end
-
   def self.doom_open_impl(filename : UInt8*, mode : UInt8*) : Void*
     begin
       file = File.new(String.new(filename), String.new(mode))
@@ -158,11 +150,6 @@ module LibDoom
     return CDoom.doom_write.call(handle, str.as(Void*), doom_strlen(str))
   end
 
-  def self.doom_set_malloc(malloc_fn : CDoom::DoomMallocFn, free_fn : CDoom::DoomFreeFn)
-    CDoom.doom_malloc = malloc_fn
-    CDoom.doom_free = free_fn
-  end
-
   def self.doom_set_file_io(open_fn : CDoom::DoomOpenFn,
                             close_fn : CDoom::DoomCloseFn,
                             read_fn : CDoom::DoomReadFn,
@@ -192,8 +179,6 @@ module LibDoom
   end
 
   def self.doom_init(argc : Int32, argv : UInt8**, flags : Int32)
-    CDoom.doom_malloc = ->doom_malloc_impl(Int32) if CDoom.doom_malloc.pointer.null?
-    CDoom.doom_free = ->doom_free_impl(Void*) if CDoom.doom_free.pointer.null?
     CDoom.doom_open = ->doom_open_impl(UInt8*, UInt8*) if CDoom.doom_open.pointer.null?
     CDoom.doom_close = ->doom_close_impl(Void*) if CDoom.doom_close.pointer.null?
     CDoom.doom_read = ->doom_read_impl(Void*, Void*, Int32) if CDoom.doom_read.pointer.null?
@@ -205,8 +190,8 @@ module LibDoom
     CDoom.doom_exit = ->doom_exit_impl(Int32) if CDoom.doom_exit.pointer.null?
     CDoom.doom_getenv = ->doom_getenv_impl(UInt8*) if CDoom.doom_getenv.pointer.null?
 
-    CDoom.screen_buffer = CDoom.doom_malloc.call(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
-    CDoom.final_screen_buffer = CDoom.doom_malloc.call(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT * 4).as(UInt8*)
+    CDoom.screen_buffer = GC.malloc(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
+    CDoom.final_screen_buffer = GC.malloc(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT * 4).as(UInt8*)
     CDoom.last_update_time = CDoom.i_get_time
 
     CDoom.myargc = argc
@@ -1502,7 +1487,7 @@ module LibDoom
       numwadfiles += 1
     end
 
-    newfile = CDoom.doom_malloc.call(doom_strlen(file) + 1)
+    newfile = GC.malloc(doom_strlen(file) + 1)
     CDoom.doom_strcpy(newfile.as(UInt8*), file)
 
     CDoom.wadfiles[numwadfiles] = newfile.as(UInt8*)
@@ -1747,7 +1732,7 @@ module LibDoom
         CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
         size = CDoom.doom_tell.call(handle)
         CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_SET)
-        file = CDoom.doom_malloc.call(size)
+        file = GC.malloc(size)
         CDoom.doom_read.call(handle, file, size * 1)
         CDoom.doom_close.call(handle)
 
@@ -1761,7 +1746,7 @@ module LibDoom
         end
 
         firstargv = CDoom.myargv[i]
-        CDoom.myargv = CDoom.doom_malloc.call(sizeof(UInt8*) * CDoom::MAXARGVS).as(UInt8**)
+        CDoom.myargv = GC.malloc(sizeof(UInt8*) * CDoom::MAXARGVS).as(UInt8**)
         CDoom.doom_memset(CDoom.myargv, 0, sizeof(UInt8*) * CDoom::MAXARGVS)
         CDoom.myargv[0] = firstargv
 
@@ -4978,7 +4963,7 @@ module LibDoom
   end
 
   def self.i_init_network
-    CDoom.doomcom = CDoom.doom_malloc.call(sizeof(typeof(CDoom.doomcom.value))).as(Pointer(CDoom::Doomcom))
+    CDoom.doomcom = GC.malloc(sizeof(typeof(CDoom.doomcom.value))).as(Pointer(CDoom::Doomcom))
     CDoom.doom_memset(CDoom.doomcom, 0, sizeof(typeof(CDoom.doomcom.value)))
 
     # set up for network
@@ -5827,7 +5812,7 @@ module LibDoom
 
   def self.i_zone_base(size : LibC::Int*) : CDoom::Byte*
     size.value = CDoom.mb_used * 1024 * 1024
-    return CDoom.doom_malloc.call(size.value).as(CDoom::Byte*)
+    return GC.malloc(size.value).as(CDoom::Byte*)
   end
 
   @@basetime = 0
@@ -5877,7 +5862,7 @@ module LibDoom
   end
 
   def self.i_alloc_low(length : LibC::Int) : CDoom::Byte*
-    mem = CDoom.doom_malloc.call(length).as(CDoom::Byte*)
+    mem = GC.malloc(length).as(CDoom::Byte*)
     CDoom.doom_memset(mem, 0, length)
     return mem
   end
@@ -5956,7 +5941,7 @@ module LibDoom
   @@was_focused = false
 
   def self.i_init_graphics
-    CDoom.screens[0] = CDoom.doom_malloc.call(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
+    CDoom.screens[0] = GC.malloc(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
 
     Raylib.set_config_flags(Raylib::ConfigFlags::WindowResizable)
     Raylib.init_window(1024, 768, "LibDoom")
@@ -7504,7 +7489,7 @@ module LibDoom
             # get a string default
             isstring = true
             len = CDoom.doom_strlen(strparm).to_i32!
-            newstring = CDoom.doom_malloc.call(len).as(UInt8*)
+            newstring = GC.malloc(len).as(UInt8*)
             strparm[len - 1] = 0
             CDoom.doom_strcpy(newstring, strparm.to_unsafe + 1)
           elsif strparm[0] == '0'.ord && strparm[1] == 'x'.ord
@@ -16716,7 +16701,7 @@ module LibDoom
     #  that are covered by more than one patch.
     # Fill in the lump / offset, so columns
     #  with only a single patch are all done.
-    patchcount = CDoom.doom_malloc.call(texture.value.width.to_i32).as(CDoom::Byte*)
+    patchcount = GC.malloc(texture.value.width.to_i32).as(CDoom::Byte*)
     CDoom.doom_memset(patchcount, 0, texture.value.width)
     patch = texture.value.patches.to_unsafe
 
@@ -16763,7 +16748,7 @@ module LibDoom
       end
     end
 
-    CDoom.doom_free.call(patchcount.as(Void*))
+    GC.free(patchcount.as(Void*))
   end
 
   def self.r_get_column(tex : LibC::Int, col : LibC::Int) : CDoom::Byte*
@@ -16790,7 +16775,7 @@ module LibDoom
     names = CDoom.w_cache_lump_name("PNAMES", CDoom::PU_STATIC).as(UInt8*)
     nummappatches = names.as(Int32*).value
     name_p = names + 4
-    patchlookup = CDoom.doom_malloc.call(nummappatches * sizeof(Int32)).as(Int32*)
+    patchlookup = GC.malloc(nummappatches * sizeof(Int32)).as(Int32*)
 
     nummappatches.times do |i|
       CDoom.doom_strncpy(name, name_p + i * 8, 8)
@@ -16900,7 +16885,7 @@ module LibDoom
 
     CDoom.numtextures.times { |i| CDoom.texturetranslation[i] = i }
 
-    CDoom.doom_free.call(patchlookup.as(Void*))
+    GC.free(patchlookup.as(Void*))
   end
 
   def self.r_init_flats
@@ -17029,7 +17014,7 @@ module LibDoom
     return if CDoom.demoplayback != 0
 
     # Precache flats.
-    flatpresent = CDoom.doom_malloc.call(CDoom.numflats).as(UInt8*)
+    flatpresent = GC.malloc(CDoom.numflats).as(UInt8*)
     CDoom.doom_memset(flatpresent, 0, CDoom.numflats)
 
     CDoom.numsectors.times do |i|
@@ -17048,7 +17033,7 @@ module LibDoom
     end
 
     # Precache textures.
-    texturepresent = CDoom.doom_malloc.call(CDoom.numtextures).as(UInt8*)
+    texturepresent = GC.malloc(CDoom.numtextures).as(UInt8*)
     CDoom.doom_memset(texturepresent, 0, CDoom.numtextures)
 
     CDoom.numsides.times do |i|
@@ -17079,7 +17064,7 @@ module LibDoom
     end
 
     # Precache sprites.
-    spritepresent = CDoom.doom_malloc.call(CDoom.numsprites).as(UInt8*)
+    spritepresent = GC.malloc(CDoom.numsprites).as(UInt8*)
     CDoom.doom_memset(spritepresent, 0, CDoom.numsprites)
 
     th = CDoom.thinkercap.next
@@ -17105,9 +17090,9 @@ module LibDoom
       end
     end
 
-    CDoom.doom_free.call(texturepresent.as(Void*))
-    CDoom.doom_free.call(flatpresent.as(Void*))
-    CDoom.doom_free.call(spritepresent.as(Void*))
+    GC.free(texturepresent.as(Void*))
+    GC.free(flatpresent.as(Void*))
+    GC.free(spritepresent.as(Void*))
   end
 
   #
@@ -21296,7 +21281,7 @@ rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
       header.numlumps = header.numlumps
       header.infotableofs = header.infotableofs
       length = header.numlumps * sizeof(CDoom::Filelump)
-      fileinfo = CDoom.doom_malloc.call(length).as(CDoom::Filelump*)
+      fileinfo = GC.malloc(length).as(CDoom::Filelump*)
       allocated = fileinfo
       CDoom.doom_seek.call(handle, header.infotableofs, CDoom::DoomSeek::DOOM_SEEK_SET)
       CDoom.doom_read.call(handle, fileinfo.as(Void*), length)
@@ -21304,7 +21289,7 @@ rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
     end
 
     # Fill in lumpinfo
-    new_lumpinfo = CDoom.doom_malloc.call(CDoom.numlumps * sizeof(CDoom::Lumpinfo))
+    new_lumpinfo = GC.malloc(CDoom.numlumps * sizeof(CDoom::Lumpinfo))
     CDoom.doom_memcpy(new_lumpinfo, CDoom.lumpinfo, @@previous_realloc_size)
     @@previous_realloc_size = CDoom.numlumps * sizeof(CDoom::Lumpinfo)
     CDoom.lumpinfo = new_lumpinfo.as(CDoom::Lumpinfo*)
@@ -21329,7 +21314,7 @@ rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
 
     CDoom.doom_close.call(handle) if !CDoom.reloadname.null?
 
-    CDoom.doom_free.call(allocated.as(Void*)) unless allocated.null?
+    GC.free(allocated.as(Void*)) unless allocated.null?
   end
 
   #
@@ -21349,7 +21334,7 @@ rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
     lumpcount = header.numlumps
     header.infotableofs = header.infotableofs
     length = lumpcount * sizeof(CDoom::Filelump)
-    fileinfo = CDoom.doom_malloc.call(length).as(CDoom::Filelump*)
+    fileinfo = GC.malloc(length).as(CDoom::Filelump*)
     CDoom.doom_seek.call(handle, header.infotableofs, CDoom::DoomSeek::DOOM_SEEK_SET)
     CDoom.doom_read.call(handle, fileinfo.as(Void*), length)
 
@@ -21370,7 +21355,7 @@ rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
 
     CDoom.doom_close.call(handle)
 
-    CDoom.doom_free.call(fileinfo.as(Void*))
+    GC.free(fileinfo.as(Void*))
   end
 
   #
@@ -21390,7 +21375,7 @@ rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
     CDoom.numlumps = 0
 
     # will be realloced as lumps are added
-    CDoom.lumpinfo = CDoom.doom_malloc.call(1).as(CDoom::Lumpinfo*)
+    CDoom.lumpinfo = GC.malloc(1).as(CDoom::Lumpinfo*)
 
     until filenames.value.null?
       CDoom.w_add_file(filenames.value)
@@ -21401,7 +21386,7 @@ rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
 
     # set up caching
     size = CDoom.numlumps * sizeof(Void*)
-    CDoom.lumpcache = CDoom.doom_malloc.call(size).as(Void**)
+    CDoom.lumpcache = GC.malloc(size).as(Void**)
 
     CDoom.i_error("Error: Couldn't allocate lumpcache") if CDoom.lumpcache.null?
 
