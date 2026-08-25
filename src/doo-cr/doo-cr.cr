@@ -5209,12 +5209,18 @@ module LibDoom
 
   # MUSIC API - dummy. Some code from DOS version.
   def self.i_set_music_volume(volume : Int32)
-    CDoom.snd_music_volume = volume
     CDoom.mus_volume = CDoom.snd_music_volume * 8
 
-    16.times do |i|
-      CDoom.queued_midi_msgs[CDoom.queue_midi_tail % CDoom::MAX_QUEUED_MIDI_MSGS] = (0x000000B0_u32 | i | 0x0700_u32 | (((CDoom.mus_channel_volumes[i] * CDoom.mus_volume) // 127) << 16))
-      CDoom.queue_midi_tail += 1
+    if @@mus_is_midi
+      @@music_stream.try { |m| RAudio.set_audio_stream_volume(m, volume / 15.0) }
+    else
+      @@music_stream.try { |m| RAudio.set_audio_stream_volume(m, 1.0) }
+
+      16.times do |i|
+        
+        CDoom.queued_midi_msgs[CDoom.queue_midi_tail % CDoom::MAX_QUEUED_MIDI_MSGS] = (0x000000B0_u32 | i | 0x0700_u32 | (((CDoom.mus_channel_volumes[i] * CDoom.mus_volume) // 127) << 16))
+        CDoom.queue_midi_tail += 1
+      end
     end
   end
 
@@ -5409,47 +5415,55 @@ module LibDoom
       @@midi_tick_accumulator += now - @@last_time
       @@last_time = now
 
-      while @@midi_tick_accumulator >= MIDI_TICK_TIME
-        while (msg = CDoom.doom_tick_midi) != 0
-          status = (msg & 0xFF).to_u8
-          data1 = ((msg >> 8) & 0xFF).to_u8
-          data2 = ((msg >> 16) & 0xFF).to_u8
-          command = status & 0xF0
-          channel = status & 0x0F
+      unless @@mus_is_midi
+        while @@midi_tick_accumulator >= MIDI_TICK_TIME
+          while (msg = CDoom.doom_tick_midi) != 0
+            status = (msg & 0xFF).to_u8
+            data1 = ((msg >> 8) & 0xFF).to_u8
+            data2 = ((msg >> 16) & 0xFF).to_u8
+            command = status & 0xF0
+            channel = status & 0x0F
 
-          break if @@closing
-          @@adl_player.try do |ap|
-            case command
-            when 0x80
-              ADLMIDI.adl_rt_noteOff(ap, channel, data1)
-            when 0x90
-              if data2 == 0
-                ADLMIDI.adl_rt_noteOff(ap, channel, data1) # vel 0 == note off
-              else
-                ADLMIDI.adl_rt_noteOn(ap, channel, data1, data2)
+            break if @@closing
+            @@adl_player.try do |ap|
+              case command
+              when 0x80
+                ADLMIDI.adl_rt_noteOff(ap, channel, data1)
+              when 0x90
+                if data2 == 0
+                  ADLMIDI.adl_rt_noteOff(ap, channel, data1) # vel 0 == note off
+                else
+                  ADLMIDI.adl_rt_noteOn(ap, channel, data1, data2)
+                end
+              when 0xA0
+                ADLMIDI.adl_rt_noteAfterTouch(ap, channel, data1, data2)
+              when 0xB0
+                ADLMIDI.adl_rt_controllerChange(ap, channel, data1, data2)
+              when 0xC0
+                ADLMIDI.adl_rt_patchChange(ap, channel, data1)
+              when 0xD0
+                ADLMIDI.adl_rt_channelAfterTouch(ap, channel, data1)
+              when 0xE0
+                ADLMIDI.adl_rt_pitchBendML(ap, channel, data2, data1) # wire order: LSB, MSB
               end
-            when 0xA0
-              ADLMIDI.adl_rt_noteAfterTouch(ap, channel, data1, data2)
-            when 0xB0
-              ADLMIDI.adl_rt_controllerChange(ap, channel, data1, data2)
-            when 0xC0
-              ADLMIDI.adl_rt_patchChange(ap, channel, data1)
-            when 0xD0
-              ADLMIDI.adl_rt_channelAfterTouch(ap, channel, data1)
-            when 0xE0
-              ADLMIDI.adl_rt_pitchBendML(ap, channel, data2, data1) # wire order: LSB, MSB
             end
           end
+          @@midi_tick_accumulator -= MIDI_TICK_TIME
         end
-        @@midi_tick_accumulator -= MIDI_TICK_TIME
       end
 
       break if @@closing
-      @@music_stream.try do |m|
-        @@adl_player.try do |ap|
-          if RAudio.audio_stream_processed?(m)
-            generated = ADLMIDI.adl_generate(ap, MIDI_BUFFER_SIZE, @@music_buffer)
-            RAudio.update_audio_stream(m, @@music_buffer, MIDI_BUFFER_SIZE // 2)
+      unless CDoom.mus_playing == 0
+        @@music_stream.try do |m|
+          @@adl_player.try do |ap|
+            if RAudio.audio_stream_processed?(m)
+              if @@mus_is_midi
+                ADLMIDI.adl_play(ap, MIDI_BUFFER_SIZE, @@music_buffer)
+              else
+                generated = ADLMIDI.adl_generate(ap, MIDI_BUFFER_SIZE, @@music_buffer)
+              end
+              RAudio.update_audio_stream(m, @@music_buffer, MIDI_BUFFER_SIZE // 2)
+            end
           end
         end
       end
@@ -5523,11 +5537,17 @@ module LibDoom
     @@adl_player.try { |ap| ADLMIDI.adl_close(ap) }
   end
 
-  def self.i_play_song(handle : Int32, looping : Int32)
+  def self.i_play_song(handle : Int32, looping : Int32)    
+    i_set_music_volume(CDoom.snd_music_volume)
+    @@midi_tick_accumulator = 0
+
     CDoom.musicdies = CDoom.gametic + CDoom::TICRATE * 30
 
     CDoom.mus_loop = looping != 0 ? 1 : 0
     CDoom.mus_playing = 1
+    if @@mus_is_midi
+      @@adl_player.try { |ap| ADLMIDI.adl_openData(ap, CDoom.mus_data, w_lump_length(CDoom.mus_playing_s_sound.value.lumpnum)) }
+    end
   end
 
   def self.i_pause_song(handle : Int32)
@@ -5550,6 +5570,10 @@ module LibDoom
     CDoom.mus_delay = 0
     CDoom.mus_offset = 0
     CDoom.mus_playing = 0
+    @@mus_is_midi = false
+    @@adl_player.try { |ap| ADLMIDI.adl_panic(ap) }
+    @@adl_player.try { |ap| ADLMIDI.adl_reset(ap) }
+
 
     CDoom.reset_all_channels
   end
@@ -5559,8 +5583,17 @@ module LibDoom
   end
 
   def self.i_register_song(data : Void*) : LibC::Int
+    @@mus_is_midi = false
+
     CDoom.doom_memcpy(pointerof(CDoom.mus_header), data, sizeof(CDoom::MusHeader))
-    return 0 if (CDoom.doom_strncmp(CDoom.mus_header.id, "MUS", 3) != 0 || CDoom.mus_header.id[3] != 0x1A)
+    if (CDoom.doom_strncmp(CDoom.mus_header.id, "MUS", 3) != 0 || CDoom.mus_header.id[3] != 0x1A)
+      if (CDoom.doom_strncmp(CDoom.mus_header.id, "MThd", 4) != 0)
+        # Not a midi either
+        return 0
+      else
+        @@mus_is_midi = true
+      end
+    end
 
     CDoom.mus_data = data.as(UInt8*)
     CDoom.mus_delay = 0
@@ -5577,6 +5610,7 @@ module LibDoom
 
   # Is the song playing?
   def self.i_tick_song : LibC::ULong
+    return 0_u64 if @@mus_is_midi
     midi_event : UInt64 | UInt32 = 0
 
     # Dequeue MIDI events
@@ -19574,9 +19608,8 @@ module LibDoom
       CDoom.i_error("Error: Attempt to set music volume at #{volume}")
     end
 
-    CDoom.i_set_music_volume(127)
-    CDoom.i_set_music_volume(volume)
     CDoom.snd_music_volume = volume
+    CDoom.i_set_music_volume(volume)
   end
 
   def self.s_set_sfx_volume(volume : LibC::Int)
@@ -19609,20 +19642,16 @@ module LibDoom
 
     # get lumpnum if neccessary
     if music.value.lumpnum == 0
-      namebuf = Pointer(UInt8).malloc(9)
-      CDoom.doom_strcpy(namebuf, "d_")
-      CDoom.doom_concat(namebuf, music.value.name)
-      music.value.lumpnum = CDoom.w_get_num_for_name(namebuf)
+      music.value.lumpnum = CDoom.w_get_num_for_name("d_#{String.new(music.value.name)}")
     end
-
     # load & register it
     music.value.data = CDoom.w_cache_lump_num(music.value.lumpnum, CDoom::PU_MUSIC)
     music.value.handle = CDoom.i_register_song(music.value.data)
-
     # play it
+    CDoom.mus_playing_s_sound = music
+
     CDoom.i_play_song(music.value.handle, looping)
 
-    CDoom.mus_playing_s_sound = music
   end
 
   def self.s_stop_music
