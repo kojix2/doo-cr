@@ -226,7 +226,6 @@ module LibDoom
     now = CDoom.i_get_time
     delta_time = now - CDoom.last_update_time
 
-
     delta_time.times do |i|
       if CDoom.is_wiping_screen != 0
         CDoom.d_update_wipe
@@ -415,8 +414,8 @@ module LibDoom
     CDoom.m_y2 = CDoom.m_y + CDoom.m_h
 
     # Change the scaling multipliers
-    CDoom.scale_mtof = CDoom.fixed_div(CDoom.f_w << CDoom::FRACBITS, CDoom.m_w)
-    CDoom.scale_ftom = CDoom.fixed_div(CDoom::FRACUNIT, CDoom.scale_mtof)
+    CDoom.scale_mtof = CDoom.fixed_div(CDoom.f_w << FRACBITS, CDoom.m_w)
+    CDoom.scale_ftom = CDoom.fixed_div(FRACUNIT, CDoom.scale_mtof)
   end
 
   #
@@ -458,11 +457,11 @@ module LibDoom
     CDoom.min_w = 2 * CDoom::PLAYERRADIUS # const? never changed?
     CDoom.min_h = 2 * CDoom::PLAYERRADIUS
 
-    a = CDoom.fixed_div(CDoom.f_w << CDoom::FRACBITS, CDoom.max_w)
-    b = CDoom.fixed_div(CDoom.f_h << CDoom::FRACBITS, CDoom.max_h)
+    a = CDoom.fixed_div(CDoom.f_w << FRACBITS, CDoom.max_w)
+    b = CDoom.fixed_div(CDoom.f_h << FRACBITS, CDoom.max_h)
 
     CDoom.min_scale_mtof = a < b ? a : b
-    CDoom.max_scale_mtof = CDoom.fixed_div(CDoom.f_h << CDoom::FRACBITS, 2 * CDoom::PLAYERRADIUS)
+    CDoom.max_scale_mtof = CDoom.fixed_div(CDoom.f_h << FRACBITS, 2 * CDoom::PLAYERRADIUS)
   end
 
   def self.am_change_window_loc
@@ -502,8 +501,8 @@ module LibDoom
 
     CDoom.m_paninc.x = 0
     CDoom.m_paninc.y = 0
-    CDoom.ftom_zoommul = CDoom::FRACUNIT
-    CDoom.mtof_zoommul = CDoom::FRACUNIT
+    CDoom.ftom_zoommul = FRACUNIT
+    CDoom.mtof_zoommul = FRACUNIT
 
     CDoom.m_w = ftom(CDoom.f_w)
     CDoom.m_h = ftom(CDoom.f_h)
@@ -567,9 +566,9 @@ module LibDoom
     CDoom.am_clear_marks
 
     CDoom.am_find_min_max_boundaries
-    CDoom.scale_mtof = CDoom.fixed_div(CDoom.min_scale_mtof, (0.7 * CDoom::FRACUNIT).to_i32!)
+    CDoom.scale_mtof = CDoom.fixed_div(CDoom.min_scale_mtof, (0.7 * FRACUNIT).to_i32!)
     CDoom.scale_mtof = CDoom.min_scale_mtof if CDoom.scale_mtof > CDoom.max_scale_mtof
-    CDoom.scale_ftom = CDoom.fixed_div(CDoom::FRACUNIT, CDoom.scale_mtof)
+    CDoom.scale_ftom = CDoom.fixed_div(FRACUNIT, CDoom.scale_mtof)
   end
 
   def self.am_stop
@@ -600,7 +599,7 @@ module LibDoom
   #
   def self.am_min_out_window_scale
     CDoom.scale_mtof = CDoom.min_scale_mtof
-    CDoom.scale_ftom = CDoom.fixed_div(CDoom::FRACUNIT, CDoom.scale_mtof)
+    CDoom.scale_ftom = CDoom.fixed_div(FRACUNIT, CDoom.scale_mtof)
     CDoom.am_activate_new_scale
   end
 
@@ -609,7 +608,7 @@ module LibDoom
   #
   def self.am_max_out_window_scale
     CDoom.scale_mtof = CDoom.max_scale_mtof
-    CDoom.scale_ftom = CDoom.fixed_div(CDoom::FRACUNIT, CDoom.scale_mtof)
+    CDoom.scale_ftom = CDoom.fixed_div(FRACUNIT, CDoom.scale_mtof)
     CDoom.am_activate_new_scale
   end
 
@@ -710,8 +709,8 @@ module LibDoom
       when CDoom::AM_PANDOWNKEY
         CDoom.m_paninc.y = 0 if CDoom.followplayer == 0
       when CDoom::AM_ZOOMOUTKEY, CDoom::AM_ZOOMINKEY
-        CDoom.mtof_zoommul = CDoom::FRACUNIT
-        CDoom.ftom_zoommul = CDoom::FRACUNIT
+        CDoom.mtof_zoommul = FRACUNIT
+        CDoom.ftom_zoommul = FRACUNIT
       end
     end
 
@@ -724,7 +723,7 @@ module LibDoom
   def self.am_change_window_scale
     # Change the scaling multipliers
     CDoom.scale_mtof = CDoom.fixed_mul(CDoom.scale_mtof, CDoom.mtof_zoommul)
-    CDoom.scale_ftom = CDoom.fixed_div(CDoom::FRACUNIT, CDoom.scale_mtof)
+    CDoom.scale_ftom = CDoom.fixed_div(FRACUNIT, CDoom.scale_mtof)
 
     if CDoom.scale_mtof < CDoom.min_scale_mtof
       CDoom.am_min_out_window_scale
@@ -767,7 +766,7 @@ module LibDoom
     CDoom.am_do_follow_player if CDoom.followplayer != 0
 
     # Change the zoom if necessary
-    CDoom.am_change_window_scale if CDoom.ftom_zoommul != CDoom::FRACUNIT
+    CDoom.am_change_window_scale if CDoom.ftom_zoommul != FRACUNIT
 
     # Change x,y location
     CDoom.am_change_window_loc if CDoom.m_paninc.x != 0 || CDoom.m_paninc.y != 0
@@ -994,9 +993,9 @@ module LibDoom
     start = CDoom.m_x
     ml = CDoom::Mline.new
 
-    if (start - CDoom.bmaporgx).remainder(CDoom::MAPBLOCKUNITS << CDoom::FRACBITS) != 0
-      start += (CDoom::MAPBLOCKUNITS << CDoom::FRACBITS) -
-               (start - CDoom.bmaporgx).remainder(CDoom::MAPBLOCKUNITS << CDoom::FRACBITS)
+    if (start - CDoom.bmaporgx).remainder(CDoom::MAPBLOCKUNITS << FRACBITS) != 0
+      start += (CDoom::MAPBLOCKUNITS << FRACBITS) -
+               (start - CDoom.bmaporgx).remainder(CDoom::MAPBLOCKUNITS << FRACBITS)
     end
     en = CDoom.m_x + CDoom.m_w
 
@@ -1008,14 +1007,14 @@ module LibDoom
       ml.a.x = x
       ml.b.x = x
       CDoom.am_draw_mline(pointerof(ml), color)
-      x += CDoom::MAPBLOCKUNITS << CDoom::FRACBITS
+      x += CDoom::MAPBLOCKUNITS << FRACBITS
     end
 
     # Figure out start of horizontal gridlines
     start = CDoom.m_y
-    if (start - CDoom.bmaporgy) % (CDoom::MAPBLOCKUNITS << CDoom::FRACBITS)
-      start += (CDoom::MAPBLOCKUNITS << CDoom::FRACBITS) -
-               ((start - CDoom.bmaporgy) % (CDoom::MAPBLOCKUNITS << CDoom::FRACBITS))
+    if (start - CDoom.bmaporgy) % (CDoom::MAPBLOCKUNITS << FRACBITS)
+      start += (CDoom::MAPBLOCKUNITS << FRACBITS) -
+               ((start - CDoom.bmaporgy) % (CDoom::MAPBLOCKUNITS << FRACBITS))
     end
     en = CDoom.m_y + CDoom.m_h
 
@@ -1027,7 +1026,7 @@ module LibDoom
       ml.a.y = y
       ml.b.y = y
       CDoom.am_draw_mline(pointerof(ml), color)
-      y += (CDoom::MAPBLOCKUNITS << CDoom::FRACBITS)
+      y += (CDoom::MAPBLOCKUNITS << FRACBITS)
     end
   end
 
@@ -1076,11 +1075,11 @@ module LibDoom
   # Used to rotate player arrow line character.
   #
   def self.am_rotate(x : CDoom::Fixed*, y : CDoom::Fixed*, a : CDoom::Angle)
-    tmpx = CDoom.fixed_mul(x.value, CDoom.finecosine[a >> CDoom::ANGLETOFINESHIFT]) -
-           CDoom.fixed_mul(y.value, CDoom.finesine[a >> CDoom::ANGLETOFINESHIFT])
+    tmpx = CDoom.fixed_mul(x.value, @@finecosine[a >> CDoom::ANGLETOFINESHIFT]) -
+           CDoom.fixed_mul(y.value, @@finesine[a >> CDoom::ANGLETOFINESHIFT])
 
-    y.value = CDoom.fixed_mul(x.value, CDoom.finesine[a >> CDoom::ANGLETOFINESHIFT]) +
-              CDoom.fixed_mul(y.value, CDoom.finecosine[a >> CDoom::ANGLETOFINESHIFT])
+    y.value = CDoom.fixed_mul(x.value, @@finesine[a >> CDoom::ANGLETOFINESHIFT]) +
+              CDoom.fixed_mul(y.value, @@finecosine[a >> CDoom::ANGLETOFINESHIFT])
 
     x.value = tmpx
   end
@@ -1180,7 +1179,7 @@ module LibDoom
       until t.null?
         CDoom.am_draw_line_character(
           CDoom.thintriangle_guy, CDoom::NUMTHINTRIANGLEGUYLINES,
-          16 << CDoom::FRACBITS, t.value.angle, colors + CDoom.lightlev,
+          16 << FRACBITS, t.value.angle, colors + CDoom.lightlev,
           t.value.x, t.value.y
         )
         t = t.value.snext
@@ -1264,7 +1263,6 @@ module LibDoom
   #
   def self.d_display
     if @@was_focused != Raylib.window_focused?
-      
       if (@@was_focused = Raylib.window_focused?)
         Raylib.disable_cursor
       else
@@ -1512,6 +1510,42 @@ module LibDoom
     CDoom.doom_strcpy(newfile.as(UInt8*), file)
 
     CDoom.wadfiles[numwadfiles] = newfile.as(UInt8*)
+  end
+
+  #
+  # Confirms a WAD files type
+  # based off of data in the WAD
+  #
+  def self.confirm_version
+    if w_check_num_for_name("map01".to_unsafe) != -1 && # Doom 2
+       #w_check_num_for_name("map32".to_unsafe) != -1 && # Custom Wads might not have all maps
+       w_check_num_for_name("interpic".to_unsafe) != -1 &&
+       w_check_num_for_name("d_runnin".to_unsafe) != -1
+      CDoom.gamemode = CDoom::GameMode::Commercial
+      # Don't overwrite Packs
+      if CDoom.gamemission == CDoom::GameMission::None ||
+         CDoom.gamemission == CDoom::GameMission::Doom
+        CDoom.gamemission = CDoom::GameMission::Doom2
+      end
+      return
+    end
+
+    if w_check_num_for_name("e1m1".to_unsafe) != -1 # Shareware
+      CDoom.gamemission = CDoom::GameMission::Doom
+
+      if w_check_num_for_name("e2m1".to_unsafe) != -1 && # Registered
+         w_check_num_for_name("e3m1".to_unsafe) != -1
+        if w_check_num_for_name("e4m1".to_unsafe) != -1 && # Retail
+           w_check_num_for_name("interpic".to_unsafe) != -1
+          CDoom.gamemode = CDoom::GameMode::Retail
+        else
+          CDoom.gamemode = CDoom::GameMode::Registered
+        end
+        return
+      else
+        CDoom.gamemode = CDoom::GameMode::Shareware
+      end
+    end
   end
 
   #
@@ -1961,7 +1995,7 @@ module LibDoom
     end
 
     # init subsystems
-    puts "v_init: allocate screens."
+    puts "v_init: Allocate screens."
     CDoom.v_init
 
     puts "m_load_defaults: Load system defaults."
@@ -1972,6 +2006,8 @@ module LibDoom
 
     puts "w_init: Init Wadfiles."
     CDoom.w_init_multiple_files(CDoom.wadfiles)
+
+    confirm_version()
 
     # Check for -file in shareware
     if CDoom.modifiedgame != 0
@@ -2000,8 +2036,7 @@ module LibDoom
 
     # Iff additonal PWAD files are used, print modified banner
     if CDoom.modifiedgame != 0
-      puts
-      ("===========================================================================\n" +
+      puts ("===========================================================================\n" +
         "ATTENTION:  This version of DOOM has been modified.  If you would like to\n" +
         "get a copy of the original game, call 1-800-IDGAMES or see the readme file.\n" +
         "        You will not receive technical support for modified games.\n" +
@@ -2011,13 +2046,11 @@ module LibDoom
     # Check and print which version is executed.
     case CDoom.gamemode
     when CDoom::GameMode::Shareware, CDoom::GameMode::Indetermined
-      puts
-      ("===========================================================================\n" +
+      puts ("===========================================================================\n" +
         "                                Shareware!\n" +
         "===========================================================================")
     when CDoom::GameMode::Registered, CDoom::GameMode::Retail, CDoom::GameMode::Commercial
-      puts
-      ("===========================================================================\n" +
+      puts ("===========================================================================\n" +
         "                 Commercial product - do not distribute!\n" +
         "         Please report software piracy to the SPA: 1-800-388-PIR8\n" +
         "===========================================================================")
@@ -2075,14 +2108,14 @@ module LibDoom
     if p != 0 && p < CDoom.myargc - 1
       CDoom.singledemo = 1 # quit after one demo
       CDoom.g_defered_play_demo(CDoom.myargv[p + 1])
-      #CDoom.d_doom_loop # never returns
+      # CDoom.d_doom_loop # never returns
       demo_deferred = true
     end
 
     p = CDoom.m_check_parm("-timedemo")
     if p != 0 && p < CDoom.myargc - 1
       CDoom.g_time_demo(CDoom.myargv[p + 1])
-      #CDoom.d_doom_loop # never returns
+      # CDoom.d_doom_loop # never returns
       demo_deferred = true
     end
 
@@ -2545,8 +2578,8 @@ module LibDoom
     CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
     CDoom.displayplayer = CDoom.consoleplayer
     CDoom.d_arbitrate_net_start if CDoom.netgame != 0
-    puts "startskill #{CDoom.startskill} deathmatch: #{CDoom.deathmatch}" +
-         " startmap: #{CDoom.startmap} startepisode: #{CDoom.startepisode}"
+    puts "startskill: #{CDoom.startskill} | deathmatch: #{CDoom.deathmatch}" +
+         " | startmap: #{CDoom.startmap} | startepisode: #{CDoom.startepisode}"
 
     # read values out of doomcom
     CDoom.ticdup = CDoom.doomcom.value.ticdup
@@ -3807,14 +3840,14 @@ module LibDoom
     if CDoom.players[playernum].mo.null?
       # first spawn of level, before corpses
       playernum.times do |i|
-        return 0 if (CDoom.players[i].mo.value.x == mthing.value.x << CDoom::FRACBITS &&
-                    CDoom.players[i].mo.value.y == mthing.value.y << CDoom::FRACBITS)
+        return 0 if (CDoom.players[i].mo.value.x == mthing.value.x << FRACBITS &&
+                    CDoom.players[i].mo.value.y == mthing.value.y << FRACBITS)
       end
       return 1
     end
 
-    x = mthing.value.x << CDoom::FRACBITS
-    y = mthing.value.y << CDoom::FRACBITS
+    x = mthing.value.x << FRACBITS
+    y = mthing.value.y << FRACBITS
 
     return 0 if CDoom.p_check_position(CDoom.players[playernum].mo, x, y) == 0
 
@@ -3827,9 +3860,9 @@ module LibDoom
 
     # spawn a teleport fog
     ss = CDoom.r_point_in_subsector(x, y)
-    an = (CDoom::ANG45 * (mthing.value.angle // 45)) >> CDoom::ANGLETOFINESHIFT
+    an = (ANG45 * (mthing.value.angle // 45)) >> CDoom::ANGLETOFINESHIFT
 
-    mo = CDoom.p_spawn_mobj(x + 20 * CDoom.finecosine[an], y + 20 * CDoom.finesine[an],
+    mo = CDoom.p_spawn_mobj(x + 20 * @@finecosine[an], y + 20 * @@finesine[an],
       ss.value.sector.value.floorheight, CDoom::Mobjtype::MT_TFOG)
 
     CDoom.s_start_sound(mo, CDoom::Sfxenum::SFX_telept) if CDoom.players[CDoom.consoleplayer].viewz != 1 # don't start sound on first frame
@@ -4107,8 +4140,8 @@ module LibDoom
       name2 = "version #{CDoom::VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
       file.write_string(name2.to_slice)
 
-      file.write_byte(CDoom.gameskill.value.to_u8!)  
-    file.write_byte(CDoom.gameepisode.to_u8!)
+      file.write_byte(CDoom.gameskill.value.to_u8!)
+      file.write_byte(CDoom.gameepisode.to_u8!)
       file.write_byte(CDoom.gamemap.to_u8!)
 
       CDoom::MAXPLAYERS.times do |i|
@@ -4201,18 +4234,18 @@ module LibDoom
         CDoom.states[i].tics = CDoom.states[i].tics >> 1
         i += 1
       end
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_BRUISERSHOT.value].speed = 20 * CDoom::FRACUNIT
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_HEADSHOT.value].speed = 20 * CDoom::FRACUNIT
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_TROOPSHOT.value].speed = 20 * CDoom::FRACUNIT
+      CDoom.mobjinfo[CDoom::Mobjtype::MT_BRUISERSHOT.value].speed = 20 * FRACUNIT
+      CDoom.mobjinfo[CDoom::Mobjtype::MT_HEADSHOT.value].speed = 20 * FRACUNIT
+      CDoom.mobjinfo[CDoom::Mobjtype::MT_TROOPSHOT.value].speed = 20 * FRACUNIT
     elsif skill != CDoom::Skill::Nightmare && CDoom.gameskill == CDoom::Skill::Nightmare
       i = CDoom::Statenum::S_SARG_RUN1.value
       while i <= CDoom::Statenum::S_SARG_PAIN2.value
         CDoom.states[i].tics = CDoom.states[i].tics << 1
         i += 1
       end
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_BRUISERSHOT.value].speed = 15 * CDoom::FRACUNIT
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_HEADSHOT.value].speed = 10 * CDoom::FRACUNIT
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_TROOPSHOT.value].speed = 10 * CDoom::FRACUNIT
+      CDoom.mobjinfo[CDoom::Mobjtype::MT_BRUISERSHOT.value].speed = 15 * FRACUNIT
+      CDoom.mobjinfo[CDoom::Mobjtype::MT_HEADSHOT.value].speed = 10 * FRACUNIT
+      CDoom.mobjinfo[CDoom::Mobjtype::MT_TROOPSHOT.value].speed = 10 * FRACUNIT
     end
 
     # force players to be initialized upon first level load
@@ -4271,11 +4304,12 @@ module LibDoom
   end
 
   @@prevstate : CDoom::Playerstate = CDoom::Playerstate::PST_LIVE
+
   def self.g_write_demo_ticcmd(cmd : CDoom::Ticcmd*)
     pstate = CDoom.players[CDoom.consoleplayer].playerstate
-    CDoom.g_check_demo_status if CDoom.gamekeydown['q'.ord] != 0 ||                                                  # press q to end demo recording
+    CDoom.g_check_demo_status if CDoom.gamekeydown['q'.ord] != 0 ||                                                         # press q to end demo recording
                                  (@@prevstate == CDoom::Playerstate::PST_DEAD && pstate == CDoom::Playerstate::PST_LIVE) || # or if player is respawning
-                                 CDoom.gamestate != CDoom::Gamestate::Level                                          # or if we are no longer on a level
+                                 CDoom.gamestate != CDoom::Gamestate::Level                                                 # or if we are no longer on a level
     @@prevstate = pstate
     CDoom.demo_p.value = cmd.value.forwardmove.to_u8!
     CDoom.demo_p += 1
@@ -5217,7 +5251,6 @@ module LibDoom
       @@music_stream.try { |m| RAudio.set_audio_stream_volume(m, 1.0) }
 
       16.times do |i|
-        
         CDoom.queued_midi_msgs[CDoom.queue_midi_tail % CDoom::MAX_QUEUED_MIDI_MSGS] = (0x000000B0_u32 | i | 0x0700_u32 | (((CDoom.mus_channel_volumes[i] * CDoom.mus_volume) // 127) << 16))
         CDoom.queue_midi_tail += 1
       end
@@ -5390,17 +5423,20 @@ module LibDoom
 
   def self.i_shutdown_sound
     # Wait till all pending sounds are finished.
-    done = 0
+    done = false
 
     # FIXME (below).
-    puts "i_shutdown_sound: NOT finishing pending sounds"
+    puts "i_shutdown_sound: Finishing pending sounds"
 
-    while done == 0
-      8.times do |i|
-        break unless !CDoom.channels[i].null?
+    until done
+      done = false
+
+      CDoom.num_channels.times do |i|
+        break unless CDoom.channels[i].null?
+        done = true
       end
 
-      done = 1
+      update_audio
     end
 
     @@audio_stream.try { |a| RAudio.unload_audio_stream(a) }
@@ -5496,7 +5532,7 @@ module LibDoom
       i += 1
     end
 
-    puts " pre-cached all sound data"
+    puts "Pre-cached all sound data"
 
     # Now initialize mixbuffer with zero.
     CDoom::MIXBUFFERSIZE.times { |i| CDoom.mixbuffer[i] = 0 }
@@ -5537,7 +5573,7 @@ module LibDoom
     @@adl_player.try { |ap| ADLMIDI.adl_close(ap) }
   end
 
-  def self.i_play_song(handle : Int32, looping : Int32)    
+  def self.i_play_song(handle : Int32, looping : Int32)
     i_set_music_volume(CDoom.snd_music_volume)
     @@midi_tick_accumulator = 0
 
@@ -5573,7 +5609,6 @@ module LibDoom
     @@mus_is_midi = false
     @@adl_player.try { |ap| ADLMIDI.adl_panic(ap) }
     @@adl_player.try { |ap| ADLMIDI.adl_reset(ap) }
-
 
     CDoom.reset_all_channels
   end
@@ -5906,6 +5941,7 @@ module LibDoom
   end
 
   @@was_focused = false
+
   def self.i_init_graphics
     CDoom.screens[0] = CDoom.doom_malloc.call(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
 
@@ -6015,7 +6051,7 @@ module LibDoom
   end
 
   def self.fixed_mul(a : CDoom::Fixed, b : CDoom::Fixed) : CDoom::Fixed
-    return ((a.to_i64 * b.to_i64) >> CDoom::FRACBITS).to_i32!
+    return ((a.to_i64 * b.to_i64) >> FRACBITS).to_i32!
   end
 
   def self.fixed_div(a : CDoom::Fixed, b : CDoom::Fixed) : CDoom::Fixed
@@ -6024,7 +6060,7 @@ module LibDoom
   end
 
   def self.fixed_div2(a : CDoom::Fixed, b : CDoom::Fixed) : CDoom::Fixed
-    c = (a.to_f64 / b.to_f64) * CDoom::FRACUNIT
+    c = (a.to_f64 / b.to_f64) * FRACUNIT
 
     CDoom.i_error("Error: fixed_div: divide by zero") if c >= 2147483648.0 || c < -2147483648.0
     return c.to_i32!
@@ -6192,10 +6228,8 @@ module LibDoom
       CDoom.quick_save_slot = -2 # means to pick a slot now
       return
     end
-    CDoom.doom_strcpy(CDoom.tempstring, CDoom::QSPROMPT_1)
-    CDoom.doom_concat(CDoom.tempstring, CDoom.savegamestrings[CDoom.quick_save_slot])
-    CDoom.doom_concat(CDoom.tempstring, CDoom::QSPROMPT_2)
-    CDoom.m_start_message(CDoom.tempstring, ->CDoom.m_quicksave_response(Int32), 1)
+    CDoom.m_start_message(CDoom::QSPROMPT_1 + String.new(CDoom.savegamestrings[CDoom.quick_save_slot].to_unsafe) + CDoom::QSPROMPT_2,
+      ->CDoom.m_quicksave_response(Int32), 1)
   end
 
   #
@@ -6218,10 +6252,8 @@ module LibDoom
       CDoom.m_start_message(CDoom::QSAVESPOT, NULL_PROCP1, 0)
       return
     end
-    CDoom.doom_strcpy(CDoom.tempstring, CDoom::QLPROMPT_1)
-    CDoom.doom_concat(CDoom.tempstring, CDoom.savegamestrings[CDoom.quick_save_slot])
-    CDoom.doom_concat(CDoom.tempstring, CDoom::QLPROMPT_2)
-    CDoom.m_start_message(CDoom.tempstring, ->CDoom.m_quickload_response(Int32), 1)
+    CDoom.m_start_message(CDoom::QLPROMPT_1 + String.new(CDoom.savegamestrings[CDoom.quick_save_slot].to_unsafe) + CDoom::QLPROMPT_2,
+      ->CDoom.m_quickload_response(Int32), 1)
   end
 
   #
@@ -6454,21 +6486,21 @@ module LibDoom
     str = "NIL"
 
     dch = key.value
-      dch += 0x80 if dch == 0x1d ||
-      dch == 0x36 || 
-      dch == 0x38 ||
-      dch == 0x3b ||
-      dch == 0x3c ||
-    dch == 0x3d ||
-    dch == 0x3e ||
-   dch == 0x3f ||
-    dch ==  0x40 ||
-    dch ==  0x41 ||
-    dch ==  0x42 ||
-   dch ==  0x43 ||
-   dch ==  0x44 ||
-    dch == 0x57 ||
-    dch == 0x58
+    dch += 0x80 if dch == 0x1d ||
+                   dch == 0x36 ||
+                   dch == 0x38 ||
+                   dch == 0x3b ||
+                   dch == 0x3c ||
+                   dch == 0x3d ||
+                   dch == 0x3e ||
+                   dch == 0x3f ||
+                   dch == 0x40 ||
+                   dch == 0x41 ||
+                   dch == 0x42 ||
+                   dch == 0x43 ||
+                   dch == 0x44 ||
+                   dch == 0x57 ||
+                   dch == 0x58
 
     CDoom::DoomKey.from_value(dch).try do |dkey|
       case dkey
@@ -6477,55 +6509,55 @@ module LibDoom
         str = "TAB"
       when CDoom::DoomKey::ENTER
         str = "ENTER"
-        when CDoom::DoomKey::ESCAPE
+      when CDoom::DoomKey::ESCAPE
         str = "ESCAPE"
-        when CDoom::DoomKey::SPACE
+      when CDoom::DoomKey::SPACE
         str = "SPACE"
-        when CDoom::DoomKey::BACKSPACE
+      when CDoom::DoomKey::BACKSPACE
         str = "BACKSPACE"
-        when CDoom::DoomKey::CTRL
+      when CDoom::DoomKey::CTRL
         str = "CTRL"
-        when CDoom::DoomKey::LEFT_ARROW
+      when CDoom::DoomKey::LEFT_ARROW
         str = "LEFT ARROW"
-        when CDoom::DoomKey::UP_ARROW
+      when CDoom::DoomKey::UP_ARROW
         str = "UP ARROW"
-        when CDoom::DoomKey::RIGHT_ARROW
+      when CDoom::DoomKey::RIGHT_ARROW
         str = "RIGHT ARROW"
-        when CDoom::DoomKey::DOWN_ARROW
+      when CDoom::DoomKey::DOWN_ARROW
         str = "DOWN ARROW"
-        when CDoom::DoomKey::SHIFT
+      when CDoom::DoomKey::SHIFT
         str = "SHIFT"
-        when CDoom::DoomKey::ALT
+      when CDoom::DoomKey::ALT
         str = "ALT"
-        when CDoom::DoomKey::F1
+      when CDoom::DoomKey::F1
         str = "F1"
-        when CDoom::DoomKey::F2
+      when CDoom::DoomKey::F2
         str = "F2"
-        when CDoom::DoomKey::F3
+      when CDoom::DoomKey::F3
         str = "F3"
-        when CDoom::DoomKey::F4
+      when CDoom::DoomKey::F4
         str = "F4"
-        when CDoom::DoomKey::F5
+      when CDoom::DoomKey::F5
         str = "F5"
-        when CDoom::DoomKey::F6
+      when CDoom::DoomKey::F6
         str = "F6"
-        when CDoom::DoomKey::F7
+      when CDoom::DoomKey::F7
         str = "F7"
-        when CDoom::DoomKey::F8
+      when CDoom::DoomKey::F8
         str = "F8"
-        when CDoom::DoomKey::F9
+      when CDoom::DoomKey::F9
         str = "F0"
-        when CDoom::DoomKey::F10
+      when CDoom::DoomKey::F10
         str = "F10"
-        when CDoom::DoomKey::F11
+      when CDoom::DoomKey::F11
         str = "F11"
-        when CDoom::DoomKey::F12
+      when CDoom::DoomKey::F12
         str = "F12"
-        when CDoom::DoomKey::PAUSE
+      when CDoom::DoomKey::PAUSE
         str = "PAUSE"
-        else
-          str = "#{key.value.chr.upcase}"
-        end
+      else
+        str = "#{key.value.chr.upcase}"
+      end
     end
 
     str = @@selected_edit == key ? "-#{str}-" : " #{str}"
@@ -6534,46 +6566,45 @@ module LibDoom
 
   def self.m_draw_edit_controls
     CDoom.m_write_text(CDoom::SCREENWIDTH // 2 - CDoom.m_string_width("Controls") // 2, @@editcontrols_def.y +
-                                            - CDoom::LINEHEIGHT + CDoom.hu_font[0].value.height // 2,
+                                                                                        -CDoom::LINEHEIGHT + CDoom.hu_font[0].value.height // 2,
       "Controls")
 
     CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::Forward.value + CDoom.hu_font[0].value.height // 2,
+                                             CDoom::LINEHEIGHT * Editcontrolenum::Forward.value + CDoom.hu_font[0].value.height // 2,
       "Forward =" + m_draw_key(pointerof(CDoom.key_up)))
 
-     CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::Back.value + CDoom.hu_font[0].value.height // 2,
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                             CDoom::LINEHEIGHT * Editcontrolenum::Back.value + CDoom.hu_font[0].value.height // 2,
       "Backward =" + m_draw_key(pointerof(CDoom.key_down)))
 
-      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::TLeft.value + CDoom.hu_font[0].value.height // 2,
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                             CDoom::LINEHEIGHT * Editcontrolenum::TLeft.value + CDoom.hu_font[0].value.height // 2,
       "Turn Left =" + m_draw_key(pointerof(CDoom.key_left)))
 
-      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::TRight.value + CDoom.hu_font[0].value.height // 2,
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                             CDoom::LINEHEIGHT * Editcontrolenum::TRight.value + CDoom.hu_font[0].value.height // 2,
       "Turn Right =" + m_draw_key(pointerof(CDoom.key_right)))
 
-      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::SLeft.value + CDoom.hu_font[0].value.height // 2,
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                             CDoom::LINEHEIGHT * Editcontrolenum::SLeft.value + CDoom.hu_font[0].value.height // 2,
       "Strafe Left =" + m_draw_key(pointerof(CDoom.key_strafeleft)))
 
-      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::SRight.value + CDoom.hu_font[0].value.height // 2,
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                             CDoom::LINEHEIGHT * Editcontrolenum::SRight.value + CDoom.hu_font[0].value.height // 2,
       "Strafe Right =" + m_draw_key(pointerof(CDoom.key_straferight)))
 
-      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::Sprint.value + CDoom.hu_font[0].value.height // 2,
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                             CDoom::LINEHEIGHT * Editcontrolenum::Sprint.value + CDoom.hu_font[0].value.height // 2,
       "Sprint =" + m_draw_key(pointerof(CDoom.key_speed)))
 
-      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::Shoot.value + CDoom.hu_font[0].value.height // 2,
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                             CDoom::LINEHEIGHT * Editcontrolenum::Shoot.value + CDoom.hu_font[0].value.height // 2,
       "Shoot =" + m_draw_key(pointerof(CDoom.key_fire)))
 
-      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                            CDoom::LINEHEIGHT * Editcontrolenum::Use.value + CDoom.hu_font[0].value.height // 2,
+    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                             CDoom::LINEHEIGHT * Editcontrolenum::Use.value + CDoom.hu_font[0].value.height // 2,
       "Use =" + m_draw_key(pointerof(CDoom.key_use)))
-  end 
-
+  end
 
   def self.m_edit_forward(choice : Int32)
     @@selected_edit = pointerof(CDoom.key_up)
@@ -6948,20 +6979,20 @@ module LibDoom
     if !@@selected_edit.null?
       dch = ch
       dch += 0x80 if dch == 0x1d ||
-      dch == 0x36 || 
-      dch == 0x38 ||
-      dch == 0x3b ||
-      dch == 0x3c ||
-    dch == 0x3d ||
-    dch == 0x3e ||
-   dch == 0x3f ||
-    dch ==  0x40 ||
-    dch ==  0x41 ||
-    dch ==  0x42 ||
-   dch ==  0x43 ||
-   dch ==  0x44 ||
-    dch == 0x57 ||
-    dch == 0x58
+                     dch == 0x36 ||
+                     dch == 0x38 ||
+                     dch == 0x3b ||
+                     dch == 0x3c ||
+                     dch == 0x3d ||
+                     dch == 0x3e ||
+                     dch == 0x3f ||
+                     dch == 0x40 ||
+                     dch == 0x41 ||
+                     dch == 0x42 ||
+                     dch == 0x43 ||
+                     dch == 0x44 ||
+                     dch == 0x57 ||
+                     dch == 0x58
 
       unless CDoom::DoomKey.from_value(dch).nil?
         @@selected_edit.value = dch
@@ -7201,7 +7232,7 @@ module LibDoom
   # but before it has been blitted.
   #
   def self.m_drawer
-    string = uninitialized StaticArray(UInt8, 40)
+    string = ""
     i = 0
     CDoom.inhelpscreens = 0
 
@@ -7213,8 +7244,7 @@ module LibDoom
         i = 0
         while i < CDoom.doom_strlen(CDoom.message_string + start)
           if (CDoom.message_string + start + i).value == '\n'.ord
-            CDoom.doom_memset(string, 0, 40)
-            CDoom.doom_strncpy(string, CDoom.message_string + start, i)
+            string = String.new(CDoom.message_string + start, i)
             start += i + 1
             break
           end
@@ -7222,7 +7252,7 @@ module LibDoom
         end
 
         if i == CDoom.doom_strlen(CDoom.message_string + start)
-          CDoom.doom_strcpy(string, CDoom.message_string + start)
+          string = String.new(CDoom.message_string + start)
           start += i
         end
 
@@ -7683,7 +7713,7 @@ module LibDoom
       when CDoom::Ceilingenum::FastCrushAndRaise
         ceiling.value.crush = 1
         ceiling.value.topheight = sec.value.ceilingheight
-        ceiling.value.bottomheight = sec.value.floorheight + (8 * CDoom::FRACUNIT)
+        ceiling.value.bottomheight = sec.value.floorheight + (8 * FRACUNIT)
         ceiling.value.direction = -1
         ceiling.value.speed = CDoom::CEILSPEED * 2
       when CDoom::Ceilingenum::SilentCrushAndRaise, CDoom::Ceilingenum::CrushAndRaise
@@ -7692,7 +7722,7 @@ module LibDoom
       when CDoom::Ceilingenum::LowerAndCrush, CDoom::Ceilingenum::LowerToFloor
         ceiling.value.bottomheight = sec.value.floorheight
         if type != CDoom::Ceilingenum::LowerToFloor
-          ceiling.value.bottomheight = ceiling.value.bottomheight + 8 * CDoom::FRACUNIT
+          ceiling.value.bottomheight = ceiling.value.bottomheight + 8 * FRACUNIT
         end
         ceiling.value.direction = -1
         ceiling.value.speed = CDoom::CEILSPEED
@@ -7910,14 +7940,14 @@ module LibDoom
       case type
       when CDoom::Vldoorenum::BlazeClose
         door.value.topheight = CDoom.p_find_lowest_ceiling_surrounding(sec)
-        door.value.topheight = door.value.topheight - 4 * CDoom::FRACUNIT
+        door.value.topheight = door.value.topheight - 4 * FRACUNIT
         door.value.direction = -1
         door.value.speed = CDoom::VDOORSPEED * 4
         CDoom.s_start_sound((door.value.sector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*),
           CDoom::Sfxenum::SFX_bdcls)
       when CDoom::Vldoorenum::DoorClose
         door.value.topheight = CDoom.p_find_lowest_ceiling_surrounding(sec)
-        door.value.topheight = door.value.topheight - 4 * CDoom::FRACUNIT
+        door.value.topheight = door.value.topheight - 4 * FRACUNIT
         door.value.direction = -1
         CDoom.s_start_sound((door.value.sector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*),
           CDoom::Sfxenum::SFX_dorcls)
@@ -7929,14 +7959,14 @@ module LibDoom
       when CDoom::Vldoorenum::BlazeRaise, CDoom::Vldoorenum::BlazeOpen
         door.value.direction = 1
         door.value.topheight = CDoom.p_find_lowest_ceiling_surrounding(sec)
-        door.value.topheight = door.value.topheight - 4 * CDoom::FRACUNIT
+        door.value.topheight = door.value.topheight - 4 * FRACUNIT
         door.value.speed = CDoom::VDOORSPEED * 4
         CDoom.s_start_sound((door.value.sector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*),
           CDoom::Sfxenum::SFX_bdopn) if door.value.topheight != sec.value.ceilingheight
       when CDoom::Vldoorenum::DoorNormal, CDoom::Vldoorenum::DoorOpen
         door.value.direction = 1
         door.value.topheight = CDoom.p_find_lowest_ceiling_surrounding(sec)
-        door.value.topheight = door.value.topheight - 4 * CDoom::FRACUNIT
+        door.value.topheight = door.value.topheight - 4 * FRACUNIT
         CDoom.s_start_sound((door.value.sector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*),
           CDoom::Sfxenum::SFX_doropn) if door.value.topheight != sec.value.ceilingheight
       end
@@ -8037,7 +8067,7 @@ module LibDoom
 
     # find the top and bottom of the movement range
     door.value.topheight = CDoom.p_find_lowest_ceiling_surrounding(sec)
-    door.value.topheight = door.value.topheight - 4 * CDoom::FRACUNIT
+    door.value.topheight = door.value.topheight - 4 * FRACUNIT
   end
 
   #
@@ -8076,7 +8106,7 @@ module LibDoom
     door.value.type = CDoom::Vldoorenum::RaiseIn5Mins
     door.value.speed = CDoom::VDOORSPEED
     door.value.topheight = CDoom.p_find_lowest_ceiling_surrounding(sec)
-    door.value.topheight = door.value.topheight - 4 * CDoom::FRACUNIT
+    door.value.topheight = door.value.topheight - 4 * FRACUNIT
     door.value.topwait = CDoom::VDOORWAIT
     door.value.topcountdown = 5 * 60 * 35
   end
@@ -8142,7 +8172,7 @@ module LibDoom
     pl = actor.value.target
     dist = CDoom.p_aprox_distance(pl.value.x - actor.value.x, pl.value.y - actor.value.y)
 
-    return 0 if dist >= CDoom::MELEERANGE - 20 * CDoom::FRACUNIT + pl.value.info.value.radius
+    return 0 if dist >= CDoom::MELEERANGE - 20 * FRACUNIT + pl.value.info.value.radius
 
     return 0 if CDoom.p_check_sight(actor, actor.value.target) == 0
 
@@ -8163,9 +8193,9 @@ module LibDoom
 
     # OPTIMIZE: get this from a global checksight
     dist = CDoom.p_aprox_distance(actor.value.x - actor.value.target.value.x,
-      actor.value.y - actor.value.target.value.y) - 64 * CDoom::FRACUNIT
+      actor.value.y - actor.value.target.value.y) - 64 * FRACUNIT
 
-    dist -= 128 * CDoom::FRACUNIT if actor.value.info.value.meleestate == 0 # no melee attack, so fire more
+    dist -= 128 * FRACUNIT if actor.value.info.value.meleestate == 0 # no melee attack, so fire more
 
     dist >>= 16
 
@@ -8265,17 +8295,17 @@ module LibDoom
     deltax = actor.value.target.value.x - actor.value.x
     deltay = actor.value.target.value.y - actor.value.y
 
-    if deltax > 10 * CDoom::FRACUNIT
+    if deltax > 10 * FRACUNIT
       d[1] = CDoom::Dirtype::East
-    elsif deltax < -10 * CDoom::FRACUNIT
+    elsif deltax < -10 * FRACUNIT
       d[1] = CDoom::Dirtype::West
     else
       d[1] = CDoom::Dirtype::NoDir
     end
 
-    if deltay < -10 * CDoom::FRACUNIT
+    if deltay < -10 * FRACUNIT
       d[2] = CDoom::Dirtype::South
-    elsif deltay > 10 * CDoom::FRACUNIT
+    elsif deltay > 10 * FRACUNIT
       d[2] = CDoom::Dirtype::North
     else
       d[2] = CDoom::Dirtype::NoDir
@@ -8383,7 +8413,7 @@ module LibDoom
           player.value.mo.value.x,
           player.value.mo.value.y) &- actor.value.angle
 
-        if an > CDoom::ANG90 && an < CDoom::ANG270
+        if an > ANG90 && an < ANG270
           dist = CDoom.p_aprox_distance(player.value.mo.value.x - actor.value.x,
             player.value.mo.value.y - actor.value.y)
           # if real close, react anyway
@@ -8501,9 +8531,9 @@ module LibDoom
       delta = (actor.value.angle &- (actor.value.movedir.to_u32! << 29)).to_i32!
 
       if delta > 0
-        actor.value.angle = actor.value.angle &- CDoom::ANG90 // 2
+        actor.value.angle = actor.value.angle &- ANG90 // 2
       elsif delta < 0
-        actor.value.angle = actor.value.angle &+ CDoom::ANG90 // 2
+        actor.value.angle = actor.value.angle &+ ANG90 // 2
       end
     end
 
@@ -8729,9 +8759,9 @@ module LibDoom
     return if actor.value.target.null?
 
     CDoom.a_face_target(actor)
-    actor.value.z = actor.value.z + 16 * CDoom::FRACUNIT # so missile spawns higher
+    actor.value.z = actor.value.z + 16 * FRACUNIT # so missile spawns higher
     mo = CDoom.p_spawn_missile(actor, actor.value.target, CDoom::Mobjtype::MT_TRACER)
-    actor.value.z = actor.value.z - 16 * CDoom::FRACUNIT # back to normal
+    actor.value.z = actor.value.z - 16 * FRACUNIT # back to normal
 
     mo.value.x = mo.value.x + mo.value.momx
     mo.value.y = mo.value.y + mo.value.momy
@@ -8748,7 +8778,7 @@ module LibDoom
       actor.value.y - actor.value.momy,
       actor.value.z, CDoom::Mobjtype::MT_SMOKE)
 
-    th.value.momz = CDoom::FRACUNIT
+    th.value.momz = FRACUNIT
     th.value.tics = th.value.tics - (CDoom.p_random & 3)
     th.value.tics = 1 if th.value.tics < 1
 
@@ -8774,8 +8804,8 @@ module LibDoom
     end
 
     exact = actor.value.angle >> CDoom::ANGLETOFINESHIFT
-    actor.value.momx = CDoom.fixed_mul(actor.value.info.value.speed, CDoom.finecosine[exact])
-    actor.value.momy = CDoom.fixed_mul(actor.value.info.value.speed, CDoom.finesine[exact])
+    actor.value.momx = CDoom.fixed_mul(actor.value.info.value.speed, @@finecosine[exact])
+    actor.value.momy = CDoom.fixed_mul(actor.value.info.value.speed, @@finesine[exact])
 
     # change slope
     dist = CDoom.p_aprox_distance(dest.value.x - actor.value.x,
@@ -8784,12 +8814,12 @@ module LibDoom
     dist = dist // actor.value.info.value.speed
 
     dist = 1 if dist < 1
-    slope = (dest.value.z + 40 * CDoom::FRACUNIT - actor.value.z) // dist
+    slope = (dest.value.z + 40 * FRACUNIT - actor.value.z) // dist
 
     if slope < actor.value.momz
-      actor.value.momz = actor.value.momz - CDoom::FRACUNIT // 8
+      actor.value.momz = actor.value.momz - FRACUNIT // 8
     else
-      actor.value.momz = actor.value.momz + CDoom::FRACUNIT // 8
+      actor.value.momz = actor.value.momz + FRACUNIT // 8
     end
   end
 
@@ -8921,8 +8951,8 @@ module LibDoom
     an = dest.value.angle >> CDoom::ANGLETOFINESHIFT
 
     CDoom.p_unset_thing_position(actor)
-    actor.value.x = dest.value.x + CDoom.fixed_mul(24 * CDoom::FRACUNIT, CDoom.finecosine[an])
-    actor.value.y = dest.value.y + CDoom.fixed_mul(24 * CDoom::FRACUNIT, CDoom.finesine[an])
+    actor.value.x = dest.value.x + CDoom.fixed_mul(24 * FRACUNIT, @@finecosine[an])
+    actor.value.y = dest.value.y + CDoom.fixed_mul(24 * FRACUNIT, @@finesine[an])
     actor.value.z = dest.value.z
     CDoom.p_set_thing_position(actor)
   end
@@ -8954,7 +8984,7 @@ module LibDoom
 
     CDoom.s_start_sound(actor, CDoom::Sfxenum::SFX_barexp.value)
     CDoom.p_damage_mobj(actor.value.target, actor, actor, 20)
-    actor.value.target.value.momz = 1000 * CDoom::FRACUNIT // actor.value.target.value.info.value.mass
+    actor.value.target.value.momz = 1000 * FRACUNIT // actor.value.target.value.info.value.mass
 
     an = actor.value.angle >> CDoom::ANGLETOFINESHIFT
 
@@ -8963,8 +8993,8 @@ module LibDoom
     return if fire.null?
 
     # move the fire between the vile and the player
-    fire.value.x = actor.value.target.value.x - CDoom.fixed_mul(24 * CDoom::FRACUNIT, CDoom.finecosine[an])
-    fire.value.y = actor.value.target.value.y - CDoom.fixed_mul(24 * CDoom::FRACUNIT, CDoom.finesine[an])
+    fire.value.x = actor.value.target.value.x - CDoom.fixed_mul(24 * FRACUNIT, @@finecosine[an])
+    fire.value.y = actor.value.target.value.y - CDoom.fixed_mul(24 * FRACUNIT, @@finesine[an])
     CDoom.p_radius_attack(fire, actor, 70)
   end
 
@@ -8987,8 +9017,8 @@ module LibDoom
     mo = CDoom.p_spawn_missile(actor, actor.value.target, CDoom::Mobjtype::MT_FATSHOT)
     mo.value.angle = mo.value.angle &+ CDoom::FATSPREAD
     an = mo.value.angle >> CDoom::ANGLETOFINESHIFT
-    mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, CDoom.finecosine[an])
-    mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, CDoom.finesine[an])
+    mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, @@finecosine[an])
+    mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, @@finesine[an])
   end
 
   def self.a_fat_attack2(actor : CDoom::Mobj*)
@@ -9000,8 +9030,8 @@ module LibDoom
     mo = CDoom.p_spawn_missile(actor, actor.value.target, CDoom::Mobjtype::MT_FATSHOT)
     mo.value.angle = mo.value.angle &- CDoom::FATSPREAD * 2
     an = mo.value.angle >> CDoom::ANGLETOFINESHIFT
-    mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, CDoom.finecosine[an])
-    mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, CDoom.finesine[an])
+    mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, @@finecosine[an])
+    mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, @@finesine[an])
   end
 
   def self.a_fat_attack3(actor : CDoom::Mobj*)
@@ -9010,14 +9040,14 @@ module LibDoom
     mo = CDoom.p_spawn_missile(actor, actor.value.target, CDoom::Mobjtype::MT_FATSHOT)
     mo.value.angle = mo.value.angle &- CDoom::FATSPREAD // 2
     an = mo.value.angle >> CDoom::ANGLETOFINESHIFT
-    mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, CDoom.finecosine[an])
-    mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, CDoom.finesine[an])
+    mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, @@finecosine[an])
+    mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, @@finesine[an])
 
     mo = CDoom.p_spawn_missile(actor, actor.value.target, CDoom::Mobjtype::MT_FATSHOT)
     mo.value.angle = mo.value.angle &+ CDoom::FATSPREAD // 2
     an = mo.value.angle >> CDoom::ANGLETOFINESHIFT
-    mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, CDoom.finecosine[an])
-    mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, CDoom.finesine[an])
+    mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, @@finecosine[an])
+    mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, @@finesine[an])
   end
 
   #
@@ -9032,8 +9062,8 @@ module LibDoom
     CDoom.s_start_sound(actor, actor.value.info.value.attacksound)
     CDoom.a_face_target(actor)
     an = actor.value.angle >> CDoom::ANGLETOFINESHIFT
-    actor.value.momx = CDoom.fixed_mul(CDoom::SKULLSPEED, CDoom.finecosine[an])
-    actor.value.momy = CDoom.fixed_mul(CDoom::SKULLSPEED, CDoom.finesine[an])
+    actor.value.momx = CDoom.fixed_mul(CDoom::SKULLSPEED, @@finecosine[an])
+    actor.value.momy = CDoom.fixed_mul(CDoom::SKULLSPEED, @@finesine[an])
     dist = CDoom.p_aprox_distance(dest.value.x - actor.value.x, dest.value.y - actor.value.y)
     dist = dist // CDoom::SKULLSPEED
 
@@ -9061,12 +9091,12 @@ module LibDoom
     # okay, there's playe for another one
     an = angle >> CDoom::ANGLETOFINESHIFT
 
-    prestep = 4 * CDoom::FRACUNIT +
+    prestep = 4 * FRACUNIT +
               3 * (actor.value.info.value.radius + CDoom.mobjinfo[CDoom::Mobjtype::MT_SKULL.value].radius) // 2
 
-    x = actor.value.x + CDoom.fixed_mul(prestep, CDoom.finecosine[an])
-    y = actor.value.y + CDoom.fixed_mul(prestep, CDoom.finesine[an])
-    z = actor.value.z + 8 * CDoom::FRACUNIT
+    x = actor.value.x + CDoom.fixed_mul(prestep, @@finecosine[an])
+    y = actor.value.y + CDoom.fixed_mul(prestep, @@finesine[an])
+    z = actor.value.z + 8 * FRACUNIT
 
     newmobj = CDoom.p_spawn_mobj(x, y, z, CDoom::Mobjtype::MT_SKULL)
 
@@ -9090,9 +9120,9 @@ module LibDoom
 
   def self.a_pain_die(actor : CDoom::Mobj*)
     CDoom.a_fall(actor)
-    CDoom.a_pain_shoot_skull(actor, actor.value.angle &+ CDoom::ANG90)
-    CDoom.a_pain_shoot_skull(actor, actor.value.angle &+ CDoom::ANG180)
-    CDoom.a_pain_shoot_skull(actor, actor.value.angle &+ CDoom::ANG270)
+    CDoom.a_pain_shoot_skull(actor, actor.value.angle &+ ANG90)
+    CDoom.a_pain_shoot_skull(actor, actor.value.angle &+ ANG180)
+    CDoom.a_pain_shoot_skull(actor, actor.value.angle &+ ANG270)
   end
 
   def self.a_scream(actor : CDoom::Mobj*)
@@ -9302,10 +9332,10 @@ module LibDoom
   end
 
   def self.a_brain_scream(mo : CDoom::Mobj*)
-    x = mo.value.x - 196 * CDoom::FRACUNIT
-    while x < mo.value.x + 320 * CDoom::FRACUNIT
-      y = mo.value.y - 320 * CDoom::FRACUNIT
-      z = 128 + CDoom.p_random * 2 * CDoom::FRACUNIT
+    x = mo.value.x - 196 * FRACUNIT
+    while x < mo.value.x + 320 * FRACUNIT
+      y = mo.value.y - 320 * FRACUNIT
+      z = 128 + CDoom.p_random * 2 * FRACUNIT
       th = CDoom.p_spawn_mobj(x, y, z, CDoom::Mobjtype::MT_ROCKET)
       th.value.momz = CDoom.p_random * 512
 
@@ -9314,7 +9344,7 @@ module LibDoom
       th.value.tics = th.value.tics - (CDoom.p_random & 7)
       th.value.tics = 1 if th.value.tics < 1
 
-      x += CDoom::FRACUNIT * 8
+      x += FRACUNIT * 8
     end
 
     CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_bosdth)
@@ -9323,7 +9353,7 @@ module LibDoom
   def self.a_brain_explode(mo : CDoom::Mobj*)
     x = mo.value.x + (CDoom.p_random - CDoom.p_random) * 2048
     y = mo.value.y
-    z = 128 + CDoom.p_random * 2 * CDoom::FRACUNIT
+    z = 128 + CDoom.p_random * 2 * FRACUNIT
     th = CDoom.p_spawn_mobj(x, y, z, CDoom::Mobjtype::MT_ROCKET)
     th.value.momz = CDoom.p_random * 512
 
@@ -9607,7 +9637,7 @@ module LibDoom
         floor.value.floordestheight =
           CDoom.p_find_highest_floor_surrounding(sec)
         if floor.value.floordestheight != sec.value.floorheight
-          floor.value.floordestheight = floor.value.floordestheight + 8 * CDoom::FRACUNIT
+          floor.value.floordestheight = floor.value.floordestheight + 8 * FRACUNIT
         end
       when CDoom::Floorenum::RaiseFloor, CDoom::Floorenum::RaiseFloorCrush
         floor.value.crush = 1 if floortype == CDoom::Floorenum::RaiseFloorCrush
@@ -9619,7 +9649,7 @@ module LibDoom
         if floor.value.floordestheight > sec.value.ceilingheight
           floor.value.floordestheight = sec.value.ceilingheight
         end
-        floor.value.floordestheight = floor.value.floordestheight - ((8 * CDoom::FRACUNIT) * (floortype == CDoom::Floorenum::RaiseFloorCrush).to_unsafe)
+        floor.value.floordestheight = floor.value.floordestheight - ((8 * FRACUNIT) * (floortype == CDoom::Floorenum::RaiseFloorCrush).to_unsafe)
       when CDoom::Floorenum::RaiseFloorTurbo
         floor.value.direction = 1
         floor.value.sector = sec
@@ -9637,19 +9667,19 @@ module LibDoom
         floor.value.sector = sec
         floor.value.speed = CDoom::FLOORSPEED
         floor.value.floordestheight = floor.value.sector.value.floorheight +
-                                      24 * CDoom::FRACUNIT
+                                      24 * FRACUNIT
       when CDoom::Floorenum::RaiseFloor512
         floor.value.direction = 1
         floor.value.sector = sec
         floor.value.speed = CDoom::FLOORSPEED
         floor.value.floordestheight = floor.value.sector.value.floorheight +
-                                      512 * CDoom::FRACUNIT
+                                      512 * FRACUNIT
       when CDoom::Floorenum::RaiseFloor24AndChange
         floor.value.direction = 1
         floor.value.sector = sec
         floor.value.speed = CDoom::FLOORSPEED
         floor.value.floordestheight = floor.value.sector.value.floorheight +
-                                      24 * CDoom::FRACUNIT
+                                      24 * FRACUNIT
         sec.value.floorpic = line.value.frontsector.value.floorpic
         sec.value.special = line.value.frontsector.value.special
       when CDoom::Floorenum::RaiseToTexture
@@ -9736,10 +9766,10 @@ module LibDoom
       case type
       when CDoom::Stairenum::Build8
         speed = CDoom::FLOORSPEED // 4
-        stairsize = 8 * CDoom::FRACUNIT
+        stairsize = 8 * FRACUNIT
       when CDoom::Stairenum::Turbo16
         speed = CDoom::FLOORSPEED * 4
-        stairsize = 16 * CDoom::FRACUNIT
+        stairsize = 16 * FRACUNIT
       end
       floor.value.speed = speed
       height = sec.value.floorheight + stairsize
@@ -9989,7 +10019,7 @@ module LibDoom
     delta = special.value.z - toucher.value.z
 
     if delta > toucher.value.height ||
-       delta < -8*CDoom::FRACUNIT
+       delta < -8*FRACUNIT
       # out of reach
       return
     end
@@ -10298,20 +10328,20 @@ module LibDoom
         target.value.x,
         target.value.y)
 
-      thrust = damage*(CDoom::FRACUNIT >> 3) &* 100//target.value.info.value.mass
+      thrust = damage*(FRACUNIT >> 3) &* 100//target.value.info.value.mass
 
       # make fall forwards sometimes
       if damage < 40 &&
          damage > target.value.health &&
-         target.value.z - inflictor.value.z > 64*CDoom::FRACUNIT &&
+         target.value.z - inflictor.value.z > 64*FRACUNIT &&
          (CDoom.p_random & 1) != 0
-        ang &+= CDoom::ANG180
+        ang &+= ANG180
         thrust *= 4
       end
 
       ang >>= CDoom::ANGLETOFINESHIFT
-      target.value.momx = target.value.momx + CDoom.fixed_mul(thrust, CDoom.finecosine[ang])
-      target.value.momy = target.value.momy + CDoom.fixed_mul(thrust, CDoom.finesine[ang])
+      target.value.momx = target.value.momx + CDoom.fixed_mul(thrust, @@finecosine[ang])
+      target.value.momy = target.value.momy + CDoom.fixed_mul(thrust, @@finesine[ang])
     end
 
     # player specific
@@ -10931,12 +10961,12 @@ module LibDoom
       end
 
       if thing.value.flags & CDoom::Mobjflag::MF_TELEPORT.value == 0 &&
-         CDoom.tmfloorz - thing.value.z > 24 * CDoom::FRACUNIT
+         CDoom.tmfloorz - thing.value.z > 24 * FRACUNIT
         return 0 # too big a step up
       end
 
       if thing.value.flags & (CDoom::Mobjflag::MF_DROPOFF.value | CDoom::Mobjflag::MF_FLOAT.value) == 0 &&
-         CDoom.tmfloorz - CDoom.tmdropoffz > 24 * CDoom::FRACUNIT
+         CDoom.tmfloorz - CDoom.tmdropoffz > 24 * FRACUNIT
         return 0 # don't stand over a dropoff
       end
     end
@@ -11019,21 +11049,21 @@ module LibDoom
 
     lineangle = CDoom.r_point_to_angle2(0, 0, ld.value.dx, ld.value.dy)
 
-    lineangle &+= CDoom::ANG180 if side == 1
+    lineangle &+= ANG180 if side == 1
 
     moveangle = CDoom.r_point_to_angle2(0, 0, CDoom.tmxmove, CDoom.tmymove)
     deltaangle = moveangle &- lineangle
 
-    deltaangle &+= CDoom::ANG180 if deltaangle > CDoom::ANG180
+    deltaangle &+= ANG180 if deltaangle > ANG180
 
     lineangle >>= CDoom::ANGLETOFINESHIFT
     deltaangle >>= CDoom::ANGLETOFINESHIFT
 
     movelen = CDoom.p_aprox_distance(CDoom.tmxmove, CDoom.tmymove)
-    newlen = CDoom.fixed_mul(movelen, CDoom.finecosine[deltaangle])
+    newlen = CDoom.fixed_mul(movelen, @@finecosine[deltaangle])
 
-    CDoom.tmxmove = CDoom.fixed_mul(newlen, CDoom.finecosine[lineangle])
-    CDoom.tmymove = CDoom.fixed_mul(newlen, CDoom.finesine[lineangle])
+    CDoom.tmxmove = CDoom.fixed_mul(newlen, @@finecosine[lineangle])
+    CDoom.tmymove = CDoom.fixed_mul(newlen, @@finesine[lineangle])
   end
 
   def self.ptr_slide_traverse(int : CDoom::Intercept*) : CDoom::DoomBool
@@ -11059,7 +11089,7 @@ module LibDoom
 
       if CDoom.openrange < CDoom.slidemo.value.height ||                       # doesn't fit
          CDoom.opentop - CDoom.slidemo.value.z < CDoom.slidemo.value.height || # mobj is too hight
-         CDoom.openbottom - CDoom.slidemo.value.z > 24 * CDoom::FRACUNIT       # too big a step up
+         CDoom.openbottom - CDoom.slidemo.value.z > 24 * FRACUNIT       # too big a step up
         isblocking = true
       end
 
@@ -11113,7 +11143,7 @@ module LibDoom
           traily = mo.value.y + mo.value.radius
         end
 
-        CDoom.bestslidefrac = CDoom::FRACUNIT + 1
+        CDoom.bestslidefrac = FRACUNIT + 1
 
         CDoom.p_path_traverse(leadx, leady, leadx + mo.value.momx, leady + mo.value.momy,
           CDoom::PT_ADDLINES, ->CDoom.ptr_slide_traverse)
@@ -11125,7 +11155,7 @@ module LibDoom
 
       # move up to the wall
       loop do
-        if stairstep || CDoom.bestslidefrac == CDoom::FRACUNIT + 1
+        if stairstep || CDoom.bestslidefrac == FRACUNIT + 1
           # the move most have hit the middle, so stairstep
           if CDoom.p_try_move(mo, mo.value.x, mo.value.y + mo.value.momy) == 0
             CDoom.p_try_move(mo, mo.value.x + mo.value.momx, mo.value.y)
@@ -11149,9 +11179,9 @@ module LibDoom
 
       # Now continue along the wall.
       # First calculate remainder.
-      CDoom.bestslidefrac = CDoom::FRACUNIT - (CDoom.bestslidefrac + 0x800)
+      CDoom.bestslidefrac = FRACUNIT - (CDoom.bestslidefrac + 0x800)
 
-      CDoom.bestslidefrac = CDoom::FRACUNIT if CDoom.bestslidefrac > CDoom::FRACUNIT
+      CDoom.bestslidefrac = FRACUNIT if CDoom.bestslidefrac > FRACUNIT
       return if CDoom.bestslidefrac <= 0
 
       CDoom.tmxmove = CDoom.fixed_mul(mo.value.momx, CDoom.bestslidefrac)
@@ -11256,7 +11286,7 @@ module LibDoom
 
       # hit line
       # position a bit closer
-      frac = int.value.frac - CDoom.fixed_div(4 * CDoom::FRACUNIT, CDoom.attackrange)
+      frac = int.value.frac - CDoom.fixed_div(4 * FRACUNIT, CDoom.attackrange)
       x = CDoom.trace.x + CDoom.fixed_mul(CDoom.trace.dx, frac)
       y = CDoom.trace.y + CDoom.fixed_mul(CDoom.trace.dy, frac)
       z = CDoom.shootz + CDoom.fixed_mul(CDoom.aimslope, CDoom.fixed_mul(frac, CDoom.attackrange))
@@ -11294,7 +11324,7 @@ module LibDoom
 
     # hit thing
     # position a bit closer
-    frac = int.value.frac - CDoom.fixed_div(10 * CDoom::FRACUNIT, CDoom.attackrange)
+    frac = int.value.frac - CDoom.fixed_div(10 * FRACUNIT, CDoom.attackrange)
 
     x = CDoom.trace.x + CDoom.fixed_mul(CDoom.trace.dx, frac)
     y = CDoom.trace.y + CDoom.fixed_mul(CDoom.trace.dy, frac)
@@ -11318,13 +11348,13 @@ module LibDoom
     angle >>= CDoom::ANGLETOFINESHIFT
     CDoom.shootthing = t1
 
-    x2 = t1.value.x + (distance >> CDoom::FRACBITS) * CDoom.finecosine[angle]
-    y2 = t1.value.y + (distance >> CDoom::FRACBITS) * CDoom.finesine[angle]
-    CDoom.shootz = t1.value.z + (t1.value.height >> 1) + 8 * CDoom::FRACUNIT
+    x2 = t1.value.x + (distance >> FRACBITS) * @@finecosine[angle]
+    y2 = t1.value.y + (distance >> FRACBITS) * @@finesine[angle]
+    CDoom.shootz = t1.value.z + (t1.value.height >> 1) + 8 * FRACUNIT
 
     # can't shoot outside view angles
-    CDoom.topslope = 100 * CDoom::FRACUNIT // 160
-    CDoom.bottomslope = -100 * CDoom::FRACUNIT // 160
+    CDoom.topslope = 100 * FRACUNIT // 160
+    CDoom.bottomslope = -100 * FRACUNIT // 160
 
     CDoom.attackrange = distance
     CDoom.linetarget = Pointer(CDoom::Mobj).null
@@ -11347,9 +11377,9 @@ module LibDoom
     angle >>= CDoom::ANGLETOFINESHIFT
     CDoom.shootthing = t1
     CDoom.la_damage = damage
-    x2 = t1.value.x + (distance >> CDoom::FRACBITS) * CDoom.finecosine[angle]
-    y2 = t1.value.y + (distance >> CDoom::FRACBITS) * CDoom.finesine[angle]
-    CDoom.shootz = t1.value.z + (t1.value.height >> 1) + 8 * CDoom::FRACUNIT
+    x2 = t1.value.x + (distance >> FRACBITS) * @@finecosine[angle]
+    y2 = t1.value.y + (distance >> FRACBITS) * @@finesine[angle]
+    CDoom.shootz = t1.value.z + (t1.value.height >> 1) + 8 * FRACUNIT
     CDoom.attackrange = distance
     CDoom.aimslope = slope
 
@@ -11391,8 +11421,8 @@ module LibDoom
 
     x1 = player.value.mo.value.x
     y1 = player.value.mo.value.y
-    x2 = x1 + (CDoom::USERANGE >> CDoom::FRACBITS) * CDoom.finecosine[angle]
-    y2 = y1 + (CDoom::USERANGE >> CDoom::FRACBITS) * CDoom.finesine[angle]
+    x2 = x1 + (CDoom::USERANGE >> FRACBITS) * @@finecosine[angle]
+    y2 = y1 + (CDoom::USERANGE >> FRACBITS) * @@finesine[angle]
 
     CDoom.p_path_traverse(x1, y1, x2, y2, CDoom::PT_ADDLINES, ->CDoom.ptr_use_traverse)
   end
@@ -11417,7 +11447,7 @@ module LibDoom
     dy = doom_abs(thing.value.y - CDoom.bombspot.value.y)
 
     dist = dx > dy ? dx : dy
-    dist = (dist - thing.value.radius) >> CDoom::FRACBITS
+    dist = (dist - thing.value.radius) >> FRACBITS
 
     dist = 0 if dist < 0
 
@@ -11435,7 +11465,7 @@ module LibDoom
   # Source is the creature that caused the explosion at spot.
   #
   def self.p_radius_attack(spot : CDoom::Mobj*, source : CDoom::Mobj*, damage : LibC::Int)
-    dist = (damage + CDoom::MAXRADIUS) << CDoom::FRACBITS
+    dist = (damage + CDoom::MAXRADIUS) << FRACBITS
     yh = (spot.value.y + dist - CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
     yl = (spot.value.y - dist - CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
     xh = (spot.value.x + dist - CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
@@ -11548,8 +11578,8 @@ module LibDoom
     dx = (x - line.value.v1.value.x)
     dy = (y - line.value.v1.value.y)
 
-    left = CDoom.fixed_mul(line.value.dy >> CDoom::FRACBITS, dx)
-    right = CDoom.fixed_mul(dy, line.value.dx >> CDoom::FRACBITS)
+    left = CDoom.fixed_mul(line.value.dy >> FRACBITS, dx)
+    right = CDoom.fixed_mul(dy, line.value.dx >> FRACBITS)
 
     return 0 if right < left # front side
     return 1                 # back side
@@ -11829,10 +11859,10 @@ module LibDoom
     s2 = 0
     dl = CDoom::Divline.new
     # avoid precision problems with two routines
-    if CDoom.trace.dx > CDoom::FRACUNIT * 16 ||
-       CDoom.trace.dy > CDoom::FRACUNIT * 16 ||
-       CDoom.trace.dx < -CDoom::FRACUNIT * 16 ||
-       CDoom.trace.dy < -CDoom::FRACUNIT * 16
+    if CDoom.trace.dx > FRACUNIT * 16 ||
+       CDoom.trace.dy > FRACUNIT * 16 ||
+       CDoom.trace.dx < -FRACUNIT * 16 ||
+       CDoom.trace.dy < -FRACUNIT * 16
       s1 = CDoom.p_point_on_divline_side(ld.value.v1.value.x, ld.value.v1.value.y, pointerof(CDoom.trace))
       s2 = CDoom.p_point_on_divline_side(ld.value.v2.value.x, ld.value.v2.value.y, pointerof(CDoom.trace))
     else
@@ -11850,7 +11880,7 @@ module LibDoom
 
     # try to early out the check
     if CDoom.earlyout != 0 &&
-       frac < CDoom::FRACUNIT &&
+       frac < FRACUNIT &&
        ld.value.backsector.null?
       return 0 # stop checking
     end
@@ -11952,9 +11982,9 @@ module LibDoom
     CDoom.validcount += 1
     CDoom.intercept_p = CDoom.intercepts.to_unsafe
 
-    x1 += CDoom::FRACUNIT if (x1 - CDoom.bmaporgx) & (CDoom::MAPBLOCKSIZE - 1) == 0 # don't side exactly on a line
+    x1 += FRACUNIT if (x1 - CDoom.bmaporgx) & (CDoom::MAPBLOCKSIZE - 1) == 0 # don't side exactly on a line
 
-    y1 += CDoom::FRACUNIT if (y1 - CDoom.bmaporgy) & (CDoom::MAPBLOCKSIZE - 1) == 0 # don't side exactly on a line
+    y1 += FRACUNIT if (y1 - CDoom.bmaporgy) & (CDoom::MAPBLOCKSIZE - 1) == 0 # don't side exactly on a line
 
     CDoom.trace.x = x1
     CDoom.trace.y = y1
@@ -11973,32 +12003,32 @@ module LibDoom
 
     if xt2 > xt1
       mapxstep = 1
-      partial = CDoom::FRACUNIT - ((x1 >> CDoom::MAPBTOFRAC) & (CDoom::FRACUNIT - 1))
+      partial = FRACUNIT - ((x1 >> CDoom::MAPBTOFRAC) & (FRACUNIT - 1))
       ystep = CDoom.fixed_div(y2 - y1, doom_abs(x2 - x1))
     elsif xt2 < xt1
       mapxstep = -1
-      partial = (x1 >> CDoom::MAPBTOFRAC) & (CDoom::FRACUNIT - 1)
+      partial = (x1 >> CDoom::MAPBTOFRAC) & (FRACUNIT - 1)
       ystep = CDoom.fixed_div(y2 - y1, doom_abs(x2 - x1))
     else
       mapxstep = 0
-      partial = CDoom::FRACUNIT
-      ystep = 256 * CDoom::FRACUNIT
+      partial = FRACUNIT
+      ystep = 256 * FRACUNIT
     end
 
     yintercept = (y1 >> CDoom::MAPBTOFRAC) + CDoom.fixed_mul(partial, ystep)
 
     if yt2 > yt1
       mapystep = 1
-      partial = CDoom::FRACUNIT - ((y1 >> CDoom::MAPBTOFRAC) & (CDoom::FRACUNIT - 1))
+      partial = FRACUNIT - ((y1 >> CDoom::MAPBTOFRAC) & (FRACUNIT - 1))
       xstep = CDoom.fixed_div(x2 - x1, doom_abs(y2 - y1))
     elsif yt2 < yt1
       mapystep = -1
-      partial = (y1 >> CDoom::MAPBTOFRAC) & (CDoom::FRACUNIT - 1)
+      partial = (y1 >> CDoom::MAPBTOFRAC) & (FRACUNIT - 1)
       xstep = CDoom.fixed_div(x2 - x1, doom_abs(y2 - y1))
     else
       mapystep = 0
-      partial = CDoom::FRACUNIT
-      xstep = 256 * CDoom::FRACUNIT
+      partial = FRACUNIT
+      xstep = 256 * FRACUNIT
     end
 
     xintercept = (x1 >> CDoom::MAPBTOFRAC) + CDoom.fixed_mul(partial, xstep)
@@ -12024,17 +12054,17 @@ module LibDoom
 
       break if mapx == xt2 && mapy == yt2
 
-      if (yintercept >> CDoom::FRACBITS) == mapy
+      if (yintercept >> FRACBITS) == mapy
         yintercept += ystep
         mapx += mapxstep
-      elsif (xintercept >> CDoom::FRACBITS) == mapx
+      elsif (xintercept >> FRACBITS) == mapx
         xintercept += xstep
         mapy += mapystep
       end
     end
 
     # go through the sorted list
-    return CDoom.p_traverse_intercepts(trav, CDoom::FRACUNIT)
+    return CDoom.p_traverse_intercepts(trav, FRACUNIT)
   end
 
   def self.p_set_mobj_state(mobj : CDoom::Mobj*, state : CDoom::Statenum) : CDoom::DoomBool
@@ -12164,10 +12194,10 @@ module LibDoom
     return if mo.value.z > mo.value.floorz
 
     if (mo.value.flags & CDoom::Mobjflag::MF_CORPSE.value != 0) &&
-       (mo.value.momx > CDoom::FRACUNIT // 4 ||
-       mo.value.momx < -CDoom::FRACUNIT // 4 ||
-       mo.value.momy > CDoom::FRACUNIT // 4 ||
-       mo.value.momy < -CDoom::FRACUNIT // 4) &&
+       (mo.value.momx > FRACUNIT // 4 ||
+       mo.value.momx < -FRACUNIT // 4 ||
+       mo.value.momy > FRACUNIT // 4 ||
+       mo.value.momy < -FRACUNIT // 4) &&
        (mo.value.floorz != mo.value.subsector.value.sector.value.floorheight)
       # do not stop sliding
       # if halfway off a step with some momentum
@@ -12282,8 +12312,8 @@ module LibDoom
   end
 
   def self.p_nightmare_respawn(mobj : CDoom::Mobj*)
-    x = mobj.value.spawnpoint.x.to_i32 << CDoom::FRACBITS
-    y = mobj.value.spawnpoint.y.to_i32 << CDoom::FRACBITS
+    x = mobj.value.spawnpoint.x.to_i32 << FRACBITS
+    y = mobj.value.spawnpoint.y.to_i32 << FRACBITS
 
     # somthing is occupying it's position?
     return if CDoom.p_check_position(mobj, x, y) == 0 # no respwan
@@ -12316,7 +12346,7 @@ module LibDoom
     # inherit attributes from deceased one
     mo = CDoom.p_spawn_mobj(x, y, z, mobj.value.type)
     mo.value.spawnpoint = mobj.value.spawnpoint
-    mo.value.angle = CDoom::ANG45 &* (mthing.value.angle // 45)
+    mo.value.angle = ANG45 &* (mthing.value.angle // 45)
 
     if mthing.value.options & CDoom::MTF_AMBUSH != 0
       mo.value.flags = mo.value.flags | CDoom::Mobjflag::MF_AMBUSH.value
@@ -12457,8 +12487,8 @@ module LibDoom
 
     mthing = CDoom.itemrespawnque.to_unsafe + CDoom.iquetail
 
-    x = mthing.value.x.to_i32 << CDoom::FRACBITS
-    y = mthing.value.y.to_i32 << CDoom::FRACBITS
+    x = mthing.value.x.to_i32 << FRACBITS
+    y = mthing.value.y.to_i32 << FRACBITS
 
     # spawn a teleport fog at the new spot
     ss = CDoom.r_point_in_subsector(x, y)
@@ -12482,7 +12512,7 @@ module LibDoom
 
     mo = CDoom.p_spawn_mobj(x, y, z, CDoom::Mobjtype.new(i))
     mo.value.spawnpoint = mthing.value
-    mo.value.angle = CDoom::ANG45 &* (mthing.value.angle // 45)
+    mo.value.angle = ANG45 &* (mthing.value.angle // 45)
 
     # pull it from the que
     CDoom.iquetail = (CDoom.iquetail + 1) & (CDoom::ITEMQUESIZE - 1)
@@ -12503,8 +12533,8 @@ module LibDoom
       CDoom.g_player_reborn(mthing.value.type - 1)
     end
 
-    x = mthing.value.x.to_i32 << CDoom::FRACBITS
-    y = mthing.value.y.to_i32 << CDoom::FRACBITS
+    x = mthing.value.x.to_i32 << FRACBITS
+    y = mthing.value.y.to_i32 << FRACBITS
     z = CDoom::ONFLOORZ
     mobj = CDoom.p_spawn_mobj(x, y, z, CDoom::Mobjtype::MT_PLAYER)
 
@@ -12513,7 +12543,7 @@ module LibDoom
       mobj.value.flags = mobj.value.flags | ((mthing.value.type - 1).to_i32 << CDoom::Mobjflag::MF_TRANSSHIFT.value)
     end
 
-    mobj.value.angle = CDoom::ANG45 &* (mthing.value.angle // 45)
+    mobj.value.angle = ANG45 &* (mthing.value.angle // 45)
     mobj.value.player = p
     mobj.value.health = p.value.health
 
@@ -12603,8 +12633,8 @@ module LibDoom
     end
 
     # spawn it
-    x = mthing.value.x.to_i32 << CDoom::FRACBITS
-    y = mthing.value.y.to_i32 << CDoom::FRACBITS
+    x = mthing.value.x.to_i32 << FRACBITS
+    y = mthing.value.y.to_i32 << FRACBITS
 
     if CDoom.mobjinfo[i].flags & CDoom::Mobjflag::MF_SPAWNCEILING.value != 0
       z = CDoom::ONCEILINGZ
@@ -12625,7 +12655,7 @@ module LibDoom
       CDoom.totalitems += 1
     end
 
-    mobj.value.angle = CDoom::ANG45 &* (mthing.value.angle // 45)
+    mobj.value.angle = ANG45 &* (mthing.value.angle // 45)
     if mthing.value.options & CDoom::MTF_AMBUSH != 0
       mobj.value.flags = mobj.value.flags | CDoom::Mobjflag::MF_AMBUSH.value
     end
@@ -12639,7 +12669,7 @@ module LibDoom
     z += (CDoom.p_random - CDoom.p_random) << 10
 
     th = CDoom.p_spawn_mobj(x, y, z, CDoom::Mobjtype::MT_PUFF)
-    th.value.momz = CDoom::FRACUNIT
+    th.value.momz = FRACUNIT
     th.value.tics = th.value.tics - (CDoom.p_random & 3)
 
     th.value.tics = 1 if th.value.tics < 1
@@ -12651,7 +12681,7 @@ module LibDoom
   def self.p_spawn_blood(x : CDoom::Fixed, y : CDoom::Fixed, z : CDoom::Fixed, damage : Int32)
     z += (CDoom.p_random - CDoom.p_random) << 10
     th = CDoom.p_spawn_mobj(x, y, z, CDoom::Mobjtype::MT_BLOOD)
-    th.value.momz = CDoom::FRACUNIT * 2
+    th.value.momz = FRACUNIT * 2
     th.value.tics = th.value.tics - (CDoom.p_random & 3)
 
     th.value.tics = 1 if th.value.tics < 1
@@ -12683,7 +12713,7 @@ module LibDoom
   def self.p_spawn_missile(source : CDoom::Mobj*, dest : CDoom::Mobj*, type : CDoom::Mobjtype) : CDoom::Mobj*
     th = CDoom.p_spawn_mobj(source.value.x,
       source.value.y,
-      source.value.z + 4 * 8 * CDoom::FRACUNIT, type)
+      source.value.z + 4 * 8 * FRACUNIT, type)
 
     CDoom.s_start_sound(th, th.value.info.value.seesound) if th.value.info.value.seesound != 0
 
@@ -12695,8 +12725,8 @@ module LibDoom
 
     th.value.angle = an
     an >>= CDoom::ANGLETOFINESHIFT
-    th.value.momx = CDoom.fixed_mul(th.value.info.value.speed, CDoom.finecosine[an])
-    th.value.momy = CDoom.fixed_mul(th.value.info.value.speed, CDoom.finesine[an])
+    th.value.momx = CDoom.fixed_mul(th.value.info.value.speed, @@finecosine[an])
+    th.value.momy = CDoom.fixed_mul(th.value.info.value.speed, @@finesine[an])
 
     dist = CDoom.p_aprox_distance(dest.value.x - source.value.x, dest.value.y - source.value.y)
     dist = dist // th.value.info.value.speed
@@ -12715,15 +12745,15 @@ module LibDoom
   def self.p_spawn_player_missile(source : CDoom::Mobj*, type : CDoom::Mobjtype)
     # see which target is to be aimed at
     an = source.value.angle
-    slope = CDoom.p_aim_line_attack(source, an, 16 * 64 * CDoom::FRACUNIT)
+    slope = CDoom.p_aim_line_attack(source, an, 16 * 64 * FRACUNIT)
 
     if CDoom.linetarget.null?
       an &+= 1 << 26
-      slope = CDoom.p_aim_line_attack(source, an, 16 * 64 * CDoom::FRACUNIT)
+      slope = CDoom.p_aim_line_attack(source, an, 16 * 64 * FRACUNIT)
 
       if CDoom.linetarget.null?
         an &-= 2 << 26
-        slope = CDoom.p_aim_line_attack(source, an, 16 * 64 * CDoom::FRACUNIT)
+        slope = CDoom.p_aim_line_attack(source, an, 16 * 64 * FRACUNIT)
       end
 
       if CDoom.linetarget.null?
@@ -12734,7 +12764,7 @@ module LibDoom
 
     x = source.value.x
     y = source.value.y
-    z = source.value.z + 4 * 8 * CDoom::FRACUNIT
+    z = source.value.z + 4 * 8 * FRACUNIT
 
     th = CDoom.p_spawn_mobj(x, y, z, type)
 
@@ -12743,9 +12773,9 @@ module LibDoom
     th.value.target = source
     th.value.angle = an
     th.value.momx = CDoom.fixed_mul(th.value.info.value.speed,
-      CDoom.finecosine[an >> CDoom::ANGLETOFINESHIFT])
+      @@finecosine[an >> CDoom::ANGLETOFINESHIFT])
     th.value.momy = CDoom.fixed_mul(th.value.info.value.speed,
-      CDoom.finesine[an >> CDoom::ANGLETOFINESHIFT])
+      @@finesine[an >> CDoom::ANGLETOFINESHIFT])
     th.value.momz = CDoom.fixed_mul(th.value.info.value.speed, slope)
 
     CDoom.p_check_missile_spawn(th)
@@ -12857,7 +12887,7 @@ module LibDoom
       when CDoom::Plattype::RaiseAndChange
         plat.value.speed = CDoom::PLATSPEED // 2
         sec.value.floorpic = CDoom.sides[line.value.sidenum[0]].sector.value.floorpic
-        plat.value.high = sec.value.floorheight + amount * CDoom::FRACUNIT
+        plat.value.high = sec.value.floorheight + amount * FRACUNIT
         plat.value.wait = 0
         plat.value.status = CDoom::Platenum::Up
 
@@ -12968,8 +12998,8 @@ module LibDoom
 
       if state.value.misc1 != 0
         # coordinate set
-        psp.value.sx = state.value.misc1 << CDoom::FRACBITS
-        psp.value.sy = state.value.misc2 << CDoom::FRACBITS
+        psp.value.sx = state.value.misc1 << FRACBITS
+        psp.value.sy = state.value.misc2 << FRACBITS
       end
 
       # Call action routine.
@@ -13079,7 +13109,7 @@ module LibDoom
     # Pause gun bobbing based off setting
     if @@weaponfirecentered != 0
       psp = player.value.psprites.to_unsafe + CDoom::Psprnum::Weapon.value
-      psp.value.sx = CDoom::FRACUNIT
+      psp.value.sx = FRACUNIT
       psp.value.sy = CDoom::WEAPONTOP
     end
   end
@@ -13137,9 +13167,9 @@ module LibDoom
 
     # bob the weapon based on movement speed
     angle = (128 * CDoom.leveltime) & CDoom::FINEMASK
-    psp.value.sx = CDoom::FRACUNIT + CDoom.fixed_mul(player.value.bob, CDoom.finecosine[angle])
+    psp.value.sx = FRACUNIT + CDoom.fixed_mul(player.value.bob, @@finecosine[angle])
     angle &= CDoom::FINEANGLES // 2 - 1
-    psp.value.sy = CDoom::WEAPONTOP + CDoom.fixed_mul(player.value.bob, CDoom.finesine[angle])
+    psp.value.sy = CDoom::WEAPONTOP + CDoom.fixed_mul(player.value.bob, @@finesine[angle])
   end
 
   #
@@ -13258,17 +13288,17 @@ module LibDoom
       player.value.mo.value.y,
       CDoom.linetarget.value.x,
       CDoom.linetarget.value.y)
-    if angle &- player.value.mo.value.angle > CDoom::ANG180
-      if angle &- player.value.mo.value.angle < -CDoom::ANG90 // 20
-        player.value.mo.value.angle = angle &+ CDoom::ANG90 // 21
+    if angle &- player.value.mo.value.angle > ANG180
+      if angle &- player.value.mo.value.angle < -ANG90 // 20
+        player.value.mo.value.angle = angle &+ ANG90 // 21
       else
-        player.value.mo.value.angle = player.value.mo.value.angle &- CDoom::ANG90 // 20
+        player.value.mo.value.angle = player.value.mo.value.angle &- ANG90 // 20
       end
     else
-      if angle &- player.value.mo.value.angle > CDoom::ANG90 // 20
-        player.value.mo.value.angle = angle &- CDoom::ANG90 // 21
+      if angle &- player.value.mo.value.angle > ANG90 // 20
+        player.value.mo.value.angle = angle &- ANG90 // 21
       else
-        player.value.mo.value.angle = player.value.mo.value.angle &+ CDoom::ANG90 // 20
+        player.value.mo.value.angle = player.value.mo.value.angle &+ ANG90 // 20
       end
     end
     player.value.mo.value.flags = player.value.mo.value.flags | CDoom::Mobjflag::MF_JUSTATTACKED.value
@@ -13303,14 +13333,14 @@ module LibDoom
   def self.p_bullet_slope(mo : CDoom::Mobj*)
     # see which target is to be aimed at
     an = mo.value.angle
-    CDoom.bulletslope = CDoom.p_aim_line_attack(mo, an, 16 * 64 * CDoom::FRACUNIT)
+    CDoom.bulletslope = CDoom.p_aim_line_attack(mo, an, 16 * 64 * FRACUNIT)
 
     if CDoom.linetarget.null?
       an &+= 1 << 26
-      CDoom.bulletslope = CDoom.p_aim_line_attack(mo, an, 16 * 64 * CDoom::FRACUNIT)
+      CDoom.bulletslope = CDoom.p_aim_line_attack(mo, an, 16 * 64 * FRACUNIT)
       if CDoom.linetarget.null?
         an &-= 2 << 26
-        CDoom.bulletslope = CDoom.p_aim_line_attack(mo, an, 16 * 64 * CDoom::FRACUNIT)
+        CDoom.bulletslope = CDoom.p_aim_line_attack(mo, an, 16 * 64 * FRACUNIT)
       end
     end
   end
@@ -13418,11 +13448,11 @@ module LibDoom
   def self.a_bfg_spray(mo : CDoom::Mobj*)
     # offset angles from its attack angle
     40.times do |i|
-      an = mo.value.angle &- CDoom::ANG90 // 2 &+ CDoom::ANG90 // 40 &* i
+      an = mo.value.angle &- ANG90 // 2 &+ ANG90 // 40 &* i
 
       # mo->target is the originator (player)
       #  of the missile
-      CDoom.p_aim_line_attack(mo.value.target, an, 16 * 64 * CDoom::FRACUNIT)
+      CDoom.p_aim_line_attack(mo.value.target, an, 16 * 64 * FRACUNIT)
 
       next if CDoom.linetarget.null?
 
@@ -13518,17 +13548,16 @@ module LibDoom
   end
 
   def self.p_archive_world(file : File)
-
     sec = CDoom.sectors
     # do sectors
     CDoom.numsectors.times do |i|
-      file.write_bytes((sec.value.floorheight >> CDoom::FRACBITS).to_i16!)
-      file.write_bytes((sec.value.ceilingheight >> CDoom::FRACBITS).to_i16!)
+      file.write_bytes((sec.value.floorheight >> FRACBITS).to_i16!)
+      file.write_bytes((sec.value.ceilingheight >> FRACBITS).to_i16!)
       file.write_bytes(sec.value.floorpic)
       file.write_bytes(sec.value.ceilingpic)
       file.write_bytes(sec.value.lightlevel)
       file.write_bytes(sec.value.special) # needed?
-      file.write_bytes(sec.value.tag) # needed?
+      file.write_bytes(sec.value.tag)     # needed?
 
       sec += 1
     end
@@ -13544,8 +13573,8 @@ module LibDoom
 
         si = CDoom.sides + li.value.sidenum[j]
 
-        file.write_bytes((si.value.textureoffset >> CDoom::FRACBITS).to_i16!)
-        file.write_bytes((si.value.rowoffset >> CDoom::FRACBITS).to_i16!)
+        file.write_bytes((si.value.textureoffset >> FRACBITS).to_i16!)
+        file.write_bytes((si.value.rowoffset >> FRACBITS).to_i16!)
         file.write_bytes(si.value.toptexture)
         file.write_bytes(si.value.bottomtexture)
         file.write_bytes(si.value.midtexture)
@@ -13555,17 +13584,16 @@ module LibDoom
   end
 
   def self.p_unarchive_world(file : File)
-
     sec = CDoom.sectors
     # do sectors
     CDoom.numsectors.times do |i|
-      sec.value.floorheight = file.read_bytes(Int16).to_i32 << CDoom::FRACBITS
-      sec.value.ceilingheight = file.read_bytes(Int16).to_i32 << CDoom::FRACBITS
+      sec.value.floorheight = file.read_bytes(Int16).to_i32 << FRACBITS
+      sec.value.ceilingheight = file.read_bytes(Int16).to_i32 << FRACBITS
       sec.value.floorpic = file.read_bytes(Int16)
       sec.value.ceilingpic = file.read_bytes(Int16)
       sec.value.lightlevel = file.read_bytes(Int16)
       sec.value.special = file.read_bytes(Int16) # needed?
-      sec.value.tag = file.read_bytes(Int16) # needed?
+      sec.value.tag = file.read_bytes(Int16)     # needed?
       sec.value.specialdata = Pointer(Void).null
       sec.value.soundtarget = Pointer(CDoom::Mobj).null
 
@@ -13581,8 +13609,8 @@ module LibDoom
       2.times do |j|
         next if li.value.sidenum[j] == -1
         si = CDoom.sides + li.value.sidenum[j]
-        si.value.textureoffset = file.read_bytes(Int16).to_i32 << CDoom::FRACBITS
-        si.value.rowoffset = file.read_bytes(Int16).to_i32 << CDoom::FRACBITS
+        si.value.textureoffset = file.read_bytes(Int16).to_i32 << FRACBITS
+        si.value.rowoffset = file.read_bytes(Int16).to_i32 << FRACBITS
         si.value.toptexture = file.read_bytes(Int16)
         si.value.bottomtexture = file.read_bytes(Int16)
         si.value.midtexture = file.read_bytes(Int16)
@@ -13690,10 +13718,10 @@ module LibDoom
 
       if th.value.function.acp1.pointer == (->CDoom.t_move_ceiling).pointer
         file.write_byte(CDoom::Specials::Ceiling.value)
-                  ceiling = th.as(CDoom::Ceiling*).value
+        ceiling = th.as(CDoom::Ceiling*).value
         ceiling.sector = Pointer(CDoom::Sector).new((ceiling.sector - CDoom.sectors).to_u64!)
         th = th.value.next
-          file.write(pointerof(ceiling).as(UInt8*).to_slice(sizeof(CDoom::Ceiling)))
+        file.write(pointerof(ceiling).as(UInt8*).to_slice(sizeof(CDoom::Ceiling)))
         next
       end
 
@@ -13702,7 +13730,7 @@ module LibDoom
         door = th.as(CDoom::Vldoor*).value
         door.sector = Pointer(CDoom::Sector).new((door.sector - CDoom.sectors).to_u64!)
         th = th.value.next
-          file.write(pointerof(door).as(UInt8*).to_slice(sizeof(CDoom::Vldoor)))
+        file.write(pointerof(door).as(UInt8*).to_slice(sizeof(CDoom::Vldoor)))
         next
       end
 
@@ -13711,7 +13739,7 @@ module LibDoom
         floor = th.as(CDoom::Floormove*).value
         floor.sector = Pointer(CDoom::Sector).new((floor.sector - CDoom.sectors).to_u64!)
         th = th.value.next
-          file.write(pointerof(floor).as(UInt8*).to_slice(sizeof(CDoom::Floormove)))
+        file.write(pointerof(floor).as(UInt8*).to_slice(sizeof(CDoom::Floormove)))
 
         next
       end
@@ -13721,7 +13749,7 @@ module LibDoom
         plat = th.as(CDoom::Plat*).value
         plat.sector = Pointer(CDoom::Sector).new((plat.sector - CDoom.sectors).to_u64!)
         th = th.value.next
-          file.write(pointerof(plat).as(UInt8*).to_slice(sizeof(CDoom::Plat)))
+        file.write(pointerof(plat).as(UInt8*).to_slice(sizeof(CDoom::Plat)))
         next
       end
 
@@ -13730,7 +13758,7 @@ module LibDoom
         flash = th.as(CDoom::Lightflash*).value
         flash.sector = Pointer(CDoom::Sector).new((flash.sector - CDoom.sectors).to_u64!)
         th = th.value.next
-          file.write(pointerof(flash).as(UInt8*).to_slice(sizeof(CDoom::Lightflash)))
+        file.write(pointerof(flash).as(UInt8*).to_slice(sizeof(CDoom::Lightflash)))
         next
       end
 
@@ -13739,7 +13767,7 @@ module LibDoom
         strobe = th.as(CDoom::Strobe*).value
         strobe.sector = Pointer(CDoom::Sector).new((strobe.sector - CDoom.sectors).to_u64!)
         th = th.value.next
-          file.write(pointerof(strobe).as(UInt8*).to_slice(sizeof(CDoom::Strobe)))
+        file.write(pointerof(strobe).as(UInt8*).to_slice(sizeof(CDoom::Strobe)))
 
         next
       end
@@ -13749,7 +13777,7 @@ module LibDoom
         glow = th.as(CDoom::Glow*).value
         glow.sector = Pointer(CDoom::Sector).new((glow.sector - CDoom.sectors).to_u64!)
         th = th.value.next
-          file.write(pointerof(glow).as(UInt8*).to_slice(sizeof(CDoom::Glow)))
+        file.write(pointerof(glow).as(UInt8*).to_slice(sizeof(CDoom::Glow)))
         next
       end
 
@@ -13866,8 +13894,8 @@ module LibDoom
     # Copy and convert vertex coordinates,
     # internal representation as fixed.
     CDoom.numvertexes.times do |i|
-      li.value.x = ml.value.x.to_i32 << CDoom::FRACBITS
-      li.value.y = ml.value.y.to_i32 << CDoom::FRACBITS
+      li.value.x = ml.value.x.to_i32 << FRACBITS
+      li.value.y = ml.value.y.to_i32 << FRACBITS
 
       li += 1
       ml += 1
@@ -13940,8 +13968,8 @@ module LibDoom
     ss = CDoom.sectors
 
     CDoom.numsectors.times do |i|
-      ss.value.floorheight = ms.value.floorheight.to_i32 << CDoom::FRACBITS
-      ss.value.ceilingheight = ms.value.ceilingheight.to_i32 << CDoom::FRACBITS
+      ss.value.floorheight = ms.value.floorheight.to_i32 << FRACBITS
+      ss.value.ceilingheight = ms.value.ceilingheight.to_i32 << FRACBITS
       ss.value.floorpic = CDoom.r_flat_num_for_name(ms.value.floorpic)
       ss.value.ceilingpic = CDoom.r_flat_num_for_name(ms.value.ceilingpic)
       ss.value.lightlevel = ms.value.lightlevel
@@ -13965,15 +13993,15 @@ module LibDoom
     no = CDoom.nodes
 
     CDoom.numnodes.times do |i|
-      no.value.x = mn.value.x.to_i32 << CDoom::FRACBITS
-      no.value.y = mn.value.y.to_i32 << CDoom::FRACBITS
-      no.value.dx = mn.value.dx.to_i32 << CDoom::FRACBITS
-      no.value.dy = mn.value.dy.to_i32 << CDoom::FRACBITS
+      no.value.x = mn.value.x.to_i32 << FRACBITS
+      no.value.y = mn.value.y.to_i32 << FRACBITS
+      no.value.dx = mn.value.dx.to_i32 << FRACBITS
+      no.value.dy = mn.value.dy.to_i32 << FRACBITS
 
       2.times do |j|
         no.value.children[j] = mn.value.children[j]
         4.times do |k|
-          ((no.value.bbox.to_unsafe + j).value.to_unsafe + k).value = mn.value.bbox[j][k].to_i32 << CDoom::FRACBITS
+          ((no.value.bbox.to_unsafe + j).value.to_unsafe + k).value = mn.value.bbox[j][k].to_i32 << FRACBITS
         end
       end
 
@@ -14113,8 +14141,8 @@ module LibDoom
     sd = CDoom.sides
 
     CDoom.numsides.times do |i|
-      sd.value.textureoffset = msd.value.textureoffset.to_i32 << CDoom::FRACBITS
-      sd.value.rowoffset = msd.value.rowoffset.to_i32 << CDoom::FRACBITS
+      sd.value.textureoffset = msd.value.textureoffset.to_i32 << FRACBITS
+      sd.value.rowoffset = msd.value.rowoffset.to_i32 << FRACBITS
       sd.value.toptexture = CDoom.r_texture_num_for_name(msd.value.toptexture)
       sd.value.bottomtexture = CDoom.r_texture_num_for_name(msd.value.bottomtexture)
       sd.value.midtexture = CDoom.r_texture_num_for_name(msd.value.midtexture)
@@ -14136,8 +14164,8 @@ module LibDoom
       CDoom.blockmaplump[i] = CDoom.blockmaplump[i] # [ds] pointless?
     end
 
-    CDoom.bmaporgx = CDoom.blockmaplump[0].to_i32 << CDoom::FRACBITS
-    CDoom.bmaporgy = CDoom.blockmaplump[1].to_i32 << CDoom::FRACBITS
+    CDoom.bmaporgx = CDoom.blockmaplump[0].to_i32 << FRACBITS
+    CDoom.bmaporgy = CDoom.blockmaplump[1].to_i32 << FRACBITS
     CDoom.bmapwidth = CDoom.blockmaplump[2]
     CDoom.bmapheight = CDoom.blockmaplump[3]
 
@@ -14341,8 +14369,8 @@ module LibDoom
     dx = x - node.value.x
     dy = y - node.value.y
 
-    left = (node.value.dy >> CDoom::FRACBITS) * (dx >> CDoom::FRACBITS)
-    right = (dy >> CDoom::FRACBITS) * (node.value.dx >> CDoom::FRACBITS)
+    left = (node.value.dy >> FRACBITS) * (dx >> FRACBITS)
+    right = (dy >> FRACBITS) * (node.value.dx >> FRACBITS)
 
     return 0 if right < left # front side
 
@@ -14654,7 +14682,7 @@ module LibDoom
   # FIND HIGHEST FLOOR HEIGHT IN SURROUNDING SECTORS
   #
   def self.p_find_highest_floor_surrounding(sec : CDoom::Sector*) : CDoom::Fixed
-    floor = -500 * CDoom::FRACUNIT
+    floor = -500 * FRACUNIT
 
     sec.value.linecount.times do |i|
       check = sec.value.lines[i]
@@ -15202,7 +15230,7 @@ module LibDoom
       case line.value.special
       when 48
         # EFFECT FIRSTCOL SCROLL +
-        (CDoom.sides + line.value.sidenum[0]).value.textureoffset = CDoom.sides[line.value.sidenum[0]].textureoffset + CDoom::FRACUNIT
+        (CDoom.sides + line.value.sidenum[0]).value.textureoffset = CDoom.sides[line.value.sidenum[0]].textureoffset + FRACUNIT
       end
     end
 
@@ -15818,7 +15846,7 @@ module LibDoom
           fog = CDoom.p_spawn_mobj(oldx, oldy, oldz, CDoom::Mobjtype::MT_TFOG)
           CDoom.s_start_sound(fog, CDoom::Sfxenum::SFX_telept.value)
           an = m.value.angle >> CDoom::ANGLETOFINESHIFT
-          fog = CDoom.p_spawn_mobj(m.value.x + 20 * CDoom.finecosine[an], m.value.y + 20 * CDoom.finesine[an],
+          fog = CDoom.p_spawn_mobj(m.value.x + 20 * @@finecosine[an], m.value.y + 20 * @@finesine[an],
             thing.value.z, CDoom::Mobjtype::MT_TFOG)
 
           # emit sound, where?
@@ -15919,8 +15947,8 @@ module LibDoom
   def self.p_thrust(player : CDoom::Player*, angle : CDoom::Angle, move : CDoom::Fixed)
     angle >>= CDoom::ANGLETOFINESHIFT
 
-    player.value.mo.value.momx = player.value.mo.value.momx + CDoom.fixed_mul(move, CDoom.finecosine[angle])
-    player.value.mo.value.momy = player.value.mo.value.momy + CDoom.fixed_mul(move, CDoom.finesine[angle])
+    player.value.mo.value.momx = player.value.mo.value.momx + CDoom.fixed_mul(move, @@finecosine[angle])
+    player.value.mo.value.momy = player.value.mo.value.momy + CDoom.fixed_mul(move, @@finesine[angle])
   end
 
   #
@@ -15944,8 +15972,8 @@ module LibDoom
     if player.value.cheats & CDoom::Cheat::CF_NOMOMENTUM.value != 0 || CDoom.onground == 0
       player.value.viewz = player.value.mo.value.z + CDoom::VIEWHEIGHT
 
-      if player.value.viewz > player.value.mo.value.ceilingz - 4 * CDoom::FRACUNIT
-        player.value.viewz = player.value.mo.value.ceilingz - 4 * CDoom::FRACUNIT
+      if player.value.viewz > player.value.mo.value.ceilingz - 4 * FRACUNIT
+        player.value.viewz = player.value.mo.value.ceilingz - 4 * FRACUNIT
       end
 
       player.value.viewz = player.value.mo.value.z + player.value.viewheight
@@ -15953,7 +15981,7 @@ module LibDoom
     end
 
     angle = (CDoom::FINEANGLES // 20 * CDoom.leveltime) & CDoom::FINEMASK
-    bob = CDoom.fixed_mul(player.value.bob // 2, CDoom.finesine[angle])
+    bob = CDoom.fixed_mul(player.value.bob // 2, @@finesine[angle])
 
     # move viewheight
     if player.value.playerstate == CDoom::Playerstate::PST_LIVE
@@ -15970,15 +15998,15 @@ module LibDoom
       end
 
       if player.value.deltaviewheight != 0
-        player.value.deltaviewheight = player.value.deltaviewheight + CDoom::FRACUNIT // 4
+        player.value.deltaviewheight = player.value.deltaviewheight + FRACUNIT // 4
         player.value.deltaviewheight = 1 if player.value.deltaviewheight == 0
       end
     end
 
     player.value.viewz = player.value.mo.value.z + player.value.viewheight + bob
 
-    if player.value.viewz > player.value.mo.value.ceilingz - 4 * CDoom::FRACUNIT
-      player.value.viewz = player.value.mo.value.ceilingz - 4 * CDoom::FRACUNIT
+    if player.value.viewz > player.value.mo.value.ceilingz - 4 * FRACUNIT
+      player.value.viewz = player.value.mo.value.ceilingz - 4 * FRACUNIT
     end
   end
 
@@ -15993,7 +16021,7 @@ module LibDoom
 
     CDoom.p_thrust(player, player.value.mo.value.angle, cmd.value.forwardmove.to_i32 * 2048) if cmd.value.forwardmove != 0 && CDoom.onground != 0
 
-    CDoom.p_thrust(player, player.value.mo.value.angle &- CDoom::ANG90, cmd.value.sidemove.to_i32 * 2048) if cmd.value.sidemove != 0 && CDoom.onground != 0
+    CDoom.p_thrust(player, player.value.mo.value.angle &- ANG90, cmd.value.sidemove.to_i32 * 2048) if cmd.value.sidemove != 0 && CDoom.onground != 0
 
     if (cmd.value.forwardmove != 0 || cmd.value.sidemove != 0) &&
        player.value.mo.value.state == CDoom.states + CDoom::Statenum::S_PLAY.value
@@ -16010,9 +16038,9 @@ module LibDoom
     CDoom.p_move_psprites(player)
 
     # fall to the ground
-    player.value.viewheight = player.value.viewheight - CDoom::FRACUNIT if player.value.viewheight > 6 * CDoom::FRACUNIT
+    player.value.viewheight = player.value.viewheight - FRACUNIT if player.value.viewheight > 6 * FRACUNIT
 
-    player.value.viewheight = 6 * CDoom::FRACUNIT if player.value.viewheight < 6 * CDoom::FRACUNIT
+    player.value.viewheight = 6 * FRACUNIT if player.value.viewheight < 6 * FRACUNIT
 
     player.value.deltaviewheight = 0
     CDoom.onground = (player.value.mo.value.z <= player.value.mo.value.floorz).to_unsafe
@@ -16032,7 +16060,7 @@ module LibDoom
         player.value.mo.value.angle = angle
 
         player.value.damagecount = player.value.damagecount - 1 if player.value.damagecount != 0
-      elsif delta < CDoom::ANG180
+      elsif delta < ANG180
         player.value.mo.value.angle = player.value.mo.value.angle &+ CDoom::ANG5
       else
         player.value.mo.value.angle = player.value.mo.value.angle &- CDoom::ANG5
@@ -16331,7 +16359,7 @@ module LibDoom
     span = angle1 &- angle2
 
     # Back side? I.e. backface culling?
-    return if span >= CDoom::ANG180
+    return if span >= ANG180
 
     # Global angle needed by segcalc.
     CDoom.rw_angle1 = angle1
@@ -16359,8 +16387,8 @@ module LibDoom
 
     # The seg is in the view range,
     # but not necessarily visible.
-    angle1 = (angle1 &+ CDoom::ANG90) >> CDoom::ANGLETOFINESHIFT
-    angle2 = (angle2 &+ CDoom::ANG90) >> CDoom::ANGLETOFINESHIFT
+    angle1 = (angle1 &+ ANG90) >> CDoom::ANGLETOFINESHIFT
+    angle2 = (angle2 &+ ANG90) >> CDoom::ANGLETOFINESHIFT
     x1 = CDoom.viewangletox[angle1]
     x2 = CDoom.viewangletox[angle2]
 
@@ -16444,7 +16472,7 @@ module LibDoom
     span = angle1 &- angle2
 
     # Sitting on a line?
-    return 1 if span >= CDoom::ANG180
+    return 1 if span >= ANG180
 
     tspan = angle1 &+ CDoom.clipangle
 
@@ -16469,8 +16497,8 @@ module LibDoom
     # Find the first clippost
     #  that touches the source post
     #  (adjacent pixels are touching).
-    angle1 = (angle1 &+ CDoom::ANG90) >> CDoom::ANGLETOFINESHIFT
-    angle2 = (angle2 &+ CDoom::ANG90) >> CDoom::ANGLETOFINESHIFT
+    angle1 = (angle1 &+ ANG90) >> CDoom::ANGLETOFINESHIFT
+    angle2 = (angle2 &+ ANG90) >> CDoom::ANGLETOFINESHIFT
     sx1 = CDoom.viewangletox[angle1]
     sx2 = CDoom.viewangletox[angle2]
 
@@ -16842,7 +16870,7 @@ module LibDoom
       end
 
       CDoom.texturewidthmask[i] = j - 1
-      CDoom.textureheight[i] = texture.value.height.to_i32 << CDoom::FRACBITS
+      CDoom.textureheight[i] = texture.value.height.to_i32 << FRACBITS
 
       totalwidth += texture.value.width
       directory += 1
@@ -16904,9 +16932,9 @@ module LibDoom
       print "." if i & 63 == 0
 
       patch = CDoom.w_cache_lump_num(CDoom.firstspritelump + i, CDoom::PU_CACHE).as(CDoom::Patch*)
-      CDoom.spritewidth[i] = patch.value.width.to_i32 << CDoom::FRACBITS
-      CDoom.spriteoffset[i] = patch.value.leftoffset.to_i32 << CDoom::FRACBITS
-      CDoom.spritetopoffset[i] = patch.value.topoffset.to_i32 << CDoom::FRACBITS
+      CDoom.spritewidth[i] = patch.value.width.to_i32 << FRACBITS
+      CDoom.spriteoffset[i] = patch.value.leftoffset.to_i32 << FRACBITS
+      CDoom.spritetopoffset[i] = patch.value.topoffset.to_i32 << FRACBITS
     end
   end
 
@@ -16927,13 +16955,13 @@ module LibDoom
   # Must be called after W_Init.
   #
   def self.r_init_data
-    print "\n  init_textures  - "
+    print "\n  init_textures           - "
     CDoom.r_init_textures
-    print "\n  init_flats     - "
+    print "\n  init_flats              - "
     CDoom.r_init_flats
-    print "\n  init_sprites   - "
+    print "\n  init_sprites            - "
     CDoom.r_init_sprite_lumps
-    print "\n  init_colormaps - "
+    print "\n  init_colormaps          - "
     CDoom.r_init_colormaps
   end
 
@@ -17114,7 +17142,7 @@ module LibDoom
     loop do
       # Re-map color indices from wall texture column
       #  using a lighting/special effects LUT.
-      dest.value = CDoom.dc_colormap[CDoom.dc_source[(frac >> CDoom::FRACBITS) & 127]]
+      dest.value = CDoom.dc_colormap[CDoom.dc_source[(frac >> FRACBITS) & 127]]
 
       dest += CDoom::SCREENWIDTH
       frac += fracstep
@@ -17216,7 +17244,7 @@ module LibDoom
       #  used with PLAY sprites.
       # Thus the "green" ramp of the player 0 sprite
       #  is mapped to gray, red, black/indigo.
-      dest.value = CDoom.dc_colormap[CDoom.dc_translation[CDoom.dc_source[frac >> CDoom::FRACBITS]]]
+      dest.value = CDoom.dc_colormap[CDoom.dc_translation[CDoom.dc_source[frac >> FRACBITS]]]
       dest += CDoom::SCREENWIDTH
 
       frac += fracstep
@@ -17235,9 +17263,17 @@ module LibDoom
     CDoom.translationtables = CDoom.z_malloc(256 * 3 + 255, CDoom::PU_STATIC, Pointer(Void).null).as(CDoom::Byte*)
     CDoom.translationtables = Pointer(CDoom::Byte).new((CDoom.translationtables.address + 255) & ~255)
 
+    print "["
+      ((256 + 15) // 16).times { |i| print " " }
+      print "]"
+      (((256 + 15) // 16) + 1).times { |i| print "\b" }
+
+
     # translate just the 16 green colors
     256.times do |i|
+        print "." if i & 15 == 0
       if i >= 0x70 && i <= 0x7f
+
         # map green ramp to gray, brown, red
         CDoom.translationtables[i] = 0x60_u8 + (i & 0xf)
         CDoom.translationtables[i + 256] = 0x40_u8 + (i & 0xf)
@@ -17249,6 +17285,7 @@ module LibDoom
         CDoom.translationtables[i + 512] = i.to_u8!
       end
     end
+    print "]"
   end
 
   #
@@ -17500,8 +17537,8 @@ module LibDoom
       return 0
     end
 
-    left = CDoom.fixed_mul(node.value.dy >> CDoom::FRACBITS, dx)
-    right = CDoom.fixed_mul(dy, node.value.dx >> CDoom::FRACBITS)
+    left = CDoom.fixed_mul(node.value.dy >> FRACBITS, dx)
+    right = CDoom.fixed_mul(dy, node.value.dx >> FRACBITS)
 
     if right < left
       # front side
@@ -17541,8 +17578,8 @@ module LibDoom
       return 0
     end
 
-    left = CDoom.fixed_mul(ldy >> CDoom::FRACBITS, dx)
-    right = CDoom.fixed_mul(dy, ldx >> CDoom::FRACBITS)
+    left = CDoom.fixed_mul(ldy >> FRACBITS, dx)
+    right = CDoom.fixed_mul(dy, ldx >> FRACBITS)
 
     if right < left
       # front side
@@ -17570,20 +17607,20 @@ module LibDoom
       if y >= 0
         if x > y
           # octant 0
-          return CDoom.tantoangle[CDoom.slope_div(y, x)].to_u32!
+          return @@tantoangle[CDoom.slope_div(y, x)].to_u32!
         else
           # octant 1
-          return (CDoom::ANG90 &- 1 &- CDoom.tantoangle[CDoom.slope_div(x, y)]).to_u32!
+          return (ANG90 &- 1 &- @@tantoangle[CDoom.slope_div(x, y)]).to_u32!
         end
       else
         y = -y
 
         if x > y
           # octant 8
-          return (-(CDoom.tantoangle[CDoom.slope_div(y, x)].to_i32!)).to_u32!
+          return (-(@@tantoangle[CDoom.slope_div(y, x)].to_i32!)).to_u32!
         else
           # octant 7
-          return (CDoom::ANG270 &+ CDoom.tantoangle[CDoom.slope_div(x, y)]).to_u32!
+          return (ANG270 &+ @@tantoangle[CDoom.slope_div(x, y)]).to_u32!
         end
       end
     else
@@ -17592,20 +17629,20 @@ module LibDoom
       if y >= 0
         if x > y
           # octant 3
-          return (CDoom::ANG180 &- 1 &- CDoom.tantoangle[CDoom.slope_div(y, x)]).to_u32!
+          return (ANG180 &- 1 &- @@tantoangle[CDoom.slope_div(y, x)]).to_u32!
         else
           # octant 2
-          return (CDoom::ANG90 &+ CDoom.tantoangle[CDoom.slope_div(x, y)]).to_u32!
+          return (ANG90 &+ @@tantoangle[CDoom.slope_div(x, y)]).to_u32!
         end
       else
         y = -y
 
         if x > y
           # octant 4
-          return (CDoom::ANG180 &+ CDoom.tantoangle[CDoom.slope_div(y, x)]).to_u32!
+          return (ANG180 &+ @@tantoangle[CDoom.slope_div(y, x)]).to_u32!
         else
           # octant 5
-          return (CDoom::ANG270 &- 1 &- CDoom.tantoangle[CDoom.slope_div(x, y)]).to_u32
+          return (ANG270 &- 1 &- @@tantoangle[CDoom.slope_div(x, y)]).to_u32
         end
       end
     end
@@ -17630,10 +17667,10 @@ module LibDoom
       dy = temp
     end
 
-    angle = (CDoom.tantoangle[CDoom.fixed_div(dy, dx) >> CDoom::DBITS] &+ CDoom::ANG90) >> CDoom::ANGLETOFINESHIFT
+    angle = (@@tantoangle[CDoom.fixed_div(dy, dx) >> DBITS] &+ ANG90) >> CDoom::ANGLETOFINESHIFT
 
     # use as cosine
-    dist = CDoom.fixed_div(dx, CDoom.finesine[angle])
+    dist = CDoom.fixed_div(dx, @@finesine[angle])
 
     return dist
   end
@@ -17645,31 +17682,90 @@ module LibDoom
   # rw_distance must be calculated first.
   #
   def self.r_scale_from_global_angle(visangle : CDoom::Angle) : CDoom::Fixed
-    anglea = CDoom::ANG90 &+ (visangle &- CDoom.viewangle)
-    angleb = CDoom::ANG90 &+ (visangle &- CDoom.rw_normalangle)
+    anglea = ANG90 &+ (visangle &- CDoom.viewangle)
+    angleb = ANG90 &+ (visangle &- CDoom.rw_normalangle)
 
     # both sines are allways positive
-    sinea = CDoom.finesine[anglea >> CDoom::ANGLETOFINESHIFT]
-    sineb = CDoom.finesine[angleb >> CDoom::ANGLETOFINESHIFT]
+    sinea = @@finesine[anglea >> CDoom::ANGLETOFINESHIFT]
+    sineb = @@finesine[angleb >> CDoom::ANGLETOFINESHIFT]
     num = CDoom.fixed_mul(CDoom.projection, sineb)
     den = CDoom.fixed_mul(CDoom.rw_distance, sinea)
 
     if den > num >> 16
       scale = CDoom.fixed_div(num, den)
 
-      if scale > 64 * CDoom::FRACUNIT
-        scale = 64 * CDoom::FRACUNIT
+      if scale > 64 * FRACUNIT
+        scale = 64 * FRACUNIT
       elsif scale < 256
         scale = 256
       end
     else
-      scale = 64 * CDoom::FRACUNIT
+      scale = 64 * FRACUNIT
     end
 
     return scale
   end
 
   def self.r_init_tables
+    {% unless flag?("PRECOMPUTED") %}
+    # FINE TANGENT COMPUTE
+      
+      print "\n  finetangent             - ["
+      ((FINETANGENT_SIZE + 255) // 256).times { |i| print " " }
+      print "]"
+      (((FINETANGENT_SIZE + 255) // 256) + 1).times { |i| print "\b" }
+
+      FINETANGENT_SIZE.times do |i|
+        print "." if i & 255 == 0
+
+        deg = -90.0 + i * (180.0 / FINETANGENT_SIZE)
+        rad = (i - FINEANGLES/4 + 0.5) * (2.0 * PI / FINEANGLES)
+        val = Math.tan(rad) * FRACUNIT
+        # clamp near the asymptotes instead of letting it blow up
+        if val > Int32::MAX.to_f64
+          @@finetangent << Int32::MAX
+        elsif val < Int32::MIN.to_f64
+          @@finetangent << Int32::MIN
+        else
+          @@finetangent << val.to_i32
+        end
+      end
+      puts "]"
+
+      # FINE SINE COMPUTE
+      print "  finesine                - ["
+    ((FINESINE_SIZE + 255) // 256).times { |i| print " " }
+      print "]"
+      (((FINESINE_SIZE + 255) // 256) + 1).times { |i| print "\b" }
+
+      FINESINE_SIZE.times do |i|
+        print "." if i & 255 == 0
+        
+rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
+        @@finesine << (Math.sin(rad) * FRACUNIT).to_i32
+
+      end
+      puts "]"
+
+      # TANTOANGLE COMPUTE
+      print "  tantoangle              - ["
+      ((TANTOANGLE_SIZE + 255) // 256).times { |i| print " " }
+      print "]"
+      (((TANTOANGLE_SIZE + 255) // 256) + 1).times { |i| print "\b" }
+
+      TANTOANGLE_SIZE.times do |i|
+        print "." if i & 255 == 0
+
+        slope = i.to_f64 / SLOPERANGE
+        rad = Math.atan(slope)
+        @@tantoangle << (rad * (ANG180.to_f64 / PI)).to_u32
+      end
+      puts "]"
+    {% else %}
+      puts "             - PRECOMPUTED"
+    {% end %}
+
+    @@finecosine = @@finesine.dup.rotate(FINEANGLES // 4)
   end
 
   def self.r_init_texture_mapping
@@ -17680,16 +17776,16 @@ module LibDoom
     # Calc focallength
     # so FIELDOFVIEW angles covers SCREENWIDTH.
     focallength = CDoom.fixed_div(CDoom.centerxfrac,
-      CDoom.finetangent[CDoom::FINEANGLES // 4 + CDoom::FIELDOFVIEW // 2])
+      @@finetangent[CDoom::FINEANGLES // 4 + CDoom::FIELDOFVIEW // 2])
 
     (CDoom::FINEANGLES // 2).times do |i|
-      if CDoom.finetangent[i] > CDoom::FRACUNIT * 2
+      if @@finetangent[i] > FRACUNIT * 2
         t = -1
-      elsif CDoom.finetangent[i] < -CDoom::FRACUNIT * 2
+      elsif @@finetangent[i] < -FRACUNIT * 2
         t = CDoom.viewwidth + 1
       else
-        t = CDoom.fixed_mul(CDoom.finetangent[i], focallength)
-        t = (CDoom.centerxfrac - t + CDoom::FRACUNIT - 1) >> CDoom::FRACBITS
+        t = CDoom.fixed_mul(@@finetangent[i], focallength)
+        t = (CDoom.centerxfrac - t + FRACUNIT - 1) >> FRACBITS
 
         if t < -1
           t = -1
@@ -17709,14 +17805,14 @@ module LibDoom
       while CDoom.viewangletox[i] > x
         i += 1
       end
-      CDoom.xtoviewangle[x] = (i.to_u32! << CDoom::ANGLETOFINESHIFT) &- CDoom::ANG90
+      CDoom.xtoviewangle[x] = (i.to_u32! << CDoom::ANGLETOFINESHIFT) &- ANG90
 
       x += 1
     end
 
     # Take out the fencepost cases from viewangletox.
     (CDoom::FINEANGLES // 2).times do |i|
-      t = CDoom.fixed_mul(CDoom.finetangent[i], focallength)
+      t = CDoom.fixed_mul(@@finetangent[i], focallength)
       t = CDoom.centerx - t
 
       if CDoom.viewangletox[i] == -1
@@ -17734,12 +17830,19 @@ module LibDoom
   # because the scalelight table changes with view size.
   #
   def self.r_init_light_tables
+    print "["
+    CDoom::LIGHTLEVELS.times { |i| print " " }
+    print "]"
+    (CDoom::LIGHTLEVELS + 1).times { |i| print "\b" }
+
     # Calculate the light levels to use
     #  for each level / distance combination.
     CDoom::LIGHTLEVELS.times do |i|
+      print "."
+
       startmap = ((CDoom::LIGHTLEVELS - 1 - i) * 2) * CDoom::NUMCOLORMAPS // CDoom::LIGHTLEVELS
       CDoom::MAXLIGHTZ.times do |j|
-        scale = CDoom.fixed_div((CDoom::SCREENWIDTH // 2 * CDoom::FRACUNIT), (j + 1) << CDoom::LIGHTZSHIFT)
+        scale = CDoom.fixed_div((CDoom::SCREENWIDTH // 2 * FRACUNIT), (j + 1) << CDoom::LIGHTZSHIFT)
         scale >>= CDoom::LIGHTSCALESHIFT
         level = startmap - scale // CDoom::DISTMAP
 
@@ -17750,6 +17853,7 @@ module LibDoom
         ((CDoom.zlight.to_unsafe + i).value.to_unsafe + j).value = CDoom.colormaps + level * 256
       end
     end
+    puts "]"
   end
 
   #
@@ -17779,8 +17883,8 @@ module LibDoom
 
     CDoom.centery = CDoom.viewheight // 2
     CDoom.centerx = CDoom.viewwidth // 2
-    CDoom.centerxfrac = CDoom.centerx << CDoom::FRACBITS
-    CDoom.centeryfrac = CDoom.centery << CDoom::FRACBITS
+    CDoom.centerxfrac = CDoom.centerx << FRACBITS
+    CDoom.centeryfrac = CDoom.centery << FRACBITS
     CDoom.projection = CDoom.centerxfrac
 
     CDoom.colfunc = ->CDoom.r_draw_column
@@ -17790,22 +17894,22 @@ module LibDoom
     CDoom.r_init_texture_mapping
 
     # psprite scales
-    CDoom.pspritescale = CDoom::FRACUNIT * CDoom.viewwidth // CDoom::SCREENWIDTH
-    CDoom.pspriteiscale = CDoom::FRACUNIT * CDoom::SCREENWIDTH // CDoom.viewwidth
+    CDoom.pspritescale = FRACUNIT * CDoom.viewwidth // CDoom::SCREENWIDTH
+    CDoom.pspriteiscale = FRACUNIT * CDoom::SCREENWIDTH // CDoom.viewwidth
 
     # thing clipping
     CDoom.viewwidth.times { |i| CDoom.screenheightarray[i] = CDoom.viewheight.to_i16! }
 
     # planes
     CDoom.viewheight.times do |i|
-      dy = ((i - CDoom.viewheight // 2) << CDoom::FRACBITS) + CDoom::FRACUNIT // 2
+      dy = ((i - CDoom.viewheight // 2) << FRACBITS) + FRACUNIT // 2
       dy = doom_abs(dy)
-      CDoom.yslope[i] = CDoom.fixed_div(CDoom.viewwidth // 2 * CDoom::FRACUNIT, dy)
+      CDoom.yslope[i] = CDoom.fixed_div(CDoom.viewwidth // 2 * FRACUNIT, dy)
     end
 
     CDoom.viewwidth.times do |i|
-      cosadj = doom_abs(CDoom.finecosine[CDoom.xtoviewangle[i] >> CDoom::ANGLETOFINESHIFT])
-      CDoom.distscale[i] = CDoom.fixed_div(CDoom::FRACUNIT, cosadj)
+      cosadj = doom_abs(@@finecosine[CDoom.xtoviewangle[i] >> CDoom::ANGLETOFINESHIFT])
+      CDoom.distscale[i] = CDoom.fixed_div(FRACUNIT, cosadj)
     end
 
     # Calculate the light levels to use
@@ -17834,11 +17938,11 @@ module LibDoom
 
     CDoom.r_set_view_size(CDoom.screenblocks, CDoom.detail_level)
 
-    print "\nr_init_light_tables"
+    print "r_init_light_tables       - "
     CDoom.r_init_light_tables
-    print "\nr_init_sky_map"
+    print "r_init_sky_map            - "
     CDoom.r_init_sky_map
-    print "\nr_init_translation_tables"
+    print "r_init_translation_tables - "
     CDoom.r_init_translation_tables
 
     CDoom.framecount = 0
@@ -17868,8 +17972,8 @@ module LibDoom
 
     CDoom.viewz = player.value.viewz
 
-    CDoom.viewsin = CDoom.finesine[CDoom.viewangle >> CDoom::ANGLETOFINESHIFT]
-    CDoom.viewcos = CDoom.finecosine[CDoom.viewangle >> CDoom::ANGLETOFINESHIFT]
+    CDoom.viewsin = @@finesine[CDoom.viewangle >> CDoom::ANGLETOFINESHIFT]
+    CDoom.viewcos = @@finecosine[CDoom.viewangle >> CDoom::ANGLETOFINESHIFT]
 
     CDoom.sscount = 0
 
@@ -17955,8 +18059,8 @@ module LibDoom
 
     length = CDoom.fixed_mul(distance, CDoom.distscale[x1])
     angle = (CDoom.viewangle &+ CDoom.xtoviewangle[x1]) >> CDoom::ANGLETOFINESHIFT
-    CDoom.ds_xfrac = CDoom.viewx &+ CDoom.fixed_mul(CDoom.finecosine[angle], length)
-    CDoom.ds_yfrac = -CDoom.viewy &- CDoom.fixed_mul(CDoom.finesine[angle], length)
+    CDoom.ds_xfrac = CDoom.viewx &+ CDoom.fixed_mul(@@finecosine[angle], length)
+    CDoom.ds_yfrac = -CDoom.viewy &- CDoom.fixed_mul(@@finesine[angle], length)
 
     if !CDoom.fixedcolormap.null?
       CDoom.ds_colormap = CDoom.fixedcolormap
@@ -17992,11 +18096,11 @@ module LibDoom
     CDoom.doom_memset(CDoom.cachedheight, 0, sizeof(typeof(CDoom.cachedheight)))
 
     # left to right mapping
-    angle = (CDoom.viewangle &- CDoom::ANG90) >> CDoom::ANGLETOFINESHIFT
+    angle = (CDoom.viewangle &- ANG90) >> CDoom::ANGLETOFINESHIFT
 
     # scale will be unit scale at SCREENWIDTH/2 distance
-    CDoom.basexscale = CDoom.fixed_div(CDoom.finecosine[angle], CDoom.centerxfrac)
-    CDoom.baseyscale = -CDoom.fixed_div(CDoom.finesine[angle], CDoom.centerxfrac)
+    CDoom.basexscale = CDoom.fixed_div(@@finecosine[angle], CDoom.centerxfrac)
+    CDoom.baseyscale = -CDoom.fixed_div(@@finesine[angle], CDoom.centerxfrac)
   end
 
   def self.r_find_plane(height : CDoom::Fixed, picnum : LibC::Int, lightlevel : LibC::Int) : CDoom::Visplane*
@@ -18305,8 +18409,9 @@ module LibDoom
       if CDoom.segtextured != 0
         # calculate texture offset
         angle = (CDoom.rw_centerangle &+ CDoom.xtoviewangle[CDoom.rw_x]) >> CDoom::ANGLETOFINESHIFT
-        texturecolumn = CDoom.rw_offset - CDoom.fixed_mul(CDoom.finetangent[angle], CDoom.rw_distance)
-        texturecolumn >>= CDoom::FRACBITS
+        angle = 0_u32 if angle >= (FINEANGLES // 2)
+        texturecolumn = CDoom.rw_offset - CDoom.fixed_mul(@@finetangent[angle], CDoom.rw_distance)
+        texturecolumn >>= FRACBITS
         # calculate lighting
         index = CDoom.rw_scale >> CDoom::LIGHTSCALESHIFT
 
@@ -18411,15 +18516,15 @@ module LibDoom
     CDoom.linedef.value.flags = CDoom.linedef.value.flags | CDoom::ML_MAPPED
 
     # calculate rw_distance for scale calculation
-    CDoom.rw_normalangle = CDoom.curline.value.angle &+ CDoom::ANG90
+    CDoom.rw_normalangle = CDoom.curline.value.angle &+ ANG90
     offsetangle = CDoom.rw_normalangle &- CDoom.rw_angle1
-    offsetangle = (-(offsetangle.to_i32!)).to_u32! if offsetangle > CDoom::ANG180
+    offsetangle = (-(offsetangle.to_i32!)).to_u32! if offsetangle > ANG180
 
-    offsetangle = CDoom::ANG90 if offsetangle > CDoom::ANG90
+    offsetangle = ANG90 if offsetangle > ANG90
 
-    distangle = CDoom::ANG90 &- offsetangle
+    distangle = ANG90 &- offsetangle
     hyp = CDoom.r_point_to_dist(CDoom.curline.value.v1.value.x, CDoom.curline.value.v1.value.y)
-    sineval = CDoom.finesine[distangle >> CDoom::ANGLETOFINESHIFT]
+    sineval = @@finesine[distangle >> CDoom::ANGLETOFINESHIFT]
     CDoom.rw_distance = CDoom.fixed_mul(hyp, sineval)
 
     CDoom.ds_p.value.x1 = start
@@ -18582,17 +18687,17 @@ module LibDoom
     if CDoom.segtextured != 0
       offsetangle = CDoom.rw_normalangle &- CDoom.rw_angle1
 
-      offsetangle = (-(offsetangle.to_i32!)).to_u32! if offsetangle > CDoom::ANG180
+      offsetangle = (-(offsetangle.to_i32!)).to_u32! if offsetangle > ANG180
 
-      offsetangle = CDoom::ANG90 if offsetangle > CDoom::ANG90
+      offsetangle = ANG90 if offsetangle > ANG90
 
-      sineval = CDoom.finesine[offsetangle >> CDoom::ANGLETOFINESHIFT]
+      sineval = @@finesine[offsetangle >> CDoom::ANGLETOFINESHIFT]
       CDoom.rw_offset = CDoom.fixed_mul(hyp, sineval)
 
-      CDoom.rw_offset = -CDoom.rw_offset if CDoom.rw_normalangle &- CDoom.rw_angle1 < CDoom::ANG180
+      CDoom.rw_offset = -CDoom.rw_offset if CDoom.rw_normalangle &- CDoom.rw_angle1 < ANG180
 
       CDoom.rw_offset += CDoom.sidedef.value.textureoffset + CDoom.curline.value.offset
-      CDoom.rw_centerangle = CDoom::ANG90 &+ CDoom.viewangle &- CDoom.rw_normalangle
+      CDoom.rw_centerangle = ANG90 &+ CDoom.viewangle &- CDoom.rw_normalangle
 
       # calculate light table
       #  use different light tables
@@ -18694,7 +18799,8 @@ module LibDoom
   # Called whenever the view size changes.
   #
   def self.r_init_sky_map
-    CDoom.skytexturemid = 100 * CDoom::FRACUNIT
+    CDoom.skytexturemid = 100 * FRACUNIT
+    puts "x"
   end
 
   #
@@ -18884,15 +18990,15 @@ module LibDoom
       topscreen = CDoom.sprtopscreen + CDoom.spryscale * column.value.topdelta
       bottomscreen = topscreen + CDoom.spryscale * column.value.length
 
-      CDoom.dc_yl = (topscreen + CDoom::FRACUNIT - 1) >> CDoom::FRACBITS
-      CDoom.dc_yh = (bottomscreen - 1) >> CDoom::FRACBITS
+      CDoom.dc_yl = (topscreen + FRACUNIT - 1) >> FRACBITS
+      CDoom.dc_yh = (bottomscreen - 1) >> FRACBITS
 
       CDoom.dc_yh = CDoom.mfloorclip[CDoom.dc_x] - 1 if CDoom.dc_yh >= CDoom.mfloorclip[CDoom.dc_x]
       CDoom.dc_yl = CDoom.mceilingclip[CDoom.dc_x] + 1 if CDoom.dc_yl <= CDoom.mceilingclip[CDoom.dc_x]
 
       if CDoom.dc_yl <= CDoom.dc_yh
         CDoom.dc_source = column.as(UInt8*) + 3
-        CDoom.dc_texturemid = basetexturemid - (column.value.topdelta.to_i32 << CDoom::FRACBITS)
+        CDoom.dc_texturemid = basetexturemid - (column.value.topdelta.to_i32 << FRACBITS)
 
         # Drawn by either r_draw_column
         #  or (SHADOW) r_draw_fuzz_column
@@ -18925,7 +19031,7 @@ module LibDoom
 
     CDoom.dc_x = vis.value.x1
     while CDoom.dc_x <= vis.value.x2
-      texturecolumn = frac >> CDoom::FRACBITS
+      texturecolumn = frac >> FRACBITS
       {% if flag?("RANGECHECK") %}
         if texturecolumn < 0 || texturecolumn >= patch.value.width
           CDoom.i_error("Error: r_draw_vis_sprite: bad texturecolumn")
@@ -18984,7 +19090,7 @@ module LibDoom
     if sprframe.value.rotate != 0
       # choose a different rotation based on player view
       ang = CDoom.r_point_to_angle(thing.value.x, thing.value.y)
-      rot = (ang &- thing.value.angle &+ (CDoom::ANG45 // 2).to_u32! * 9) >> 29
+      rot = (ang &- thing.value.angle &+ (ANG45 // 2).to_u32! * 9) >> 29
       lump = sprframe.value.lump[rot]
       flip = sprframe.value.flip[rot]
     else
@@ -18995,13 +19101,13 @@ module LibDoom
 
     # calculate edges of the shape
     tx -= CDoom.spriteoffset[lump]
-    x1 = (CDoom.centerxfrac + CDoom.fixed_mul(tx, xscale)) >> CDoom::FRACBITS
+    x1 = (CDoom.centerxfrac + CDoom.fixed_mul(tx, xscale)) >> FRACBITS
 
     # off the right side?
     return if x1 > CDoom.viewwidth
 
     tx += CDoom.spritewidth[lump]
-    x2 = ((CDoom.centerxfrac + CDoom.fixed_mul(tx, xscale)) >> CDoom::FRACBITS) - 1
+    x2 = ((CDoom.centerxfrac + CDoom.fixed_mul(tx, xscale)) >> FRACBITS) - 1
 
     # off the left side
     return if x2 < 0
@@ -19017,7 +19123,7 @@ module LibDoom
     vis.value.texturemid = vis.value.gzt - CDoom.viewz
     vis.value.x1 = x1 < 0 ? 0 : x1
     vis.value.x2 = x2 >= CDoom.viewwidth ? CDoom.viewwidth - 1 : x2
-    iscale = CDoom.fixed_div(CDoom::FRACUNIT, xscale)
+    iscale = CDoom.fixed_div(FRACUNIT, xscale)
 
     if flip != 0
       vis.value.startfrac = CDoom.spritewidth[lump] - 1
@@ -19102,16 +19208,16 @@ module LibDoom
     flip = sprframe.value.flip[0]
 
     # calculate edges of the shape
-    tx = psp.value.sx - 160 * CDoom::FRACUNIT
+    tx = psp.value.sx - 160 * FRACUNIT
 
     tx -= CDoom.spriteoffset[lump]
-    x1 = (CDoom.centerxfrac + CDoom.fixed_mul(tx, CDoom.pspritescale)) >> CDoom::FRACBITS
+    x1 = (CDoom.centerxfrac + CDoom.fixed_mul(tx, CDoom.pspritescale)) >> FRACBITS
 
     # off the right side?
     return if x1 > CDoom.viewwidth
 
     tx += CDoom.spritewidth[lump]
-    x2 = ((CDoom.centerxfrac + CDoom.fixed_mul(tx, CDoom.pspritescale)) >> CDoom::FRACBITS) - 1
+    x2 = ((CDoom.centerxfrac + CDoom.fixed_mul(tx, CDoom.pspritescale)) >> FRACBITS) - 1
 
     # off the left side
     return if x2 < 0
@@ -19120,7 +19226,7 @@ module LibDoom
     # store information in a vissprite
     vis = pointerof(avis)
     vis.value.mobjflags = 0
-    vis.value.texturemid = (CDoom::BASEYCENTER << CDoom::FRACBITS) + CDoom::FRACUNIT // 2 - (psp.value.sy - CDoom.spritetopoffset[lump])
+    vis.value.texturemid = (CDoom::BASEYCENTER << FRACBITS) + FRACUNIT // 2 - (psp.value.sy - CDoom.spritetopoffset[lump])
     vis.value.x1 = x1 < 0 ? 0 : x1
     vis.value.x2 = x2 >= CDoom.viewwidth ? CDoom.viewwidth - 1 : x2
     vis.value.scale = CDoom.pspritescale
@@ -19355,7 +19461,7 @@ module LibDoom
   #  allocates channel buffer, sets S_sfx lookup.
   #
   def self.s_init(sfx_volume : LibC::Int, music_volume : LibC::Int)
-    puts "s_init: default sfx volume #{sfx_volume}"
+    puts "s_init: Default sfx volume #{sfx_volume}"
 
     # Whatever these did with DMX, these are rather dummies now. [ds] or are they...
     CDoom.i_set_channels
@@ -19657,7 +19763,6 @@ module LibDoom
     CDoom.mus_playing_s_sound = music
 
     CDoom.i_play_song(music.value.handle, looping)
-
   end
 
   def self.s_stop_music
@@ -19734,7 +19839,7 @@ module LibDoom
     angle >>= CDoom::ANGLETOFINESHIFT
 
     # stereo separation
-    sep.value = 128 - (CDoom.fixed_mul(CDoom::S_STEREO_SWING, CDoom.finesine[angle]) >> CDoom::FRACBITS)
+    sep.value = 128 - (CDoom.fixed_mul(CDoom::S_STEREO_SWING, @@finesine[angle]) >> FRACBITS)
 
     # volume calculation
     if approx_dist < CDoom::S_CLOSE_DIST
@@ -19743,11 +19848,11 @@ module LibDoom
       approx_dist = CDoom::S_CLIPPING_DIST if approx_dist > CDoom::S_CLIPPING_DIST
 
       vol.value = 15 + ((CDoom.snd_sfx_volume - 15) *
-                        ((CDoom::S_CLIPPING_DIST - approx_dist) >> CDoom::FRACBITS)) // CDoom::S_ATTENUATOR
+                        ((CDoom::S_CLIPPING_DIST - approx_dist) >> FRACBITS)) // CDoom::S_ATTENUATOR
     else
       # distance effect
       vol.value = (CDoom.snd_sfx_volume *
-                   ((CDoom::S_CLIPPING_DIST - approx_dist) >> CDoom::FRACBITS)) // CDoom::S_ATTENUATOR
+                   ((CDoom::S_CLIPPING_DIST - approx_dist) >> FRACBITS)) // CDoom::S_ATTENUATOR
     end
 
     return (vol.value > 0).to_unsafe
@@ -20245,17 +20350,17 @@ module LibDoom
           if badguyangle > CDoom.plyr.value.mo.value.angle
             # whether right or left
             diffang = badguyangle &- CDoom.plyr.value.mo.value.angle
-            i = diffang > CDoom::ANG180
+            i = diffang > ANG180
           else
             # whether left or right
             diffang = CDoom.plyr.value.mo.value.angle &- badguyangle
-            i = diffang <= CDoom::ANG180
+            i = diffang <= ANG180
           end # confusing, aint it?
 
           CDoom.st_facecount = CDoom::ST_TURNCOUNT
           CDoom.st_faceindex = CDoom.st_calc_pain_offset
 
-          if diffang < CDoom::ANG45
+          if diffang < ANG45
             # head-on
             CDoom.st_faceindex += CDoom::ST_RAMPAGEOFFSET
           elsif i
@@ -20798,11 +20903,11 @@ module LibDoom
   end
 
   def self.slope_div(num : LibC::UInt, den : LibC::UInt) : LibC::Int
-    return CDoom::SLOPERANGE if den < 512
+    return SLOPERANGE if den < 512
 
     ans = (num << 3)//(den >> 8)
 
-    return ans <= CDoom::SLOPERANGE ? ans.to_i32! : CDoom::SLOPERANGE
+    return ans <= SLOPERANGE ? ans.to_i32! : SLOPERANGE
   end
 
   def self.v_mark_rect(x : LibC::Int,

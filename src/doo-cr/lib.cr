@@ -263,8 +263,6 @@ lib CDoom
   QLOADNET  = "you can't quickload during a netgame!\n\n" + PRESSKEY
   QSAVESPOT = "you haven't picked a quicksave slot yet!\n\n" + PRESSKEY
   SAVEDEAD  = "you can't save if you aren't playing!\n\n" + PRESSKEY
-  QSPROMPT  = "quicksave over your game named\n\n'%s'?\n\n" + PRESSYN
-  QLPROMPT  = "do you want to quickload the game named\n\n'%s'?\n\n" + PRESSYN
 
   QSPROMPT_1 = "quicksave over your game named\n\n'"
   QSPROMPT_2 = "'?\n\n" + PRESSYN
@@ -3036,8 +3034,7 @@ lib CDoom
   #
   # Fixed point, 32bit as 16.16.
   #
-  FRACBITS = 16
-  FRACUNIT = (1 << FRACBITS)
+  
 
   alias Fixed = LibC::Int
 
@@ -3507,7 +3504,6 @@ lib CDoom
 
   # __TABLES__
 
-  PI = 3.141592657
 
   FINEANGLES = 8192
   FINEMASK   = (FINEANGLES - 1)
@@ -3516,33 +3512,19 @@ lib CDoom
   ANGLETOFINESHIFT = 19
 
   # Effective size is 10240.
-  FINESINE_SIZE = 5 * FINEANGLES//4
-  $finesine : Fixed*
 
   # Re-use data, is just PI/2 pahse shift.
-  $finecosine : Fixed*
 
   # Effective size is 4096.
-  FINETANGENT_SIZE = FINEANGLES//2
-  $finetangent : Fixed*
+  
 
-  # Binary Angle Measument, BAM.
-  ANG45  = 0x20000000
-  ANG90  = 0x40000000
-  ANG180 = 0x80000000
-  ANG270 = 0xc0000000
-
-  SLOPERANGE = 2048
-  SLOPEBITS  =   11
-  DBITS      = (FRACBITS - SLOPEBITS)
+  
 
   alias Angle = LibC::UInt
 
   # Effective size is 2049;
   # The +1 size is to handle the case when x==y
   #  without additional checking.
-  TANTOANGLE_SIZE = SLOPERANGE + 1
-  $tantoangle : Angle*
 
   # Utility function,
   #  called by R_PointToAngle.
@@ -4147,7 +4129,7 @@ lib CDoom
   $scaledviewwidth : LibC::Int
 
   # This one is related to the 3-screen display mode.
-  # ANG90 = left side, ANG270 = right
+  # LibDoom::ANG90 = left side, ANG270 = right
   $viewangleoffset : LibC::Int
 
   # Player taking events, and displaying.
@@ -4995,7 +4977,7 @@ lib CDoom
   end
 
   PLATWAIT  = 3
-  PLATSPEED = FRACUNIT
+  PLATSPEED = LibDoom::FRACUNIT
   MAXPLATS  = 30
 
   $activeplats : Plat*[MAXPLATS]
@@ -5039,7 +5021,7 @@ lib CDoom
     topcountdown : LibC::Int
   end
 
-  VDOORSPEED = FRACUNIT*2
+  VDOORSPEED = LibDoom::FRACUNIT*2
   VDOORWAIT  = 150
 
   fun ev_vertical_door = EV_VerticalDoor(line : Line*, thing : Mobj*)
@@ -5078,7 +5060,7 @@ lib CDoom
     olddirection : LibC::Int
   end
 
-  CEILSPEED   = FRACUNIT
+  CEILSPEED   = LibDoom::FRACUNIT
   CEILWAIT    = 150
   MAXCEILINGS =  30
 
@@ -5144,7 +5126,7 @@ lib CDoom
     speed : Fixed
   end
 
-  FLOORSPEED = FRACUNIT
+  FLOORSPEED = LibDoom::FRACUNIT
 
   enum Result
     Ok
@@ -5511,33 +5493,33 @@ lib CDoom
 
   # __R_LOCAL__
 
-  FLOATSPEED = (FRACUNIT*4)
+  FLOATSPEED = (LibDoom::FRACUNIT*4)
 
   MAXHEALTH  = 100
-  VIEWHEIGHT = (41*FRACUNIT)
+  VIEWHEIGHT = (41*LibDoom::FRACUNIT)
 
   # mapblocks are used to check movement
   # against lines and things
   MAPBLOCKUNITS = 128
-  MAPBLOCKSIZE  = (MAPBLOCKUNITS*FRACUNIT)
-  MAPBLOCKSHIFT = (FRACBITS + 7)
+  MAPBLOCKSIZE  = (MAPBLOCKUNITS*LibDoom::FRACUNIT)
+  MAPBLOCKSHIFT = (LibDoom::FRACBITS + 7)
   MAPBMASK      = (MAPBLOCKSIZE - 1)
-  MAPBTOFRAC    = (MAPBLOCKSHIFT - FRACBITS)
+  MAPBTOFRAC    = (MAPBLOCKSHIFT - LibDoom::FRACBITS)
 
   # player radius for movement checking
-  PLAYERRADIUS = 16*FRACUNIT
+  PLAYERRADIUS = 16*LibDoom::FRACUNIT
 
   # MAXRADIUS is for precalculated sector block boxes
   # the spider demon is larger,
   # but we do not have any moving sectors nearby
-  MAXRADIUS = 32*FRACUNIT
+  MAXRADIUS = 32*LibDoom::FRACUNIT
 
-  GRAVITY = FRACUNIT
-  MAXMOVE = (30*FRACUNIT)
+  GRAVITY = LibDoom::FRACUNIT
+  MAXMOVE = (30*LibDoom::FRACUNIT)
 
-  USERANGE     = (64*FRACUNIT)
-  MELEERANGE   = (64*FRACUNIT)
-  MISSILERANGE = (32*64*FRACUNIT)
+  USERANGE     = (64*LibDoom::FRACUNIT)
+  MELEERANGE   = (64*LibDoom::FRACUNIT)
+  MISSILERANGE = (32*64*LibDoom::FRACUNIT)
 
   # follow a player exlusively for 3 seconds
   BASETHRESHOLD = 100
@@ -6091,16 +6073,16 @@ lib CDoom
   AM_NUMMARKPOINTS = 10
 
   # scale on entry
-  INITSCALEMTOF = (0.2*FRACUNIT)
+  INITSCALEMTOF = (0.2*LibDoom::FRACUNIT)
   # how much the automap moves window per tic in frame-buffer coordinates
   # moves 140 pixels in 1 second
   F_PANINC = 4
   # how much zoom-in per tic
   # goes to 2x in 1 second
-  M_ZOOMIN = (1.02*FRACUNIT).to_i32
+  M_ZOOMIN = (1.02*LibDoom::FRACUNIT).to_i32
   # how much zoom-out per tic
   # pulls out to 0.5x in 1 second
-  M_ZOOMOUT = (FRACUNIT/1.02).to_i32
+  M_ZOOMOUT = (LibDoom::FRACUNIT/1.02).to_i32
 
   # the following is crap
   LINE_NEVERSEE = ML_DONTDRAW
@@ -7363,8 +7345,8 @@ lib CDoom
   fun p_random = P_Random : LibC::Int
 
   MAXSPECIALCROSS = 8
-  FATSPREAD       = ANG90 // 8
-  SKULLSPEED      = 20*FRACUNIT
+  FATSPREAD       = LibDoom::ANG90 // 8
+  SKULLSPEED      = 20*LibDoom::FRACUNIT
 
   enum Dirtype
     East
@@ -7502,11 +7484,11 @@ lib CDoom
 
   fun p_check_missile_spawn = P_CheckMissileSpawn(th : Mobj*)
 
-  LOWERSPEED = FRACUNIT*6
-  RAISESPEED = FRACUNIT*6
+  LOWERSPEED = LibDoom::FRACUNIT*6
+  RAISESPEED = LibDoom::FRACUNIT*6
 
-  WEAPONBOTTOM = 128*FRACUNIT
-  WEAPONTOP    = 32*FRACUNIT
+  WEAPONBOTTOM = 128*LibDoom::FRACUNIT
+  WEAPONTOP    = 32*LibDoom::FRACUNIT
 
   # plasma cells for a bfg attack
   BFGCELLS = 40
@@ -7615,7 +7597,7 @@ lib CDoom
   # 16 pixels of bob
   MAXBOB = 0x100000
 
-  ANG5 = ANG90//18
+  ANG5 = LibDoom::ANG90//18
 
   $onground : DoomBool
 
@@ -7841,7 +7823,7 @@ lib CDoom
 
   fun r_render_seg_loop = R_RenderSegLoop
 
-  MINZ        = FRACUNIT * 4
+  MINZ        = LibDoom::FRACUNIT * 4
   BASEYCENTER = 100
 
   struct Maskdraw
@@ -7892,7 +7874,7 @@ lib CDoom
   # Originally: (200*0x10000).
   S_CLOSE_DIST = (160*0x10000)
 
-  S_ATTENUATOR = ((S_CLIPPING_DIST - S_CLOSE_DIST) >> FRACBITS)
+  S_ATTENUATOR = ((S_CLIPPING_DIST - S_CLOSE_DIST) >> LibDoom::FRACBITS)
 
   NORM_PITCH    = 128
   NORM_PRIORITY =  64

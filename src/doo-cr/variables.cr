@@ -1,4 +1,27 @@
 module LibDoom
+  PI = 3.141592657
+
+  FRACBITS = 16
+  FRACUNIT = (1 << FRACBITS)
+
+  FINEANGLES = 8192
+  FINEMASK   = (FINEANGLES - 1)
+  FINETANGENT_SIZE = FINEANGLES//2
+  FINESINE_SIZE = 5 * FINEANGLES//4
+
+  SLOPERANGE = 2048
+  SLOPEBITS  =   11
+  DBITS      = (FRACBITS - SLOPEBITS)
+
+  TANTOANGLE_SIZE = SLOPERANGE + 1
+
+  # Binary Angle Measument, BAM.
+  ANG45  = 0x20000000
+  ANG90  = 0x40000000
+  ANG180 = 0x80000000
+  ANG270 = 0xc0000000
+
+
   CDoom.precache = 1
 
   @@st_notify : CDoom::Event = CDoom::Event.new
@@ -91,18 +114,18 @@ module LibDoom
     a: CDoom::Mpoint.new(x: CDoom::R // 6 + CDoom::R // 32, y: -CDoom::R // 7 - CDoom::R // 32), b: CDoom::Mpoint.new(x: CDoom::R // 6 + CDoom::R // 10, y: -CDoom::R // 7))
 
   CDoom.triangle_guy[0] = CDoom::Mline.new(
-    a: CDoom::Mpoint.new(x: (-0.867 * CDoom::FRACUNIT).to_i32!, y: (-0.5 * CDoom::FRACUNIT).to_i32!), b: CDoom::Mpoint.new(x: (0.867 * CDoom::FRACUNIT).to_i32!, y: (-0.5 * CDoom::FRACUNIT).to_i32!))
+    a: CDoom::Mpoint.new(x: (-0.867 * FRACUNIT).to_i32!, y: (-0.5 * FRACUNIT).to_i32!), b: CDoom::Mpoint.new(x: (0.867 * FRACUNIT).to_i32!, y: (-0.5 * FRACUNIT).to_i32!))
   CDoom.triangle_guy[1] = CDoom::Mline.new(
-    a: CDoom::Mpoint.new(x: (0.867 * CDoom::FRACUNIT).to_i32!, y: (-0.5 * CDoom::FRACUNIT).to_i32!), b: CDoom::Mpoint.new(x: 0, y: CDoom::FRACUNIT))
+    a: CDoom::Mpoint.new(x: (0.867 * FRACUNIT).to_i32!, y: (-0.5 * FRACUNIT).to_i32!), b: CDoom::Mpoint.new(x: 0, y: FRACUNIT))
   CDoom.triangle_guy[2] = CDoom::Mline.new(
-    a: CDoom::Mpoint.new(x: 0, y: CDoom::FRACUNIT), b: CDoom::Mpoint.new(x: (-0.867 * CDoom::FRACUNIT).to_i32!, y: (-0.5 * CDoom::FRACUNIT).to_i32!))
+    a: CDoom::Mpoint.new(x: 0, y: FRACUNIT), b: CDoom::Mpoint.new(x: (-0.867 * FRACUNIT).to_i32!, y: (-0.5 * FRACUNIT).to_i32!))
 
   CDoom.thintriangle_guy[0] = CDoom::Mline.new(
-    a: CDoom::Mpoint.new(x: (-0.5 * CDoom::FRACUNIT).to_i32!, y: (-0.7 * CDoom::FRACUNIT).to_i32!), b: CDoom::Mpoint.new(x: CDoom::FRACUNIT, y: 0))
+    a: CDoom::Mpoint.new(x: (-0.5 * FRACUNIT).to_i32!, y: (-0.7 * FRACUNIT).to_i32!), b: CDoom::Mpoint.new(x: FRACUNIT, y: 0))
   CDoom.thintriangle_guy[1] = CDoom::Mline.new(
-    a: CDoom::Mpoint.new(x: CDoom::FRACUNIT, y: 0), b: CDoom::Mpoint.new(x: (-0.5 * CDoom::FRACUNIT).to_i32!, y: (0.7 * CDoom::FRACUNIT).to_i32!))
+    a: CDoom::Mpoint.new(x: FRACUNIT, y: 0), b: CDoom::Mpoint.new(x: (-0.5 * FRACUNIT).to_i32!, y: (0.7 * FRACUNIT).to_i32!))
   CDoom.thintriangle_guy[2] = CDoom::Mline.new(
-    a: CDoom::Mpoint.new(x: (-0.5 * CDoom::FRACUNIT).to_i32!, y: (0.7 * CDoom::FRACUNIT).to_i32!), b: CDoom::Mpoint.new(x: (-0.5 * CDoom::FRACUNIT).to_i32, y: (-0.7 * CDoom::FRACUNIT).to_i32!))
+    a: CDoom::Mpoint.new(x: (-0.5 * FRACUNIT).to_i32!, y: (0.7 * FRACUNIT).to_i32!), b: CDoom::Mpoint.new(x: (-0.5 * FRACUNIT).to_i32, y: (-0.7 * FRACUNIT).to_i32!))
 
   CDoom.cheating = 0
   CDoom.grid = 0
@@ -1958,8 +1981,8 @@ module LibDoom
       CDoom::Statenum::S_PLAY_XDIE1.value,                                                                                                                                                  # xdeathstate
       CDoom::Sfxenum::SFX_pldeth.value,                                                                                                                                                     # deathsound
       0,                                                                                                                                                                                    # speed
-      16 * CDoom::FRACUNIT,                                                                                                                                                                 # radius
-      56 * CDoom::FRACUNIT,                                                                                                                                                                 # height
+      16 * FRACUNIT,                                                                                                                                                                 # radius
+      56 * FRACUNIT,                                                                                                                                                                 # height
       100,                                                                                                                                                                                  # mass
       0,                                                                                                                                                                                    # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                                                       # activesound
@@ -1983,8 +2006,8 @@ module LibDoom
       CDoom::Statenum::S_POSS_XDIE1.value,                                                                           # xdeathstate
       CDoom::Sfxenum::SFX_podth1.value,                                                                              # deathsound
       8,                                                                                                             # speed
-      20 * CDoom::FRACUNIT,                                                                                          # radius
-      56 * CDoom::FRACUNIT,                                                                                          # height
+      20 * FRACUNIT,                                                                                          # radius
+      56 * FRACUNIT,                                                                                          # height
       100,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_posact.value,                                                                              # activesound
@@ -2008,8 +2031,8 @@ module LibDoom
       CDoom::Statenum::S_SPOS_XDIE1.value,                                                                           # xdeathstate
       CDoom::Sfxenum::SFX_podth2.value,                                                                              # deathsound
       8,                                                                                                             # speed
-      20 * CDoom::FRACUNIT,                                                                                          # radius
-      56 * CDoom::FRACUNIT,                                                                                          # height
+      20 * FRACUNIT,                                                                                          # radius
+      56 * FRACUNIT,                                                                                          # height
       100,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_posact.value,                                                                              # activesound
@@ -2033,8 +2056,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_vildth.value,                                                                              # deathsound
       15,                                                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                                                          # radius
-      56 * CDoom::FRACUNIT,                                                                                          # height
+      20 * FRACUNIT,                                                                                          # radius
+      56 * FRACUNIT,                                                                                          # height
       500,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_vilact.value,                                                                              # activesound
@@ -2058,8 +2081,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                               # deathsound
       0,                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                         # radius
-      16 * CDoom::FRACUNIT,                                                         # height
+      20 * FRACUNIT,                                                         # radius
+      16 * FRACUNIT,                                                         # height
       100,                                                                          # mass
       0,                                                                            # damage
       CDoom::Sfxenum::SFX_None.value,                                               # activesound
@@ -2083,8 +2106,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_skedth.value,                                                                              # deathsound
       10,                                                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                                                          # radius
-      56 * CDoom::FRACUNIT,                                                                                          # height
+      20 * FRACUNIT,                                                                                          # radius
+      56 * FRACUNIT,                                                                                          # height
       500,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_skeact.value,                                                                              # activesound
@@ -2107,9 +2130,9 @@ module LibDoom
       CDoom::Statenum::S_TRACEEXP1.value,                                                                                                                   # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_barexp.value,                                                                                                                     # deathsound
-      10 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      11 * CDoom::FRACUNIT,                                                                                                                                 # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      10 * FRACUNIT,                                                                                                                                 # speed
+      11 * FRACUNIT,                                                                                                                                 # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       10,                                                                                                                                                   # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2133,8 +2156,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                               # deathsound
       0,                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                         # radius
-      16 * CDoom::FRACUNIT,                                                         # height
+      20 * FRACUNIT,                                                         # radius
+      16 * FRACUNIT,                                                         # height
       100,                                                                          # mass
       0,                                                                            # damage
       CDoom::Sfxenum::SFX_None.value,                                               # activesound
@@ -2158,8 +2181,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_mandth.value,                                                                              # deathsound
       8,                                                                                                             # speed
-      48 * CDoom::FRACUNIT,                                                                                          # radius
-      64 * CDoom::FRACUNIT,                                                                                          # height
+      48 * FRACUNIT,                                                                                          # radius
+      64 * FRACUNIT,                                                                                          # height
       1000,                                                                                                          # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_posact.value,                                                                              # activesound
@@ -2182,9 +2205,9 @@ module LibDoom
       CDoom::Statenum::S_FATSHOTX1.value,                                                                                                                   # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_firxpl.value,                                                                                                                     # deathsound
-      20 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      6 * CDoom::FRACUNIT,                                                                                                                                  # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      20 * FRACUNIT,                                                                                                                                 # speed
+      6 * FRACUNIT,                                                                                                                                  # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       8,                                                                                                                                                    # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2208,8 +2231,8 @@ module LibDoom
       CDoom::Statenum::S_CPOS_XDIE1.value,                                                                           # xdeathstate
       CDoom::Sfxenum::SFX_podth2.value,                                                                              # deathsound
       8,                                                                                                             # speed
-      20 * CDoom::FRACUNIT,                                                                                          # radius
-      56 * CDoom::FRACUNIT,                                                                                          # height
+      20 * FRACUNIT,                                                                                          # radius
+      56 * FRACUNIT,                                                                                          # height
       100,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_posact.value,                                                                              # activesound
@@ -2233,8 +2256,8 @@ module LibDoom
       CDoom::Statenum::S_TROO_XDIE1.value,                                                                           # xdeathstate
       CDoom::Sfxenum::SFX_bgdth1.value,                                                                              # deathsound
       8,                                                                                                             # speed
-      20 * CDoom::FRACUNIT,                                                                                          # radius
-      56 * CDoom::FRACUNIT,                                                                                          # height
+      20 * FRACUNIT,                                                                                          # radius
+      56 * FRACUNIT,                                                                                          # height
       100,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_bgact.value,                                                                               # activesound
@@ -2258,8 +2281,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_sgtdth.value,                                                                              # deathsound
       10,                                                                                                            # speed
-      30 * CDoom::FRACUNIT,                                                                                          # radius
-      56 * CDoom::FRACUNIT,                                                                                          # height
+      30 * FRACUNIT,                                                                                          # radius
+      56 * FRACUNIT,                                                                                          # height
       400,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                               # activesound
@@ -2283,8 +2306,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_sgtdth.value,                                                                                                                 # deathsound
       10,                                                                                                                                               # speed
-      30 * CDoom::FRACUNIT,                                                                                                                             # radius
-      56 * CDoom::FRACUNIT,                                                                                                                             # height
+      30 * FRACUNIT,                                                                                                                             # radius
+      56 * FRACUNIT,                                                                                                                             # height
       400,                                                                                                                                              # mass
       0,                                                                                                                                                # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                                                                  # activesound
@@ -2308,8 +2331,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                                                                                         # xdeathstate
       CDoom::Sfxenum::SFX_cacdth.value,                                                                                                                                                      # deathsound
       8,                                                                                                                                                                                     # speed
-      31 * CDoom::FRACUNIT,                                                                                                                                                                  # radius
-      56 * CDoom::FRACUNIT,                                                                                                                                                                  # height
+      31 * FRACUNIT,                                                                                                                                                                  # radius
+      56 * FRACUNIT,                                                                                                                                                                  # height
       400,                                                                                                                                                                                   # mass
       0,                                                                                                                                                                                     # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                                                                                                       # activesound
@@ -2333,8 +2356,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_brsdth.value,                                                                              # deathsound
       8,                                                                                                             # speed
-      24 * CDoom::FRACUNIT,                                                                                          # radius
-      64 * CDoom::FRACUNIT,                                                                                          # height
+      24 * FRACUNIT,                                                                                          # radius
+      64 * FRACUNIT,                                                                                          # height
       1000,                                                                                                          # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                               # activesound
@@ -2357,9 +2380,9 @@ module LibDoom
       CDoom::Statenum::S_BRBALLX1.value,                                                                                                                    # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_firxpl.value,                                                                                                                     # deathsound
-      15 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      6 * CDoom::FRACUNIT,                                                                                                                                  # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      15 * FRACUNIT,                                                                                                                                 # speed
+      6 * FRACUNIT,                                                                                                                                  # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       8,                                                                                                                                                    # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2383,8 +2406,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_kntdth.value,                                                                              # deathsound
       8,                                                                                                             # speed
-      24 * CDoom::FRACUNIT,                                                                                          # radius
-      64 * CDoom::FRACUNIT,                                                                                          # height
+      24 * FRACUNIT,                                                                                          # radius
+      64 * FRACUNIT,                                                                                          # height
       1000,                                                                                                          # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                               # activesound
@@ -2408,8 +2431,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                                                   # xdeathstate
       CDoom::Sfxenum::SFX_firxpl.value,                                                                                                                # deathsound
       8,                                                                                                                                               # speed
-      16 * CDoom::FRACUNIT,                                                                                                                            # radius
-      56 * CDoom::FRACUNIT,                                                                                                                            # height
+      16 * FRACUNIT,                                                                                                                            # radius
+      56 * FRACUNIT,                                                                                                                            # height
       50,                                                                                                                                              # mass
       3,                                                                                                                                               # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                                                                 # activesound
@@ -2433,8 +2456,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_spidth.value,                                                                              # deathsound
       12,                                                                                                            # speed
-      128 * CDoom::FRACUNIT,                                                                                         # radius
-      100 * CDoom::FRACUNIT,                                                                                         # height
+      128 * FRACUNIT,                                                                                         # radius
+      100 * FRACUNIT,                                                                                         # height
       1000,                                                                                                          # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                               # activesound
@@ -2458,8 +2481,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_bspdth.value,                                                                              # deathsound
       12,                                                                                                            # speed
-      64 * CDoom::FRACUNIT,                                                                                          # radius
-      64 * CDoom::FRACUNIT,                                                                                          # height
+      64 * FRACUNIT,                                                                                          # radius
+      64 * FRACUNIT,                                                                                          # height
       600,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_bspact.value,                                                                              # activesound
@@ -2483,8 +2506,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                 # xdeathstate
       CDoom::Sfxenum::SFX_cybdth.value,                                                                              # deathsound
       16,                                                                                                            # speed
-      40 * CDoom::FRACUNIT,                                                                                          # radius
-      110 * CDoom::FRACUNIT,                                                                                         # height
+      40 * FRACUNIT,                                                                                          # radius
+      110 * FRACUNIT,                                                                                         # height
       1000,                                                                                                          # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                               # activesound
@@ -2508,8 +2531,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                                                                                         # xdeathstate
       CDoom::Sfxenum::SFX_pedth.value,                                                                                                                                                       # deathsound
       8,                                                                                                                                                                                     # speed
-      31 * CDoom::FRACUNIT,                                                                                                                                                                  # radius
-      56 * CDoom::FRACUNIT,                                                                                                                                                                  # height
+      31 * FRACUNIT,                                                                                                                                                                  # radius
+      56 * FRACUNIT,                                                                                                                                                                  # height
       400,                                                                                                                                                                                   # mass
       0,                                                                                                                                                                                     # damage
       CDoom::Sfxenum::SFX_dmact.value,                                                                                                                                                       # activesound
@@ -2533,8 +2556,8 @@ module LibDoom
       CDoom::Statenum::S_SSWV_XDIE1.value,                                                                           # xdeathstate
       CDoom::Sfxenum::SFX_ssdth.value,                                                                               # deathsound
       8,                                                                                                             # speed
-      20 * CDoom::FRACUNIT,                                                                                          # radius
-      56 * CDoom::FRACUNIT,                                                                                          # height
+      20 * FRACUNIT,                                                                                          # radius
+      56 * FRACUNIT,                                                                                          # height
       100,                                                                                                           # mass
       0,                                                                                                             # damage
       CDoom::Sfxenum::SFX_posact.value,                                                                              # activesound
@@ -2558,8 +2581,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                                                                                                # xdeathstate
       CDoom::Sfxenum::SFX_keendt.value,                                                                                                                                                             # deathsound
       0,                                                                                                                                                                                            # speed
-      16 * CDoom::FRACUNIT,                                                                                                                                                                         # radius
-      72 * CDoom::FRACUNIT,                                                                                                                                                                         # height
+      16 * FRACUNIT,                                                                                                                                                                         # radius
+      72 * FRACUNIT,                                                                                                                                                                         # height
       10000000,                                                                                                                                                                                     # mass
       0,                                                                                                                                                                                            # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                                                               # activesound
@@ -2583,8 +2606,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                           # xdeathstate
       CDoom::Sfxenum::SFX_bosdth.value,                                        # deathsound
       0,                                                                       # speed
-      16 * CDoom::FRACUNIT,                                                    # radius
-      16 * CDoom::FRACUNIT,                                                    # height
+      16 * FRACUNIT,                                                    # radius
+      16 * FRACUNIT,                                                    # height
       10000000,                                                                # mass
       0,                                                                       # damage
       CDoom::Sfxenum::SFX_None.value,                                          # activesound
@@ -2608,8 +2631,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                               # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                              # deathsound
       0,                                                                           # speed
-      20 * CDoom::FRACUNIT,                                                        # radius
-      32 * CDoom::FRACUNIT,                                                        # height
+      20 * FRACUNIT,                                                        # radius
+      32 * FRACUNIT,                                                        # height
       100,                                                                         # mass
       0,                                                                           # damage
       CDoom::Sfxenum::SFX_None.value,                                              # activesound
@@ -2633,8 +2656,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                               # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                              # deathsound
       0,                                                                           # speed
-      20 * CDoom::FRACUNIT,                                                        # radius
-      32 * CDoom::FRACUNIT,                                                        # height
+      20 * FRACUNIT,                                                        # radius
+      32 * FRACUNIT,                                                        # height
       100,                                                                         # mass
       0,                                                                           # damage
       CDoom::Sfxenum::SFX_None.value,                                              # activesound
@@ -2657,9 +2680,9 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                                                                                           # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                                                           # xdeathstate
       CDoom::Sfxenum::SFX_firxpl.value,                                                                                                                                                        # deathsound
-      10 * CDoom::FRACUNIT,                                                                                                                                                                    # speed
-      6 * CDoom::FRACUNIT,                                                                                                                                                                     # radius
-      32 * CDoom::FRACUNIT,                                                                                                                                                                    # height
+      10 * FRACUNIT,                                                                                                                                                                    # speed
+      6 * FRACUNIT,                                                                                                                                                                     # radius
+      32 * FRACUNIT,                                                                                                                                                                    # height
       100,                                                                                                                                                                                     # mass
       3,                                                                                                                                                                                       # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                                                          # activesound
@@ -2683,8 +2706,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                               # deathsound
       0,                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                         # radius
-      16 * CDoom::FRACUNIT,                                                         # height
+      20 * FRACUNIT,                                                         # radius
+      16 * FRACUNIT,                                                         # height
       100,                                                                          # mass
       0,                                                                            # damage
       CDoom::Sfxenum::SFX_None.value,                                               # activesound
@@ -2708,8 +2731,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                               # xdeathstate
       CDoom::Sfxenum::SFX_barexp.value,                                                                            # deathsound
       0,                                                                                                           # speed
-      10 * CDoom::FRACUNIT,                                                                                        # radius
-      42 * CDoom::FRACUNIT,                                                                                        # height
+      10 * FRACUNIT,                                                                                        # radius
+      42 * FRACUNIT,                                                                                        # height
       100,                                                                                                         # mass
       0,                                                                                                           # damage
       CDoom::Sfxenum::SFX_None.value,                                                                              # activesound
@@ -2732,9 +2755,9 @@ module LibDoom
       CDoom::Statenum::S_TBALLX1.value,                                                                                                                     # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_firxpl.value,                                                                                                                     # deathsound
-      10 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      6 * CDoom::FRACUNIT,                                                                                                                                  # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      10 * FRACUNIT,                                                                                                                                 # speed
+      6 * FRACUNIT,                                                                                                                                  # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       3,                                                                                                                                                    # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2757,9 +2780,9 @@ module LibDoom
       CDoom::Statenum::S_RBALLX1.value,                                                                                                                     # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_firxpl.value,                                                                                                                     # deathsound
-      10 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      6 * CDoom::FRACUNIT,                                                                                                                                  # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      10 * FRACUNIT,                                                                                                                                 # speed
+      6 * FRACUNIT,                                                                                                                                  # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       5,                                                                                                                                                    # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2782,9 +2805,9 @@ module LibDoom
       CDoom::Statenum::S_EXPLODE1.value,                                                                                                                    # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_barexp.value,                                                                                                                     # deathsound
-      20 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      11 * CDoom::FRACUNIT,                                                                                                                                 # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      20 * FRACUNIT,                                                                                                                                 # speed
+      11 * FRACUNIT,                                                                                                                                 # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       20,                                                                                                                                                   # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2807,9 +2830,9 @@ module LibDoom
       CDoom::Statenum::S_PLASEXP.value,                                                                                                                     # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_firxpl.value,                                                                                                                     # deathsound
-      25 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      13 * CDoom::FRACUNIT,                                                                                                                                 # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      25 * FRACUNIT,                                                                                                                                 # speed
+      13 * FRACUNIT,                                                                                                                                 # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       5,                                                                                                                                                    # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2832,9 +2855,9 @@ module LibDoom
       CDoom::Statenum::S_BFGLAND.value,                                                                                                                     # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_rxplod.value,                                                                                                                     # deathsound
-      25 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      13 * CDoom::FRACUNIT,                                                                                                                                 # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      25 * FRACUNIT,                                                                                                                                 # speed
+      13 * FRACUNIT,                                                                                                                                 # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       100,                                                                                                                                                  # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2857,9 +2880,9 @@ module LibDoom
       CDoom::Statenum::S_ARACH_PLEX.value,                                                                                                                  # deathstate
       CDoom::Statenum::S_NULL.value,                                                                                                                        # xdeathstate
       CDoom::Sfxenum::SFX_firxpl.value,                                                                                                                     # deathsound
-      25 * CDoom::FRACUNIT,                                                                                                                                 # speed
-      13 * CDoom::FRACUNIT,                                                                                                                                 # radius
-      8 * CDoom::FRACUNIT,                                                                                                                                  # height
+      25 * FRACUNIT,                                                                                                                                 # speed
+      13 * FRACUNIT,                                                                                                                                 # radius
+      8 * FRACUNIT,                                                                                                                                  # height
       100,                                                                                                                                                  # mass
       5,                                                                                                                                                    # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                                                       # activesound
@@ -2883,8 +2906,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                               # deathsound
       0,                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                         # radius
-      16 * CDoom::FRACUNIT,                                                         # height
+      20 * FRACUNIT,                                                         # radius
+      16 * FRACUNIT,                                                         # height
       100,                                                                          # mass
       0,                                                                            # damage
       CDoom::Sfxenum::SFX_None.value,                                               # activesound
@@ -2908,8 +2931,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,        # xdeathstate
       CDoom::Sfxenum::SFX_None.value,       # deathsound
       0,                                    # speed
-      20 * CDoom::FRACUNIT,                 # radius
-      16 * CDoom::FRACUNIT,                 # height
+      20 * FRACUNIT,                 # radius
+      16 * FRACUNIT,                 # height
       100,                                  # mass
       0,                                    # damage
       CDoom::Sfxenum::SFX_None.value,       # activesound
@@ -2933,8 +2956,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                               # deathsound
       0,                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                         # radius
-      16 * CDoom::FRACUNIT,                                                         # height
+      20 * FRACUNIT,                                                         # radius
+      16 * FRACUNIT,                                                         # height
       100,                                                                          # mass
       0,                                                                            # damage
       CDoom::Sfxenum::SFX_None.value,                                               # activesound
@@ -2958,8 +2981,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                               # deathsound
       0,                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                         # radius
-      16 * CDoom::FRACUNIT,                                                         # height
+      20 * FRACUNIT,                                                         # radius
+      16 * FRACUNIT,                                                         # height
       100,                                                                          # mass
       0,                                                                            # damage
       CDoom::Sfxenum::SFX_None.value,                                               # activesound
@@ -2983,8 +3006,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                               # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                              # deathsound
       0,                                                                           # speed
-      20 * CDoom::FRACUNIT,                                                        # radius
-      16 * CDoom::FRACUNIT,                                                        # height
+      20 * FRACUNIT,                                                        # radius
+      16 * FRACUNIT,                                                        # height
       100,                                                                         # mass
       0,                                                                           # damage
       CDoom::Sfxenum::SFX_None.value,                                              # activesound
@@ -3008,8 +3031,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                               # deathsound
       0,                                                                            # speed
-      20 * CDoom::FRACUNIT,                                                         # radius
-      16 * CDoom::FRACUNIT,                                                         # height
+      20 * FRACUNIT,                                                         # radius
+      16 * FRACUNIT,                                                         # height
       100,                                                                          # mass
       0,                                                                            # damage
       CDoom::Sfxenum::SFX_None.value,                                               # activesound
@@ -3033,8 +3056,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3058,8 +3081,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3083,8 +3106,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3108,8 +3131,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3133,8 +3156,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3158,8 +3181,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3183,8 +3206,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3208,8 +3231,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3233,8 +3256,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3258,8 +3281,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3283,8 +3306,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3308,8 +3331,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3333,8 +3356,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3358,8 +3381,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3383,8 +3406,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3408,8 +3431,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3433,8 +3456,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3458,8 +3481,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3483,8 +3506,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3508,8 +3531,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                             # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                            # deathsound
       0,                                                                         # speed
-      20 * CDoom::FRACUNIT,                                                      # radius
-      16 * CDoom::FRACUNIT,                                                      # height
+      20 * FRACUNIT,                                                      # radius
+      16 * FRACUNIT,                                                      # height
       100,                                                                       # mass
       0,                                                                         # damage
       CDoom::Sfxenum::SFX_None.value,                                            # activesound
@@ -3533,8 +3556,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3558,8 +3581,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3583,8 +3606,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3608,8 +3631,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3633,8 +3656,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3658,8 +3681,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3683,8 +3706,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3708,8 +3731,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3733,8 +3756,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3758,8 +3781,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3783,8 +3806,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3808,8 +3831,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3833,8 +3856,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3858,8 +3881,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3883,8 +3906,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3908,8 +3931,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      20 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      20 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3933,8 +3956,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      16 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      16 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -3958,8 +3981,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      16 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      16 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -3983,8 +4006,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,   # xdeathstate
       CDoom::Sfxenum::SFX_None.value,  # deathsound
       0,                               # speed
-      16 * CDoom::FRACUNIT,            # radius
-      16 * CDoom::FRACUNIT,            # height
+      16 * FRACUNIT,            # radius
+      16 * FRACUNIT,            # height
       100,                             # mass
       0,                               # damage
       CDoom::Sfxenum::SFX_None.value,  # activesound
@@ -4008,8 +4031,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4033,8 +4056,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4058,8 +4081,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4083,8 +4106,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4108,8 +4131,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      16 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      16 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -4133,8 +4156,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      16 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      16 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -4158,8 +4181,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,   # deathsound
       0,                                # speed
-      16 * CDoom::FRACUNIT,             # radius
-      16 * CDoom::FRACUNIT,             # height
+      16 * FRACUNIT,             # radius
+      16 * FRACUNIT,             # height
       100,                              # mass
       0,                                # damage
       CDoom::Sfxenum::SFX_None.value,   # activesound
@@ -4183,8 +4206,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4208,8 +4231,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      16 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      16 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -4233,8 +4256,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      16 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      16 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -4258,8 +4281,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4283,8 +4306,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,     # xdeathstate
       CDoom::Sfxenum::SFX_None.value,    # deathsound
       0,                                 # speed
-      16 * CDoom::FRACUNIT,              # radius
-      16 * CDoom::FRACUNIT,              # height
+      16 * FRACUNIT,              # radius
+      16 * FRACUNIT,              # height
       100,                               # mass
       0,                                 # damage
       CDoom::Sfxenum::SFX_None.value,    # activesound
@@ -4308,8 +4331,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4333,8 +4356,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4358,8 +4381,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4383,8 +4406,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4408,8 +4431,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4433,8 +4456,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      20 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      20 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4458,8 +4481,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      16 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      16 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4483,8 +4506,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      68 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      68 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -4508,8 +4531,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      84 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      84 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -4533,8 +4556,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      84 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      84 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -4558,8 +4581,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      68 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      68 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -4583,8 +4606,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      52 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      52 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -4608,8 +4631,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                  # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                 # deathsound
       0,                                                                              # speed
-      20 * CDoom::FRACUNIT,                                                           # radius
-      84 * CDoom::FRACUNIT,                                                           # height
+      20 * FRACUNIT,                                                           # radius
+      84 * FRACUNIT,                                                           # height
       100,                                                                            # mass
       0,                                                                              # damage
       CDoom::Sfxenum::SFX_None.value,                                                 # activesound
@@ -4633,8 +4656,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                  # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                 # deathsound
       0,                                                                              # speed
-      20 * CDoom::FRACUNIT,                                                           # radius
-      68 * CDoom::FRACUNIT,                                                           # height
+      20 * FRACUNIT,                                                           # radius
+      68 * FRACUNIT,                                                           # height
       100,                                                                            # mass
       0,                                                                              # damage
       CDoom::Sfxenum::SFX_None.value,                                                 # activesound
@@ -4658,8 +4681,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                  # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                 # deathsound
       0,                                                                              # speed
-      20 * CDoom::FRACUNIT,                                                           # radius
-      52 * CDoom::FRACUNIT,                                                           # height
+      20 * FRACUNIT,                                                           # radius
+      52 * FRACUNIT,                                                           # height
       100,                                                                            # mass
       0,                                                                              # damage
       CDoom::Sfxenum::SFX_None.value,                                                 # activesound
@@ -4683,8 +4706,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                  # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                 # deathsound
       0,                                                                              # speed
-      20 * CDoom::FRACUNIT,                                                           # radius
-      52 * CDoom::FRACUNIT,                                                           # height
+      20 * FRACUNIT,                                                           # radius
+      52 * FRACUNIT,                                                           # height
       100,                                                                            # mass
       0,                                                                              # damage
       CDoom::Sfxenum::SFX_None.value,                                                 # activesound
@@ -4708,8 +4731,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                  # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                 # deathsound
       0,                                                                              # speed
-      20 * CDoom::FRACUNIT,                                                           # radius
-      68 * CDoom::FRACUNIT,                                                           # height
+      20 * FRACUNIT,                                                           # radius
+      68 * FRACUNIT,                                                           # height
       100,                                                                            # mass
       0,                                                                              # damage
       CDoom::Sfxenum::SFX_None.value,                                                 # activesound
@@ -4733,8 +4756,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      20 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      20 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -4758,8 +4781,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      20 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      20 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -4783,8 +4806,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      20 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      20 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -4808,8 +4831,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      20 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      20 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -4833,8 +4856,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      20 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      20 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4858,8 +4881,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      20 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      20 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -4883,8 +4906,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      20 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      20 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -4908,8 +4931,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      20 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      20 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4933,8 +4956,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,       # xdeathstate
       CDoom::Sfxenum::SFX_None.value,      # deathsound
       0,                                   # speed
-      20 * CDoom::FRACUNIT,                # radius
-      16 * CDoom::FRACUNIT,                # height
+      20 * FRACUNIT,                # radius
+      16 * FRACUNIT,                # height
       100,                                 # mass
       0,                                   # damage
       CDoom::Sfxenum::SFX_None.value,      # activesound
@@ -4958,8 +4981,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,         # xdeathstate
       CDoom::Sfxenum::SFX_None.value,        # deathsound
       0,                                     # speed
-      16 * CDoom::FRACUNIT,                  # radius
-      16 * CDoom::FRACUNIT,                  # height
+      16 * FRACUNIT,                  # radius
+      16 * FRACUNIT,                  # height
       100,                                   # mass
       0,                                     # damage
       CDoom::Sfxenum::SFX_None.value,        # activesound
@@ -4983,8 +5006,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,  # xdeathstate
       CDoom::Sfxenum::SFX_None.value, # deathsound
       0,                              # speed
-      20 * CDoom::FRACUNIT,           # radius
-      16 * CDoom::FRACUNIT,           # height
+      20 * FRACUNIT,           # radius
+      16 * FRACUNIT,           # height
       100,                            # mass
       0,                              # damage
       CDoom::Sfxenum::SFX_None.value, # activesound
@@ -5008,8 +5031,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,         # xdeathstate
       CDoom::Sfxenum::SFX_None.value,        # deathsound
       0,                                     # speed
-      16 * CDoom::FRACUNIT,                  # radius
-      16 * CDoom::FRACUNIT,                  # height
+      16 * FRACUNIT,                  # radius
+      16 * FRACUNIT,                  # height
       100,                                   # mass
       0,                                     # damage
       CDoom::Sfxenum::SFX_None.value,        # activesound
@@ -5033,8 +5056,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,        # xdeathstate
       CDoom::Sfxenum::SFX_None.value,       # deathsound
       0,                                    # speed
-      16 * CDoom::FRACUNIT,                 # radius
-      16 * CDoom::FRACUNIT,                 # height
+      16 * FRACUNIT,                 # radius
+      16 * FRACUNIT,                 # height
       100,                                  # mass
       0,                                    # damage
       CDoom::Sfxenum::SFX_None.value,       # activesound
@@ -5058,8 +5081,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      16 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      16 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -5083,8 +5106,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,      # xdeathstate
       CDoom::Sfxenum::SFX_None.value,     # deathsound
       0,                                  # speed
-      16 * CDoom::FRACUNIT,               # radius
-      16 * CDoom::FRACUNIT,               # height
+      16 * FRACUNIT,               # radius
+      16 * FRACUNIT,               # height
       100,                                # mass
       0,                                  # damage
       CDoom::Sfxenum::SFX_None.value,     # activesound
@@ -5108,8 +5131,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,   # deathsound
       0,                                # speed
-      32 * CDoom::FRACUNIT,             # radius
-      16 * CDoom::FRACUNIT,             # height
+      32 * FRACUNIT,             # radius
+      16 * FRACUNIT,             # height
       100,                              # mass
       0,                                # damage
       CDoom::Sfxenum::SFX_None.value,   # activesound
@@ -5133,8 +5156,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,   # xdeathstate
       CDoom::Sfxenum::SFX_None.value,  # deathsound
       0,                               # speed
-      16 * CDoom::FRACUNIT,            # radius
-      16 * CDoom::FRACUNIT,            # height
+      16 * FRACUNIT,            # radius
+      16 * FRACUNIT,            # height
       100,                             # mass
       0,                               # damage
       CDoom::Sfxenum::SFX_None.value,  # activesound
@@ -5158,8 +5181,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      88 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      88 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -5183,8 +5206,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      88 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      88 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -5208,8 +5231,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      64 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      64 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -5233,8 +5256,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      64 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      64 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -5258,8 +5281,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      64 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      64 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -5283,8 +5306,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,                                                                                    # xdeathstate
       CDoom::Sfxenum::SFX_None.value,                                                                                   # deathsound
       0,                                                                                                                # speed
-      16 * CDoom::FRACUNIT,                                                                                             # radius
-      64 * CDoom::FRACUNIT,                                                                                             # height
+      16 * FRACUNIT,                                                                                             # radius
+      64 * FRACUNIT,                                                                                             # height
       100,                                                                                                              # mass
       0,                                                                                                                # damage
       CDoom::Sfxenum::SFX_None.value,                                                                                   # activesound
@@ -5308,8 +5331,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,        # xdeathstate
       CDoom::Sfxenum::SFX_None.value,       # deathsound
       0,                                    # speed
-      20 * CDoom::FRACUNIT,                 # radius
-      16 * CDoom::FRACUNIT,                 # height
+      20 * FRACUNIT,                 # radius
+      16 * FRACUNIT,                 # height
       100,                                  # mass
       0,                                    # damage
       CDoom::Sfxenum::SFX_None.value,       # activesound
@@ -5333,8 +5356,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,        # xdeathstate
       CDoom::Sfxenum::SFX_None.value,       # deathsound
       0,                                    # speed
-      20 * CDoom::FRACUNIT,                 # radius
-      16 * CDoom::FRACUNIT,                 # height
+      20 * FRACUNIT,                 # radius
+      16 * FRACUNIT,                 # height
       100,                                  # mass
       0,                                    # damage
       CDoom::Sfxenum::SFX_None.value,       # activesound
@@ -5358,8 +5381,8 @@ module LibDoom
       CDoom::Statenum::S_NULL.value,        # xdeathstate
       CDoom::Sfxenum::SFX_None.value,       # deathsound
       0,                                    # speed
-      20 * CDoom::FRACUNIT,                 # radius
-      16 * CDoom::FRACUNIT,                 # height
+      20 * FRACUNIT,                 # radius
+      16 * FRACUNIT,                 # height
       100,                                  # mass
       0,                                    # damage
       CDoom::Sfxenum::SFX_None.value,       # activesound
@@ -5555,14 +5578,13 @@ module LibDoom
   @@editcontrols_menu = [
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_forward(Int32), alpha_key: 'f'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_backward(Int32), alpha_key: 'b'.ord),
-        CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_sleft(Int32), alpha_key: 's'.ord),
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_sleft(Int32), alpha_key: 's'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_sright(Int32), alpha_key: 's'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_tleft(Int32), alpha_key: 't'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_tright(Int32), alpha_key: 't'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_sprint(Int32), alpha_key: 's'.ord),
     CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_shoot(Int32), alpha_key: 's'.ord),
-    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_use(Int32), alpha_key: 'u'.ord)
-
+    CDoom::Menuitem.new(status: 1, name: "".to_unsafe, routine: ->m_edit_use(Int32), alpha_key: 'u'.ord),
   ]
 
   @@editcontrols_def = CDoom::Menu.new(
@@ -5692,7 +5714,7 @@ module LibDoom
                 CDoom::Default.new(name: "crosshair", location: pointerof(CDoom.crosshair), defaultvalue: 0),
                 CDoom::Default.new(name: "always_run", location: pointerof(CDoom.always_run), defaultvalue: 0),
 
-                CDoom::Default.new(name: "snd_channels", location: pointerof(CDoom.num_channels), defaultvalue: 3),
+                CDoom::Default.new(name: "snd_channels", location: pointerof(CDoom.num_channels), defaultvalue: 8),
 
                 CDoom::Default.new(name: "usegamma", location: pointerof(CDoom.usegamma), defaultvalue: 0),
 
@@ -5753,8 +5775,8 @@ module LibDoom
   c_array(CDoom.diags,
     CDoom::Dirtype::NorthWest, CDoom::Dirtype::NorthEast, CDoom::Dirtype::SouthWest, CDoom::Dirtype::SouthEast)
 
-  c_array(CDoom.xspeed, CDoom::FRACUNIT, 47000, 0, -47000, -CDoom::FRACUNIT, -47000, 0, 47000)
-  c_array(CDoom.yspeed, 0, 47000, CDoom::FRACUNIT, 47000, 0, -47000, -CDoom::FRACUNIT, -47000)
+  c_array(CDoom.xspeed, FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000, 0, 47000)
+  c_array(CDoom.yspeed, 0, 47000, FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000)
   CDoom.traceangle = 0xc000000
 
   # Floor/ceiling animation sequences,
@@ -6193,6 +6215,7 @@ module LibDoom
   CDoom.cheat_mypos.sequence = CDoom.cheat_mypos_seq.to_unsafe
   CDoom.cheat_mypos.p = Pointer(UInt8).null
 
+  {% if flag?("PRECOMPUTED") %}
   @@finetangent = [
     -170910304, -56965752, -34178904, -24413316, -18988036, -15535599, -13145455, -11392683,
     -10052327, -8994149, -8137527, -7429880, -6835455, -6329090, -5892567, -5512368,
@@ -6707,9 +6730,7 @@ module LibDoom
     5512368, 5892567, 6329090, 6835455, 7429880, 8137527, 8994149, 10052327,
     11392683, 13145455, 15535599, 18988036, 24413316, 34178904, 56965752, 170910304,
   ]
-  CDoom.finetangent = @@finetangent.to_unsafe
-
-  @@finesine = [
+    @@finesine = [
     25, 75, 125, 175, 226, 276, 326, 376,
     427, 477, 527, 578, 628, 678, 728, 779,
     829, 879, 929, 980, 1030, 1080, 1130, 1181,
@@ -7991,9 +8012,6 @@ module LibDoom
     65531, 65531, 65532, 65532, 65533, 65533, 65534, 65534,
     65534, 65535, 65535, 65535, 65535, 65535, 65535, 65535,
   ]
-  CDoom.finesine = @@finesine.to_unsafe
-  CDoom.finecosine = @@finesine.to_unsafe + CDoom::FINEANGLES // 4
-
   @@tantoangle : Array(UInt32) = [
     0_u32, 333772_u32, 667544_u32, 1001315_u32, 1335086_u32, 1668857_u32, 2002626_u32, 2336395_u32,
     2670163_u32, 3003929_u32, 3337694_u32, 3671457_u32, 4005219_u32, 4338979_u32, 4672736_u32, 5006492_u32,
@@ -8253,7 +8271,14 @@ module LibDoom
     535533216_u32, 535700704_u32, 535868128_u32, 536035456_u32, 536202720_u32, 536369888_u32, 536536992_u32, 536704000_u32,
     536870912_u32,
   ]
-  CDoom.tantoangle = @@tantoangle.to_unsafe
+  {% else %}
+  @@finetangent = [] of CDoom::Fixed
+  @@finesine = [] of CDoom::Fixed
+  @@tantoangle : Array(UInt32) = [] of UInt32
+  {% end %}
+  @@finecosine : Array(CDoom::Fixed) = [] of CDoom::Fixed
+
+
 
   # Now where did these came from?
   c_array((CDoom.gammatable.to_unsafe).value,

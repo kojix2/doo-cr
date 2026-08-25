@@ -1,4 +1,4 @@
-CRYSTAL_FLAGS := -DRANGECHECK
+CRYSTAL_FLAGS := -DRANGECHECK -DPRECOMPUTED
 EXEC := doo-cr
 
 ifeq ($(OS),Windows_NT)
@@ -49,7 +49,8 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
 	$(CHANGE_LIB_NAMES)
 
-
+	cd ./bin && \
+	./doo-cr
 
 clean:
 	rm -rf raylib

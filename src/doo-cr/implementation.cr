@@ -2013,7 +2013,6 @@ fun p_move_psprites = P_MovePsprites(curplayer : CDoom::Player*)
   LibDoom.p_move_psprites(curplayer)
 end
 
-
 fun p_load_vertexes = P_LoadVertexes(lump : LibC::Int)
   LibDoom.p_load_vertexes(lump)
 end
