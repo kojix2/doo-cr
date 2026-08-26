@@ -2524,7 +2524,7 @@ module LibDoom
         end
 
         CDoom::MAXPLAYERS.times do |i|
-          ifCDoom.h_get_packet != 0 && 
+          if CDoom.h_get_packet != 0 && 
           CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
              i == CDoom.doomcom.value.numplayers
             CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
