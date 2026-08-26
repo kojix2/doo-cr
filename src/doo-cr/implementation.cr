@@ -132,14 +132,6 @@ fun doom_init(argc : Int32, argv : UInt8**, flags : Int32)
   LibDoom.doom_init(argc, argv, flags)
 end
 
-fun doom_update
-  LibDoom.doom_update
-end
-
-fun doom_force_update
-  LibDoom.doom_force_update
-end
-
 fun doom_get_framebuffer(channels : Int32) : UInt8*
   LibDoom.doom_get_framebuffer(channels)
 end
@@ -340,10 +332,6 @@ end
 
 fun d_display = D_Display
   LibDoom.d_display
-end
-
-fun d_update_wipe = D_UpdateWipe
-  LibDoom.d_update_wipe
 end
 
 fun d_doom_loop = D_DoomLoop

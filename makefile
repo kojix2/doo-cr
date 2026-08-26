@@ -50,7 +50,7 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	$(CHANGE_LIB_NAMES)
 
 	cd ./bin && \
-	./doo-cr -warp 01
+	./doo-cr
 
 clean:
 	rm -rf raylib

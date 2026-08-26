@@ -200,54 +200,25 @@ module LibDoom
     CDoom.d_doom_main
   end
 
-  def self.doom_update
-    update_audio
-
-    if CDoom.timingdemo != 0
-      doom_force_update
-      return
-    end
-
-    now = CDoom.i_get_time
-    delta_time = now - CDoom.last_update_time
-
-    delta_time.times do |i|
-      if CDoom.is_wiping_screen != 0
-        CDoom.d_update_wipe
-      else
-        CDoom.d_doom_loop
-      end
-    end
-
-    CDoom.last_update_time = now
-  end
-
   def self.doom_draw
-    @@screen_texture.try do |st|
-      fb = CDoom.doom_get_framebuffer(4)
-      break if fb.null?
-      Raylib.update_texture(st, fb)
+      return unless Raylib.window_ready?
+      @@screen_texture.try do |st|
+        fb = CDoom.doom_get_framebuffer(4)
+        next if fb.null?
+        Raylib.update_texture(st, fb)
 
-      scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
-      scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
-      scale = [scalew, scaleh].min
+        scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
+        scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
+        scale = [scalew, scaleh].min
 
-      Raylib.begin_drawing
-      Raylib.clear_background(Raylib::BLACK)
-      Raylib.draw_texture_pro(st,
-        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
-        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
-          width: SRES_X.to_f * scale, height: SRES_Y.to_f * scale),
-        Raylib::Vector2.new, 0, Raylib::WHITE)
-      Raylib.end_drawing
-    end
-  end
-
-  def self.doom_force_update
-    if CDoom.is_wiping_screen != 0
-      CDoom.d_update_wipe
-    else
-      CDoom.d_doom_loop
+        Raylib.begin_drawing
+        Raylib.clear_background(Raylib::BLACK)
+        Raylib.draw_texture_pro(st,
+          Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
+          Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
+            width: SRES_X.to_f * scale, height: SRES_Y.to_f * scale),
+          Raylib::Vector2.new, 0, Raylib::WHITE)
+        Raylib.end_drawing
     end
   end
 
@@ -1349,7 +1320,6 @@ module LibDoom
     CDoom.net_update # send out any new accumulation
 
     # normal update
-    CDoom.is_wiping_screen = wipe.to_unsafe
     if !wipe
       CDoom.i_finish_update # page flip or blit buffer
       return
@@ -1357,39 +1327,54 @@ module LibDoom
 
     # wipe update
     CDoom.wipe_end_screen(0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
-  end
 
-  def self.d_update_wipe
-    if CDoom.wipe_screen_wipe(CDoom::WIPE_MELT, 0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT, 1) != 0
-      CDoom.is_wiping_screen = 0
+    wipestart = i_get_time - 1
+    done = 0
+    tics = 0
+    nowtime = 0
+
+    loop do
+      loop do
+        nowtime = i_get_time
+        tics = nowtime - wipestart
+        break if tics != 0
+      end
+      wipestart = nowtime
+      done = CDoom.wipe_screen_wipe(CDoom::WIPE_MELT, 0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT, 1)
+
+      i_update_no_blit
+      m_drawer        # menu is drawn even on top of wipes
+      i_finish_update # page flip or blit buffer
+
+      break if done != 0
     end
   end
 
   def self.d_doom_loop
-    # while true
-    # frame syncronous IO operations
-    CDoom.i_start_frame
+    until Raylib.close_window?
+      # frame syncronous IO operations
+      CDoom.i_start_frame
 
-    # process one or more tics
-    if CDoom.singletics != 0
-      CDoom.i_start_tic
-      CDoom.d_process_events
-      CDoom.g_build_ticcmd((CDoom.netcmds.to_unsafe + CDoom.consoleplayer).value.to_unsafe + CDoom.maketic % CDoom::BACKUPTICS)
-      CDoom.d_do_advance_demo if CDoom.advancedemo != 0
-      CDoom.m_ticker
-      CDoom.g_ticker
-      CDoom.gametic += 1
-      CDoom.maketic += 1
-    else
-      CDoom.try_run_tics # will run at least one tic
+      # process one or more tics
+      if CDoom.singletics != 0
+        CDoom.i_start_tic
+        CDoom.d_process_events
+        CDoom.g_build_ticcmd((CDoom.netcmds.to_unsafe + CDoom.consoleplayer).value.to_unsafe + CDoom.maketic % CDoom::BACKUPTICS)
+        CDoom.d_do_advance_demo if CDoom.advancedemo != 0
+        CDoom.m_ticker
+        CDoom.g_ticker
+        CDoom.gametic += 1
+        CDoom.maketic += 1
+      else
+        CDoom.try_run_tics # will run at least one tic
+      end
+
+      CDoom.s_update_sounds(CDoom.players[CDoom.consoleplayer].mo) # move positional sounds
+      # Update display, next frame, with current state.
+      CDoom.d_display
     end
 
-    CDoom.s_update_sounds(CDoom.players[CDoom.consoleplayer].mo) # move positional sounds
-
-    # Update display, next frame, with current state.
-    CDoom.d_display
-
-    # end
+    i_quit
   end
 
   #
@@ -1499,7 +1484,7 @@ module LibDoom
   #
   def self.confirm_version
     if w_check_num_for_name("map01".to_unsafe) != -1 && # Doom 2
-       #w_check_num_for_name("map32".to_unsafe) != -1 && # Custom Wads might not have all maps
+       # w_check_num_for_name("map32".to_unsafe) != -1 && # Custom Wads might not have all maps
        w_check_num_for_name("interpic".to_unsafe) != -1 &&
        w_check_num_for_name("d_runnin".to_unsafe) != -1
       CDoom.gamemode = CDoom::GameMode::Commercial
@@ -1548,22 +1533,17 @@ module LibDoom
     # Registered.
     doomwad = String.new(doomwaddir) + "/doom.wad"
 
-
     # Shareware.
     doom1wad = String.new(doomwaddir) + "/doom1.wad"
-
 
     # Bug, dear Shawn.
     # Insufficient malloc, caused spurious realloc errors.
     plutoniawad = String.new(doomwaddir) + "/plutonia.wad"
 
-
     tntwad = String.new(doomwaddir) + "/tnt.wad"
-
 
     # French stuff
     doom2fwad = String.new(doomwaddir) + "/doom2f.wad"
-
 
     {% if !CDoom.has_constant?("DOOM_WIN32") %}
       home = CDoom.doom_getenv.call("HOME".to_unsafe)
@@ -2005,24 +1985,24 @@ module LibDoom
 
     # Iff additonal PWAD files are used, print modified banner
     if CDoom.modifiedgame != 0
-      puts ("===========================================================================\n" +
-        "ATTENTION:  This version of DOOM has been modified.  If you would like to\n" +
-        "get a copy of the original game, call 1-800-IDGAMES or see the readme file.\n" +
-        "        You will not receive technical support for modified games.\n" +
-        "===========================================================================")
+      puts("===========================================================================\n" +
+           "ATTENTION:  This version of DOOM has been modified.  If you would like to\n" +
+           "get a copy of the original game, call 1-800-IDGAMES or see the readme file.\n" +
+           "        You will not receive technical support for modified games.\n" +
+           "===========================================================================")
     end
 
     # Check and print which version is executed.
     case CDoom.gamemode
     when CDoom::GameMode::Shareware, CDoom::GameMode::Indetermined
-      puts ("===========================================================================\n" +
-        "                                Shareware!\n" +
-        "===========================================================================")
+      puts("===========================================================================\n" +
+           "                                Shareware!\n" +
+           "===========================================================================")
     when CDoom::GameMode::Registered, CDoom::GameMode::Retail, CDoom::GameMode::Commercial
-      puts ("===========================================================================\n" +
-        "                 Commercial product - do not distribute!\n" +
-        "         Please report software piracy to the SPA: 1-800-388-PIR8\n" +
-        "===========================================================================")
+      puts("===========================================================================\n" +
+           "                 Commercial product - do not distribute!\n" +
+           "         Please report software piracy to the SPA: 1-800-388-PIR8\n" +
+           "===========================================================================")
     else
       # Ouch
     end
@@ -2077,14 +2057,14 @@ module LibDoom
     if p != 0 && p < CDoom.myargc - 1
       CDoom.singledemo = 1 # quit after one demo
       CDoom.g_defered_play_demo(CDoom.myargv[p + 1])
-      # CDoom.d_doom_loop # never returns
+      CDoom.d_doom_loop # never returns
       demo_deferred = true
     end
 
     p = CDoom.m_check_parm("-timedemo")
     if p != 0 && p < CDoom.myargc - 1
       CDoom.g_time_demo(CDoom.myargv[p + 1])
-      # CDoom.d_doom_loop # never returns
+      CDoom.d_doom_loop # never returns
       demo_deferred = true
     end
 
@@ -2112,8 +2092,6 @@ module LibDoom
       end
     end
 
-    # CDoom.d_doom_loop # never returns [ddos] Called by app
-
     CDoom.g_begin_recording if CDoom.demorecording != 0
 
     if CDoom.m_check_parm("-debugfile") != 0
@@ -2125,7 +2103,7 @@ module LibDoom
       CDoom.debugfile = CDoom.doom_open.call(filename.to_unsafe, "w".to_unsafe)
     end
 
-    CDoom.i_init_graphics
+    CDoom.d_doom_loop # never returns [ddos] Called by app
   end
 
   def self.net_buffer_size : Int32
@@ -2141,9 +2119,9 @@ module LibDoom
     l = (CDoom.net_buffer_size - offsetof(CDoom::Doomdata, @retransmitfrom)) // 4
     l.times do |i|
       value = (pointerof(CDoom.netbuffer.value.@retransmitfrom)
-    .as(UInt32*))[i]
+        .as(UInt32*))[i]
 
-c = c &+ (value &* (i + 1).to_u32)
+      c = c &+ (value &* (i + 1).to_u32)
     end
 
     return c & CDoom::NCMD_CHECKSUM
@@ -2299,7 +2277,7 @@ c = c &+ (value &* (i + 1).to_u32)
         CDoom.nodeingame[netnode] = 0
         CDoom.playeringame[netconsole] = 0
         CDoom.doom_strcpy(CDoom.exitmsg, "Player 1 left the game")
-        CDoom.exitmsg[7] += netconsole
+        CDoom.exitmsg[7] = CDoom.exitmsg[7] + netconsole
         (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message = CDoom.exitmsg
         CDoom.g_check_demo_status if CDoom.demorecording != 0
         next
@@ -2321,7 +2299,7 @@ c = c &+ (value &* (i + 1).to_u32)
         end
         CDoom.resendcount[netnode] = CDoom::RESENDCOUNT
       else
-        CDoom.resendcount[netnode] -= 1
+        CDoom.resendcount[netnode] = CDoom.resendcount[netnode] - 1
       end
 
       # check for out of order / duplicated packet
@@ -2379,7 +2357,7 @@ c = c &+ (value &* (i + 1).to_u32)
     nowtime = CDoom.i_get_time // CDoom.ticdup
     newtics = nowtime - CDoom.gametime
     CDoom.gametime = nowtime
-    
+
     if newtics > 0 # something new to update
       if CDoom.skiptics <= newtics
         newtics -= CDoom.skiptics
@@ -2402,7 +2380,7 @@ c = c &+ (value &* (i + 1).to_u32)
         CDoom.maketic += 1
       end
 
-    return if CDoom.singletics != 0 # singletic update is syncronous
+      return if CDoom.singletics != 0 # singletic update is syncronous
 
       # send the packet to the other nodes
       CDoom.doomcom.value.numnodes.times do |i|
@@ -2505,13 +2483,13 @@ c = c &+ (value &* (i + 1).to_u32)
           CDoom.h_send_packet(i, CDoom::NCMD_SETUP)
         end
 
-         i = 10
-          while i != 0 && CDoom.h_get_packet != 0
-            if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
-              gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
-            end
-            i -= 1
+        i = 10
+        while i != 0 && CDoom.h_get_packet != 0
+          if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
+            gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
           end
+          i -= 1
+        end
 
         i = 1
         while i < CDoom.doomcom.value.numnodes
@@ -3257,7 +3235,7 @@ c = c &+ (value &* (i + 1).to_u32)
     while ticks != 0
       width.times do |i|
         if CDoom.y[i] < 0
-          CDoom.y[i] += 1
+          CDoom.y[i] = CDoom.y[i] + 1
           done = 0
         elsif CDoom.y[i] < height
           dy = (CDoom.y[i] < 16) ? CDoom.y[i] + 1 : 8
@@ -3272,7 +3250,7 @@ c = c &+ (value &* (i + 1).to_u32)
             idx += width
             j -= 1
           end
-          CDoom.y[i] += dy
+          CDoom.y[i] = CDoom.y[i] + dy
           s = CDoom.wipe_scr_start.as(Int16*) + (i * height)
           d = CDoom.wipe_scr.as(Int16*) + (CDoom.y[i] * width + i)
           idx = 0
@@ -3673,11 +3651,6 @@ c = c &+ (value &* (i + 1).to_u32)
         cmd = ((CDoom.players.to_unsafe + i).as(UInt8*) + offsetof(CDoom::Player, @cmd)).as(CDoom::Ticcmd*) # Gotta be a better way to do this
 
         CDoom.doom_memcpy(cmd, CDoom.netcmds[i].to_unsafe + buf, sizeof(CDoom::Ticcmd))
-        puts "Net"
-        puts (CDoom.netcmds[i].to_unsafe + buf).value.forwardmove
-        puts "Cmd"
-        puts cmd.value.forwardmove
-        puts
 
         CDoom.g_read_demo_ticcmd(cmd) if CDoom.demoplayback != 0
         CDoom.g_write_demo_ticcmd(cmd) if CDoom.demorecording != 0
@@ -4971,7 +4944,7 @@ c = c &+ (value &* (i + 1).to_u32)
   def self.doom_htonl(x : UInt32) : UInt32
     NEEDS_BYTE_SWAP ? x.byte_swap : x
   end
-  
+
   def self.udp_socket : UDPSocket
     begin
       UDPSocket.new(Socket::Family::INET)
@@ -5041,43 +5014,43 @@ c = c &+ (value &* (i + 1).to_u32)
     if @@first
       puts "len=#{c}:p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
     end
-      @@first = false
+    @@first = false
 
-      i = 0
-      while i < CDoom.doomcom.value.numnodes
-        addr = @@sendaddress[i]
-        break if addr && addr.address == fromaddress.address
-        i += 1
-      end
+    i = 0
+    while i < CDoom.doomcom.value.numnodes
+      addr = @@sendaddress[i]
+      break if addr && addr.address == fromaddress.address
+      i += 1
+    end
 
-      if i == CDoom.doomcom.value.numnodes
-        CDoom.doomcom.value.remotenode = -1
-        return
-      end
+    if i == CDoom.doomcom.value.numnodes
+      CDoom.doomcom.value.remotenode = -1
+      return
+    end
 
-      CDoom.doomcom.value.remotenode = i
-      CDoom.doomcom.value.datalength = c
+    CDoom.doomcom.value.remotenode = i
+    CDoom.doomcom.value.datalength = c
 
-      CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
-      CDoom.netbuffer.value.player = sw.player
-      CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
-      CDoom.netbuffer.value.starttic = sw.starttic
-      CDoom.netbuffer.value.numtics = sw.numtics
+    CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
+    CDoom.netbuffer.value.player = sw.player
+    CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
+    CDoom.netbuffer.value.starttic = sw.starttic
+    CDoom.netbuffer.value.numtics = sw.numtics
 
-      CDoom.netbuffer.value.numtics.times do |c|
-        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
-        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
-        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
-        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
-        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
-        (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
-      end
+    CDoom.netbuffer.value.numtics.times do |c|
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
+    end
   end
 
   def self.get_local_address : Int32
     hostname = System.hostname
     hostentry = Socket::Addrinfo.resolve(hostname, nil,
-    family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
+      family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
 
     i_error("Error: get_local_address : get_host_by_name: couldn't get local host") unless hostentry
 
@@ -5144,17 +5117,17 @@ c = c &+ (value &* (i + 1).to_u32)
       arg = String.new(CDoom.myargv[i])
 
       @@sendaddress[CDoom.doomcom.value.numnodes] =
-      if arg[0] == '.'
-        Socket::IPAddress.new(arg[1..], @@doomport)
-      else
-        hostentry = Socket::Addrinfo.resolve(arg, nil,
-          family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
+        if arg[0] == '.'
+          Socket::IPAddress.new(arg[1..], @@doomport)
+        else
+          hostentry = Socket::Addrinfo.resolve(arg, nil,
+            family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
 
-        CDoom.i_error("Error: gethostbyname: couldn't find #{arg}") unless hostentry
+          CDoom.i_error("Error: gethostbyname: couldn't find #{arg}") unless hostentry
 
-        Socket::IPAddress.new(hostentry.not_nil!.ip_address.address, @@doomport)
-      end
-    CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
+          Socket::IPAddress.new(hostentry.not_nil!.ip_address.address, @@doomport)
+        end
+      CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
     end
 
     CDoom.doomcom.value.id = CDoom::DOOMCOM_ID
@@ -5212,7 +5185,7 @@ c = c &+ (value &* (i + 1).to_u32)
     sfx = CDoom.w_cache_lump_num(sfxlump, CDoom::PU_STATIC).as(UInt8*)
 
     samplerate = (sfx + 0x02).as(UInt16*).value
-     # Do we need to resample?
+    # Do we need to resample?
     if (resample_div = samplerate // CDoom::DOOM_SAMPLERATE) > 1
       # Boy do we!
       # Downsample multiples of DOOM_SAMPLERATE.
@@ -5230,8 +5203,6 @@ c = c &+ (value &* (i + 1).to_u32)
         sfx[i + 8 + 16] = (avg // resample_div).to_u8!
       end
     end
-
-
 
     # Pads the sound effect out to the mixing buffer size.
     # The original realloc would interfere with zone memory.
@@ -5591,7 +5562,7 @@ c = c &+ (value &* (i + 1).to_u32)
       end
 
       if done
-        puts " finished!" 
+        puts " finished!"
         break
       end
 
@@ -5599,8 +5570,6 @@ c = c &+ (value &* (i + 1).to_u32)
         puts " couldn't finish."
         break
       end
-
-      update_audio
     end
 
     @@audio_stream.try { |a| RAudio.unload_audio_stream(a) }
@@ -5610,7 +5579,9 @@ c = c &+ (value &* (i + 1).to_u32)
   end
 
   def self.update_audio
-    1.times do |i|
+    loop do
+      next unless Raylib.window_ready? && RAudio.audio_device_ready? && 
+      !@@audio_stream.nil? && !@@adl_player.nil?
       now = Raylib.get_time
       @@midi_tick_accumulator += now - @@last_time
       @@last_time = now
@@ -5926,13 +5897,13 @@ c = c &+ (value &* (i + 1).to_u32)
           break unless delay_byte & 0b10000000 != 0
         end
 
-        return  midi_event.to_u64!
+        return midi_event.to_u64!
       end
     end
 
     CDoom.mus_delay -= 1
 
-    return  midi_event.to_u64!
+    return midi_event.to_u64!
   end
 
   def self.i_tactile(on : LibC::Int, off : LibC::Int, total : LibC::Int)
@@ -5970,6 +5941,7 @@ c = c &+ (value &* (i + 1).to_u32)
   # i_init
   #
   def self.i_init
+    CDoom.i_init_graphics
     CDoom.i_init_sound
     CDoom.i_init_music
   end
@@ -5993,7 +5965,6 @@ c = c &+ (value &* (i + 1).to_u32)
     till = now + Time::Span.new(nanoseconds: (count * (1000000 // 70)) * 1000)
     while now < till
       now = Time.instant
-      update_audio
     end
   end
 
@@ -6031,6 +6002,87 @@ c = c &+ (value &* (i + 1).to_u32)
   end
 
   def self.i_start_tic
+    poll_key(TAB, Tab)
+    poll_key(ENTER, Enter)
+    poll_key(ESCAPE, Escape)
+    poll_key(SPACE, Space)
+    poll_key(APOSTROPHE, Apostrophe)
+    poll_key(MULTIPLY, KpMultiply)
+    poll_key(COMMA, Comma)
+    poll_key(MINUS, Minus)
+    poll_key(PERIOD, Period)
+    poll_key(SLASH, Slash)
+    poll_key(ZERO, Zero)
+    poll_key(ONE, One)
+    poll_key(TWO, Two)
+    poll_key(THREE, Three)
+    poll_key(FOUR, Four)
+    poll_key(FIVE, Five)
+    poll_key(SIX, Six)
+    poll_key(SEVEN, Seven)
+    poll_key(EIGHT, Eight)
+    poll_key(NINE, Nine)
+    poll_key(SEMICOLON, Semicolon)
+    poll_key(EQUALS, Equal)
+    poll_key(LEFT_BRACKET, LeftBracket)
+    poll_key(RIGHT_BRACKET, RightBracket)
+    poll_key(A, A)
+    poll_key(B, B)
+    poll_key(C, C)
+    poll_key(D, D)
+    poll_key(E, E)
+    poll_key(F, F)
+    poll_key(G, G)
+    poll_key(H, H)
+    poll_key(I, I)
+    poll_key(J, J)
+    poll_key(K, K)
+    poll_key(L, L)
+    poll_key(M, M)
+    poll_key(N, N)
+    poll_key(O, O)
+    poll_key(P, P)
+    poll_key(Q, Q)
+    poll_key(R, R)
+    poll_key(S, S)
+    poll_key(T, T)
+    poll_key(U, U)
+    poll_key(V, V)
+    poll_key(W, W)
+    poll_key(X, X)
+    poll_key(Y, Y)
+    poll_key(Z, Z)
+    poll_key(BACKSPACE, Backspace)
+    poll_key(CTRL, LeftControl)
+    poll_key(CTRL, RightControl)
+    poll_key(LEFT_ARROW, Left)
+    poll_key(UP_ARROW, Up)
+    poll_key(RIGHT_ARROW, Right)
+    poll_key(DOWN_ARROW, Down)
+    poll_key(SHIFT, LeftShift)
+    poll_key(SHIFT, RightShift)
+    poll_key(ALT, LeftAlt)
+    poll_key(ALT, RightAlt)
+    poll_key(F1, F1)
+    poll_key(F2, F2)
+    poll_key(F3, F3)
+    poll_key(F4, F4)
+    poll_key(F5, F5)
+    poll_key(F6, F6)
+    poll_key(F7, F7)
+    poll_key(F8, F8)
+    poll_key(F9, F9)
+    poll_key(F10, F10)
+    poll_key(F11, F11)
+    poll_key(F12, F12)
+    poll_key(PAUSE, Pause)
+
+    poll_button(LEFT, Left)
+    poll_button(RIGHT, Right)
+    poll_button(MIDDLE, Middle)
+
+    delta = Raylib.get_mouse_delta * 2
+    LibDoom.doom_mouse_move(delta.x.to_i32, delta.y.to_i32)
   end
 
   def self.i_update_no_blit
@@ -6057,6 +6109,8 @@ c = c &+ (value &* (i + 1).to_u32)
         i += 2
       end
     end
+
+    doom_draw
   end
 
   def self.i_read_screen(scr : CDoom::Byte*)
@@ -11223,7 +11277,7 @@ c = c &+ (value &* (i + 1).to_u32)
 
       if CDoom.openrange < CDoom.slidemo.value.height ||                       # doesn't fit
          CDoom.opentop - CDoom.slidemo.value.z < CDoom.slidemo.value.height || # mobj is too hight
-         CDoom.openbottom - CDoom.slidemo.value.z > 24 * FRACUNIT       # too big a step up
+         CDoom.openbottom - CDoom.slidemo.value.z > 24 * FRACUNIT              # too big a step up
         isblocking = true
       end
 
@@ -16057,8 +16111,8 @@ c = c &+ (value &* (i + 1).to_u32)
     # pause if in menu and at least one tic has been run
     if CDoom.netgame == 0 &&
        CDoom.menuactive != 0 &&
-       CDoom.demoplayback == 0 &&
-       CDoom.players[CDoom.consoleplayer].viewz != 1
+       CDoom.demoplayback == 0
+      CDoom.players[CDoom.consoleplayer].viewz != 1
       return
     end
     CDoom::MAXPLAYERS.times { |i| CDoom.p_player_think(CDoom.players.to_unsafe + i) if CDoom.playeringame[i] != 0 }
@@ -17398,16 +17452,14 @@ c = c &+ (value &* (i + 1).to_u32)
     CDoom.translationtables = Pointer(CDoom::Byte).new((CDoom.translationtables.address + 255) & ~255)
 
     print "["
-      ((256 + 15) // 16).times { |i| print " " }
-      print "]"
-      (((256 + 15) // 16) + 1).times { |i| print "\b" }
-
+    ((256 + 15) // 16).times { |i| print " " }
+    print "]"
+    (((256 + 15) // 16) + 1).times { |i| print "\b" }
 
     # translate just the 16 green colors
     256.times do |i|
-        print "." if i & 15 == 0
+      print "." if i & 15 == 0
       if i >= 0x70 && i <= 0x7f
-
         # map green ramp to gray, brown, red
         CDoom.translationtables[i] = 0x60_u8 + (i & 0xf)
         CDoom.translationtables[i + 256] = 0x40_u8 + (i & 0xf)
@@ -17842,8 +17894,8 @@ c = c &+ (value &* (i + 1).to_u32)
 
   def self.r_init_tables
     {% unless flag?("PRECOMPUTED") %}
-    # FINE TANGENT COMPUTE
-      
+      # FINE TANGENT COMPUTE
+
       print "\n  finetangent             - ["
       ((FINETANGENT_SIZE + 255) // 256).times { |i| print " " }
       print "]"
@@ -17868,16 +17920,15 @@ c = c &+ (value &* (i + 1).to_u32)
 
       # FINE SINE COMPUTE
       print "  finesine                - ["
-    ((FINESINE_SIZE + 255) // 256).times { |i| print " " }
+      ((FINESINE_SIZE + 255) // 256).times { |i| print " " }
       print "]"
       (((FINESINE_SIZE + 255) // 256) + 1).times { |i| print "\b" }
 
       FINESINE_SIZE.times do |i|
         print "." if i & 255 == 0
-        
-rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
-        @@finesine << (Math.sin(rad) * FRACUNIT).to_i32
 
+        rad = (i + 0.5) * (2.0 * PI / FINEANGLES)
+        @@finesine << (Math.sin(rad) * FRACUNIT).to_i32
       end
       puts "]"
 
