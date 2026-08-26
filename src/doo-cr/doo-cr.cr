@@ -2488,6 +2488,7 @@ module LibDoom
               numips.times do |i|
                 # Load other client's IP addresses
                 CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
+                CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
                 @@sendaddress[i + 1] = Socket::IPAddress.v4(
                   ipnums[0], ipnums[1], ipnums[2], ipnums[3],
                   port: @@doomport)
@@ -2527,7 +2528,8 @@ module LibDoom
             CDoom.h_send_packet(CDoom.doomcom.value.numnodes, NCMD_SETUP)
 
             CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
-            puts "connect client!"
+            CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
+            puts "connected client!"
           end
           i -= 1
         end
@@ -2537,7 +2539,7 @@ module LibDoom
         # Space to start game and end waiting for connections
         if CDoom.doomcom.value.numnodes >= CDoom::MAXPLAYERS ||
            Raylib::KeyboardKey::Space.down?
-           puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
+          puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
           # Distribute ips
           CDoom.netbuffer.value.retransmitfrom = 19
           CDoom.netbuffer.value.starttic = 69
@@ -2552,14 +2554,15 @@ module LibDoom
               ipnums.value = ipnum
               ipnums += 1
             end
-            CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1
+            CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1 if i % 2 == 0
           end
 
           # Send out
-          CDoom.doomcom.value.numnodes.times do |i|
-            h_send_packet(i, NCMD_DISTRIBUTE)
+          1000.times do
+            CDoom.doomcom.value.numnodes.times do |i|
+              h_send_packet(i, NCMD_DISTRIBUTE)
+            end
           end
-
           break
         end
       end
@@ -5097,12 +5100,11 @@ module LibDoom
       end
       if CDoom.doomcom.value.numnodes < CDoom::MAXPLAYERS
         # We have room, return if invalid data
-        puts sw.starttic
         if doom_htonl(sw.checksum) & NCMD_CONNECT != 0 &&
            sw.retransmitfrom == 69 && sw.starttic == 19 &&
            sw.numtics == 0
           # Add it in
-          
+
           @@sendaddress[i] = fromaddress
         else
           CDoom.doomcom.value.remotenode = -1
