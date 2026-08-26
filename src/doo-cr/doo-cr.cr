@@ -212,7 +212,7 @@ module LibDoom
         scale = [scalew, scaleh].min
 
         Raylib.begin_drawing
-        Raylib.clear_background(Raylib::BLACK)
+        # Raylib.clear_background(Raylib::BLACK)
         Raylib.draw_texture_pro(st,
           Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
           Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
@@ -2444,63 +2444,67 @@ module LibDoom
     CDoom.doom_memset(gotinfo, 0, sizeof(typeof(gotinfo)))
 
     if CDoom.doomcom.value.consoleplayer != 0
-      # listen for setup info from key player
-      puts "listening for network start info..."
-      while true
-        CDoom.check_abort
-        next if CDoom.h_get_packet == 0
-        if CDoom.netbuffer.value.checksum & CDoom::NCMD_SETUP != 0
-          if CDoom.netbuffer.value.player != CDoom::VERSION
-            CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
-          end
-          CDoom.startskill = CDoom::Skill.new(CDoom.netbuffer.value.retransmitfrom & 15)
-          CDoom.deathmatch = (CDoom.netbuffer.value.retransmitfrom & 0xc0) >> 6
-          CDoom.nomonsters = (CDoom.netbuffer.value.retransmitfrom & 0x20) > 0
-          CDoom.respawnparm = (CDoom.netbuffer.value.retransmitfrom & 0x10) > 0
-          CDoom.startmap = CDoom.netbuffer.value.starttic & 0x3f
-          CDoom.startepisode = CDoom.netbuffer.value.starttic >> 6
-          return
-        end
-      end
-    else
-      # key player, send the setup info
-      puts "sending network start info..."
-      loop do
-        CDoom.check_abort
-        CDoom.doomcom.value.numnodes.times do |i|
-          CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
-          if CDoom.deathmatch != 0
-            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
-          end
-          if CDoom.nomonsters != 0
-            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
-          end
-          if CDoom.respawnparm != 0
-            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
-          end
-          CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
-          CDoom.netbuffer.value.player = CDoom::VERSION
-          CDoom.netbuffer.value.numtics = 0
-          CDoom.h_send_packet(i, CDoom::NCMD_SETUP)
-        end
-
-        i = 10
-        while i != 0 && CDoom.h_get_packet != 0
-          if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
-            gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
-          end
-          i -= 1
-        end
-
-        i = 1
-        while i < CDoom.doomcom.value.numnodes
-          break if gotinfo[i] == 0
-          i += 1
-        end
-
-        break unless i < CDoom.doomcom.value.numnodes
-      end
+  # listen for setup info from key player
+  puts "listening for network start info..."
+  while true
+    CDoom.check_abort
+    if CDoom.h_get_packet == 0
+      Fiber.yield
+      next
     end
+    if CDoom.netbuffer.value.checksum & CDoom::NCMD_SETUP != 0
+      if CDoom.netbuffer.value.player != CDoom::VERSION
+        CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
+      end
+      CDoom.startskill = CDoom::Skill.new(CDoom.netbuffer.value.retransmitfrom & 15)
+      CDoom.deathmatch = (CDoom.netbuffer.value.retransmitfrom & 0xc0) >> 6
+      CDoom.nomonsters = (CDoom.netbuffer.value.retransmitfrom & 0x20) > 0
+      CDoom.respawnparm = (CDoom.netbuffer.value.retransmitfrom & 0x10) > 0
+      CDoom.startmap = CDoom.netbuffer.value.starttic & 0x3f
+      CDoom.startepisode = CDoom.netbuffer.value.starttic >> 6
+      return
+    end
+  end
+else
+  # key player, send the setup info
+  puts "sending network start info..."
+  loop do
+    CDoom.check_abort
+    CDoom.doomcom.value.numnodes.times do |i|
+      CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
+      if CDoom.deathmatch != 0
+        CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
+      end
+      if CDoom.nomonsters != 0
+        CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
+      end
+      if CDoom.respawnparm != 0
+        CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
+      end
+      CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
+      CDoom.netbuffer.value.player = CDoom::VERSION
+      CDoom.netbuffer.value.numtics = 0
+      CDoom.h_send_packet(i, CDoom::NCMD_SETUP)
+    end
+
+    i = 10
+    while i != 0 && CDoom.h_get_packet != 0
+      if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
+        gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
+      end
+      i -= 1
+    end
+
+    i = 1
+    while i < CDoom.doomcom.value.numnodes
+      break if gotinfo[i] == 0
+      i += 1
+    end
+
+    break unless i < CDoom.doomcom.value.numnodes
+    sleep 10.milliseconds
+  end
+end
   end
 
   #
@@ -2628,21 +2632,22 @@ module LibDoom
 
     # wait for new tics if needed
     while lowtic < CDoom.gametic // CDoom.ticdup + counts
-      CDoom.net_update
-      lowtic = Int32::MAX
+  CDoom.net_update
+  Fiber.yield
+  lowtic = Int32::MAX
 
-      CDoom.doomcom.value.numnodes.times do |i|
-        lowtic = CDoom.nettics[i] if CDoom.nodeingame[i] != 0 && CDoom.nettics[i] < lowtic
-      end
+  CDoom.doomcom.value.numnodes.times do |i|
+    lowtic = CDoom.nettics[i] if CDoom.nodeingame[i] != 0 && CDoom.nettics[i] < lowtic
+  end
 
-      CDoom.i_error("Error: try_run_tics: lowtic < CDoom.gametic") if lowtic < CDoom.gametic // CDoom.ticdup
+  CDoom.i_error("Error: try_run_tics: lowtic < CDoom.gametic") if lowtic < CDoom.gametic // CDoom.ticdup
 
-      # don't stay in here forever -- give the menu a chance to work
-      if CDoom.i_get_time // CDoom.ticdup - entertic >= 20
-        CDoom.m_ticker
-        return
-      end
-    end
+  # don't stay in here forever -- give the menu a chance to work
+  if CDoom.i_get_time // CDoom.ticdup - entertic >= 20
+    CDoom.m_ticker
+    return
+  end
+end
 
     # run the count * ticdup dics
     while counts != 0
@@ -4995,58 +5000,55 @@ module LibDoom
   @@first = true
 
   def self.packet_get
-    sock = @@insocket
-    unless sock
-      CDoom.doomcom.value.remotenode = -1
-      return
-    end
-
-    sw = uninitialized CDoom::Doomdata
-    buf = Bytes.new(pointerof(sw).as(UInt8*), sizeof(CDoom::Doomdata))
-
-    fromaddress = uninitialized Socket::IPAddress
-    begin
-      c, fromaddress = sock.receive(buf)
-    rescue ex
-      CDoom.doomcom.value.remotenode = -1
-      return
-    end
-
-    if @@first
-      puts "len=#{c}:p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
-    end
-    @@first = false
-
-    i = 0
-    while i < CDoom.doomcom.value.numnodes
-      addr = @@sendaddress[i]
-      break if addr && addr.address == fromaddress.address
-      i += 1
-    end
-
-    if i == CDoom.doomcom.value.numnodes
-      CDoom.doomcom.value.remotenode = -1
-      return
-    end
-
-    CDoom.doomcom.value.remotenode = i
-    CDoom.doomcom.value.datalength = c
-
-    CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
-    CDoom.netbuffer.value.player = sw.player
-    CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
-    CDoom.netbuffer.value.starttic = sw.starttic
-    CDoom.netbuffer.value.numtics = sw.numtics
-
-    CDoom.netbuffer.value.numtics.times do |c|
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
-    end
+  sock = @@insocket
+  unless sock
+    CDoom.doomcom.value.remotenode = -1
+    return
   end
+
+  select
+  when result = @@recv_channel.receive
+    sw, fromaddress = result
+  else
+    CDoom.doomcom.value.remotenode = -1
+    return
+  end
+
+  if @@first
+    puts "len=p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
+  end
+  @@first = false
+
+  i = 0
+  while i < CDoom.doomcom.value.numnodes
+    addr = @@sendaddress[i]
+    break if addr && addr.address == fromaddress.address
+    i += 1
+  end
+
+  if i == CDoom.doomcom.value.numnodes
+    CDoom.doomcom.value.remotenode = -1
+    return
+  end
+
+  CDoom.doomcom.value.remotenode = i
+  CDoom.doomcom.value.datalength = sizeof(CDoom::Doomdata)
+
+  CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
+  CDoom.netbuffer.value.player = sw.player
+  CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
+  CDoom.netbuffer.value.starttic = sw.starttic
+  CDoom.netbuffer.value.numtics = sw.numtics
+
+  CDoom.netbuffer.value.numtics.times do |c|
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
+  end
+end
 
   def self.get_local_address : Int32
     hostname = System.hostname
@@ -5135,10 +5137,23 @@ module LibDoom
     CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numnodes
 
     @@insocket = udp_socket()
-    bind_to_local_port(@@insocket.not_nil!, @@doomport)
-    @@insocket.not_nil!.read_timeout = 69.millisecond
+bind_to_local_port(@@insocket.not_nil!, @@doomport)
 
-    @@sendsocket = udp_socket()
+@@sendsocket = udp_socket()
+
+spawn do
+  sock = @@insocket.not_nil!
+  loop do
+    sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
+    buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
+    begin
+      c, fromaddress = sock.receive(buf)
+      @@recv_channel.send({sw_ptr.value, fromaddress})
+    rescue ex
+      break
+    end
+  end
+end
   end
 
   def self.i_net_cmd
