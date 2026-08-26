@@ -4992,7 +4992,11 @@ module LibDoom
     end
 
     bytes = Bytes.new(pointerof(sw).as(UInt8*), CDoom.doomcom.value.datalength)
-    c = sock.send(bytes, to: dest)
+    begin
+      c = sock.send(bytes, to: dest)
+    rescue ex
+        i_error("Error: packet_send: Failed to send packet to #{dest.address}:#{dest.port}")
+    end
   end
 
   @@first = true
@@ -5124,7 +5128,7 @@ module LibDoom
           hostentry = Socket::Addrinfo.resolve(arg, nil,
             family: Socket::Family::INET, type: Socket::Type::DGRAM).first?
 
-          CDoom.i_error("Error: gethostbyname: couldn't find #{arg}") unless hostentry
+          CDoom.i_error("Error: i_init_network: couldn't find #{arg}") unless hostentry
 
           Socket::IPAddress.new(hostentry.not_nil!.ip_address.address, @@doomport)
         end
