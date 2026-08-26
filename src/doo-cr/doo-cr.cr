@@ -2483,7 +2483,6 @@ module LibDoom
               ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
 
               numips.times do |i|
-                puts "Loading ip"
                 # Load other client's IP addresses
                 CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
                 CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
@@ -2493,6 +2492,7 @@ module LibDoom
                 ipnums += 4
               end
             end
+            return
           end
         end
       end
@@ -2541,14 +2541,15 @@ module LibDoom
           # Distribute ips
           CDoom.netbuffer.value.retransmitfrom = 19
           CDoom.netbuffer.value.starttic = 69
-          CDoom.netbuffer.value.numtics = 0
 
-          ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
 
           # Build ips into ticcmds
 
           # Send out
           CDoom.doomcom.value.numnodes.times do |i|
+          CDoom.netbuffer.value.numtics = 0
+          ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+
             @@sendaddress.each do |add|
               next if !add || add == @@sendaddress[i]
               puts "sending ip"
@@ -2563,7 +2564,7 @@ module LibDoom
               h_send_packet(i, NCMD_DISTRIBUTE)
             end
           end
-          break
+          return
         end
       end
     end
