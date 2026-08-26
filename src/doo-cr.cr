@@ -24,6 +24,15 @@ RANGECHECK = true
 macro poll_key(doomkey, raylibkey)
   was_down = LibDoom.keystates[CDoom::DoomKey::{{doomkey}}.value]
   is_down = Raylib::KeyboardKey::{{raylibkey}}.down?
+
+  LibDoom.doom_key_down(CDoom::DoomKey::{{doomkey}}) if is_down && !was_down
+  LibDoom.doom_key_up(CDoom::DoomKey::{{doomkey}}) if !is_down && was_down
+end
+
+macro poll_two_key(doomkey, raylibkey1, raylibkey2)
+  was_down = LibDoom.keystates[CDoom::DoomKey::{{doomkey}}.value]
+  is_down = Raylib::KeyboardKey::{{raylibkey1}}.down? || Raylib::KeyboardKey::{{raylibkey2}}.down?
+  
   LibDoom.doom_key_down(CDoom::DoomKey::{{doomkey}}) if is_down && !was_down
   LibDoom.doom_key_up(CDoom::DoomKey::{{doomkey}}) if !is_down && was_down
 end
