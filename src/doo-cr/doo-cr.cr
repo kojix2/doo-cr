@@ -4994,15 +4994,15 @@ module LibDoom
 
   @@first = true
 
-    def self.packet_get
+  def self.packet_get
     sock = @@insocket
     unless sock
       CDoom.doomcom.value.remotenode = -1
       return
     end
 
-    sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
-    buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
+    sw = uninitialized CDoom::Doomdata
+    buf = Bytes.new(pointerof(sw).as(UInt8*), sizeof(CDoom::Doomdata))
 
     fromaddress = uninitialized Socket::IPAddress
     begin
@@ -5013,7 +5013,7 @@ module LibDoom
     end
 
     if @@first
-      puts "len=#{c}:p=[0x#{sw_ptr.value.checksum.to_s(16)} 0x#{sw_ptr.value.player.to_s(16)}]"
+      puts "len=#{c}:p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
     end
     @@first = false
 
@@ -5032,19 +5032,19 @@ module LibDoom
     CDoom.doomcom.value.remotenode = i
     CDoom.doomcom.value.datalength = c
 
-    CDoom.netbuffer.value.checksum = doom_htonl(sw_ptr.value.checksum)
-    CDoom.netbuffer.value.player = sw_ptr.value.player
-    CDoom.netbuffer.value.retransmitfrom = sw_ptr.value.retransmitfrom
-    CDoom.netbuffer.value.starttic = sw_ptr.value.starttic
-    CDoom.netbuffer.value.numtics = sw_ptr.value.numtics
+    CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
+    CDoom.netbuffer.value.player = sw.player
+    CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
+    CDoom.netbuffer.value.starttic = sw.starttic
+    CDoom.netbuffer.value.numtics = sw.numtics
 
     CDoom.netbuffer.value.numtics.times do |c|
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw_ptr.value.cmds[c].forwardmove
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw_ptr.value.cmds[c].sidemove
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw_ptr.value.cmds[c].angleturn)
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw_ptr.value.cmds[c].consistancy)
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw_ptr.value.cmds[c].chatchar
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw_ptr.value.cmds[c].buttons
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
     end
   end
 
