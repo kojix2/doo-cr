@@ -3034,7 +3034,6 @@ lib CDoom
   #
   # Fixed point, 32bit as 16.16.
   #
-  
 
   alias Fixed = LibC::Int
 
@@ -3504,7 +3503,6 @@ lib CDoom
 
   # __TABLES__
 
-
   FINEANGLES = 8192
   FINEMASK   = (FINEANGLES - 1)
 
@@ -3516,9 +3514,6 @@ lib CDoom
   # Re-use data, is just PI/2 pahse shift.
 
   # Effective size is 4096.
-  
-
-  
 
   alias Angle = LibC::UInt
 
