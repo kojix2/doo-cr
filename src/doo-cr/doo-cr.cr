@@ -2486,10 +2486,8 @@ module LibDoom
 
         i = 10
         while i != 0 && CDoom.h_get_packet != 0
-          puts "DEBUG got packet, player=#{CDoom.netbuffer.value.player}, numnodes=#{CDoom.doomcom.value.numnodes}"
           if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
             gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
-            puts "DEBUG gotinfo[#{CDoom.netbuffer.value.player & 0x7f}] set"
           end
           i -= 1
         end
@@ -2499,8 +2497,6 @@ module LibDoom
           break if gotinfo[i] == 0
           i += 1
         end
-        puts "DEBUG loop check: i=#{i} numnodes=#{CDoom.doomcom.value.numnodes} gotinfo[1]=#{gotinfo[1]?}"
-
 
         break unless i < CDoom.doomcom.value.numnodes
       end
@@ -5140,7 +5136,7 @@ module LibDoom
 
     @@insocket = udp_socket()
     bind_to_local_port(@@insocket.not_nil!, @@doomport)
-    Socket.set_blocking(@@insocket.not_nil!.fd, false)
+    @@insocket.not_nil!.read_timeout = 1.millisecond
 
     @@sendsocket = udp_socket()
   end
