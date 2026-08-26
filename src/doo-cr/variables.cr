@@ -27,8 +27,7 @@ module LibDoom
 
   CDoom.precache = 1
 
-  class_getter menukeydown = Array(Bool).new(CDoom::NUMKEYS, false)
-  class_getter menumousebuttons = Array(Bool).new(3, false)
+  class_getter keystates = Array(Bool).new(CDoom::NUMKEYS, false)
 
   @@mousedelta = Raylib::Vector2.new
 

@@ -277,6 +277,7 @@ module LibDoom
   end
 
   def self.doom_key_down(key : CDoom::DoomKey)
+    @@keystates[key.value] = true
     event = CDoom::Event.new
     event.type = CDoom::Evtype::Keydown
     event.data1 = key.value
@@ -284,6 +285,7 @@ module LibDoom
   end
 
   def self.doom_key_up(key : CDoom::DoomKey)
+    @@keystates[key.value] = false
     event = CDoom::Event.new
     event.type = CDoom::Evtype::Keyup
     event.data1 = key.value
@@ -292,7 +294,6 @@ module LibDoom
 
   def self.doom_button_down(button : CDoom::DoomButton)
     CDoom.button_states[button.value] = 1
-    @@menumousebuttons[button.value] = true
 
     event = CDoom::Event.new
     event.type = CDoom::Evtype::Mouse
@@ -307,7 +308,6 @@ module LibDoom
 
   def self.doom_button_up(button : CDoom::DoomButton)
     CDoom.button_states[button.value] = 0
-    @@menumousebuttons[button.value] = false
 
     event = CDoom::Event.new
     event.type = CDoom::Evtype::Mouse
@@ -7176,12 +7176,7 @@ module LibDoom
           @@mousewait = CDoom.i_get_time + 15
         end
       else
-        if ev.value.type == CDoom::Evtype::Keydown
-        ch = ev.value.data1 
-        @@menukeydown[ch] = true if ev.value.data1 < CDoom::NUMKEYS
-        elsif  ev.value.type == CDoom::Evtype::Keyup
-          @@menukeydown[ev.value.data1] = false if ev.value.data1 < CDoom::NUMKEYS
-        end
+        ch = ev.value.data1 if ev.value.type == CDoom::Evtype::Keydown
       end
     end
 
