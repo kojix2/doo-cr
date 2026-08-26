@@ -2440,10 +2440,7 @@ module LibDoom
   # d_arbitrate_net_start
   #
   def self.d_arbitrate_net_start
-    gotinfo = uninitialized StaticArray(CDoom::DoomBool, CDoom::MAXNETNODES)
-
     CDoom.autostart = 1
-    CDoom.doom_memset(gotinfo, 0, sizeof(typeof(gotinfo)))
 
     if CDoom.doomcom.value.consoleplayer != 0
       puts "sending connection info..."
@@ -2505,13 +2502,8 @@ module LibDoom
         doom_draw
         CDoom.check_abort
 
-        i = 10
-        while i != 0 && CDoom.h_get_packet != 0
-          if CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0
-            # New address, connect them. Propogate IP
-            next if gotinfo[CDoom.netbuffer.value.player & 0x7f] != 0 # Already connected
-            gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
-
+        CDoom.doomcom.value.numnodes.times do |i|
+          # Send out setup until everyones loaded
             CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
             if CDoom.deathmatch != 0
               CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
@@ -2525,8 +2517,13 @@ module LibDoom
             CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
             CDoom.netbuffer.value.player = CDoom::VERSION
             CDoom.netbuffer.value.numtics = 0
-            CDoom.h_send_packet(CDoom.doomcom.value.numnodes, NCMD_SETUP)
+            CDoom.h_send_packet(i, NCMD_SETUP)
+          end
 
+        i = 10
+        while i != 0 && CDoom.h_get_packet != 0
+          if CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
+            CDoom.netbuffer.value.player & 0x7f == CDoom.doomcom.value.numplayers + 1
             CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
             CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
             puts "connected client!"
