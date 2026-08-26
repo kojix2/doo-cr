@@ -50,7 +50,7 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	$(CHANGE_LIB_NAMES)
 
 	cd ./bin && \
-	./doo-cr -net 1 -deathmatch -nomonsters -warp 01
+	./doo-cr -net -deathmatch -nomonsters -warp 01
 
 arm: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \
@@ -62,7 +62,7 @@ arm: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	$(CHANGE_LIB_NAMES)
 
 	cd ./bin && \
-	./doo-cr.exe -net 2 192.168.0.233
+	./doo-cr.exe -net 192.168.0.233
 
 clean:
 	rm -rf raylib
