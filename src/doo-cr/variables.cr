@@ -41,6 +41,16 @@ module LibDoom
   @@litelevels : StaticArray(Int32, 8) = StaticArray[0, 4, 7, 10, 12, 14, 15, 15]
   @@litelevelscnt = 0
 
+  NCMD_EXIT       = 0x80000000
+  NCMD_RETRANSMIT = 0x40000000
+  NCMD_SETUP      = 0x20000000
+  NCMD_KILL       = 0x10000000 # kill game
+  NCMD_CONNECT    = 0x08000000
+  NCMD_DISTRIBUTE = 0x04000000
+  NCMD_CHECKSUM   = 0x03ffffff
+
+  RESENDCOUNT =   10
+  PL_DRONE    = 0x80             # bit flag in doomdata->player
   @@doomport : Int32 = 5029      # CDoom::IPPORT_USERRESERVED + 0x1d
   @@doomport_send : Int32 = 5030 # CDoom::IPPORT_USERRESERVED + 0x1e
 

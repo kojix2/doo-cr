@@ -6371,15 +6371,6 @@ lib CDoom
 
   fun d_doom_main = D_DoomMain
 
-  NCMD_EXIT       = 0x80000000
-  NCMD_RETRANSMIT = 0x40000000
-  NCMD_SETUP      = 0x20000000
-  NCMD_KILL       = 0x10000000 # kill game
-  NCMD_CHECKSUM   = 0x0fffffff
-
-  RESENDCOUNT =   10
-  PL_DRONE    = 0x80 # bit flag in doomdata->player
-
   $doomcom : Doomcom*
   $netbuffer : Doomdata* # points inside doomcom
 

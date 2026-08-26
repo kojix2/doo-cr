@@ -2126,7 +2126,7 @@ module LibDoom
     #   c = c &+ (value &* (i + 1).to_u32)
     # end
 
-    # return c & CDoom::NCMD_CHECKSUM
+    # return c & NCMD_CHECKSUM
     return 0_u32
   end
 
@@ -2166,7 +2166,7 @@ module LibDoom
 
     if !CDoom.debugfile.null?
       realretrans = -1
-      if CDoom.netbuffer.value.checksum & CDoom::NCMD_RETRANSMIT != 0
+      if CDoom.netbuffer.value.checksum & NCMD_RETRANSMIT != 0
         realretrans = CDoom.expand_tics(CDoom.netbuffer.value.retransmitfrom)
       end
 
@@ -2221,7 +2221,7 @@ module LibDoom
       return 0
     end
 
-    if CDoom.net_buffer_checksum != CDoom.netbuffer.value.checksum & CDoom::NCMD_CHECKSUM
+    if CDoom.net_buffer_checksum != CDoom.netbuffer.value.checksum & NCMD_CHECKSUM
       if !CDoom.debugfile.null?
         CDoom.doom_fprint(CDoom.debugfile, "bad packet checksum\n")
       end
@@ -2229,11 +2229,11 @@ module LibDoom
     end
 
     if !CDoom.debugfile.null?
-      if CDoom.netbuffer.value.checksum & CDoom::NCMD_SETUP != 0
+      if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
         CDoom.doom_fprint(CDoom.debugfile, "setup packet\n")
       else
         realretrans = -1
-        if CDoom.netbuffer.value.checksum & CDoom::NCMD_RETRANSMIT != 0
+        if CDoom.netbuffer.value.checksum & NCMD_RETRANSMIT != 0
           realretrans = CDoom.expand_tics(CDoom.netbuffer.value.retransmitfrom)
         end
 
@@ -2264,9 +2264,9 @@ module LibDoom
   #
   def self.get_packets
     while CDoom.h_get_packet != 0
-      next if CDoom.netbuffer.value.checksum & CDoom::NCMD_SETUP != 0 # extra setup packet
+      next if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0 # extra setup packet
 
-      netconsole = CDoom.netbuffer.value.player & ~CDoom::PL_DRONE
+      netconsole = CDoom.netbuffer.value.player & ~PL_DRONE
       netnode = CDoom.doomcom.value.remotenode
 
       # to save bytes, only the low byte of tic numbers are sent
@@ -2275,7 +2275,7 @@ module LibDoom
       realend = realstart + CDoom.netbuffer.value.numtics
 
       # check for exiting the game
-      if CDoom.netbuffer.value.checksum & CDoom::NCMD_EXIT != 0
+      if CDoom.netbuffer.value.checksum & NCMD_EXIT != 0
         next if CDoom.nodeingame[netnode] == 0
         CDoom.nodeingame[netnode] = 0
         CDoom.playeringame[netconsole] = 0
@@ -2287,20 +2287,20 @@ module LibDoom
       end
 
       # check for a remote game kill
-      CDoom.i_error("Error: Killed by network driver") if CDoom.netbuffer.value.checksum & CDoom::NCMD_KILL != 0
+      CDoom.i_error("Error: Killed by network driver") if CDoom.netbuffer.value.checksum & NCMD_KILL != 0
 
       CDoom.nodeforplayer[netconsole] = netnode
 
       # check for retransmit request
       if CDoom.resendcount[netnode] <= 0 &&
-         (CDoom.netbuffer.value.checksum & CDoom::NCMD_RETRANSMIT) != 0
+         (CDoom.netbuffer.value.checksum & NCMD_RETRANSMIT) != 0
         CDoom.resendto[netnode] = CDoom.expand_tics(CDoom.netbuffer.value.retransmitfrom)
         if !CDoom.debugfile.null?
           CDoom.doom_fprint(CDoom.debugfile, "retransmit from ")
           CDoom.doom_fprint(CDoom.debugfile, CDoom.doom_itoa(CDoom.resendto[netnode], 10))
           CDoom.doom_fprint(CDoom.debugfile, "\n")
         end
-        CDoom.resendcount[netnode] = CDoom::RESENDCOUNT
+        CDoom.resendcount[netnode] = RESENDCOUNT
       else
         CDoom.resendcount[netnode] = CDoom.resendcount[netnode] - 1
       end
@@ -2404,7 +2404,7 @@ module LibDoom
 
           if CDoom.remoteresend[i] != 0
             CDoom.netbuffer.value.retransmitfrom = CDoom.nettics[i]
-            CDoom.h_send_packet(i, CDoom::NCMD_RETRANSMIT)
+            CDoom.h_send_packet(i, NCMD_RETRANSMIT)
           else
             CDoom.netbuffer.value.retransmitfrom = 0
             CDoom.h_send_packet(i, 0)
@@ -2446,13 +2446,19 @@ module LibDoom
     CDoom.doom_memset(gotinfo, 0, sizeof(typeof(gotinfo)))
 
     if CDoom.doomcom.value.consoleplayer != 0
-      # listen for setup info from key player
-      puts "listening for network start info..."
-      while true
-        CDoom.check_abort
+      puts "sending connection info..."
+      loop do
+        doom_draw
+        i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[0]
+        check_abort
+        CDoom.netbuffer.value.retransmitfrom = 69
+        CDoom.netbuffer.value.starttic = 0
+        CDoom.netbuffer.value.player = CDoom.doomcom.value.consoleplayer.to_u8!
+        CDoom.netbuffer.value.numtics = 420
+        h_send_packet(0, NCMD_CONNECT) # Assume first node is host
+
         next if CDoom.h_get_packet == 0
-        puts "Goe a packet! checksum = #{CDoom.netbuffer.value.checksum}"
-        if CDoom.netbuffer.value.checksum & CDoom::NCMD_SETUP != 0
+        if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
           if CDoom.netbuffer.value.player != CDoom::VERSION
             CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
           end
@@ -2462,46 +2468,98 @@ module LibDoom
           CDoom.respawnparm = (CDoom.netbuffer.value.retransmitfrom & 0x10) > 0
           CDoom.startmap = CDoom.netbuffer.value.starttic & 0x3f
           CDoom.startepisode = CDoom.netbuffer.value.starttic >> 6
-          return
+
+          puts "connected! waiting for host to start"
+          loop do
+            doom_draw
+            check_abort
+            next if CDoom.h_get_packet == 0
+
+            # Host is sending ips
+            if CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
+              if CDoom.netbuffer.value.retransmitfrom != 0 ||
+                 CDoom.netbuffer.value.starttic != 69 ||
+                 CDoom.netbuffer.value.player != 420 ||
+                 i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
+              end
+
+              numips = CDoom.netbuffer.value.numtics
+              ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+
+              numips.times do |i|
+                # Load other client's IP addresses
+                CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
+                @@sendaddress[i + 1] = Socket::IPAddress.v4(
+                  ipnums[0], ipnums[1], ipnums[2], ipnums[3],
+                  port: @@doomport)
+                ipnums += 4
+              end
+            end
+          end
         end
       end
     else
       # key player, send the setup info
       puts "sending network start info..."
       loop do
+        doom_draw
         CDoom.check_abort
-        CDoom.doomcom.value.numnodes.times do |i|
-          CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
-          if CDoom.deathmatch != 0
-            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
-          end
-          if CDoom.nomonsters != 0
-            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
-          end
-          if CDoom.respawnparm != 0
-            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
-          end
-          CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
-          CDoom.netbuffer.value.player = CDoom::VERSION
-          CDoom.netbuffer.value.numtics = 0
-          CDoom.h_send_packet(i, CDoom::NCMD_SETUP)
-        end
 
         i = 10
         while i != 0 && CDoom.h_get_packet != 0
-          if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
+          if CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0
+            # New address, connect them. Propogate IP
+            next if gotinfo[CDoom.netbuffer.value.player & 0x7f] != 0 # Already connected
             gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
+
+            CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
+            if CDoom.deathmatch != 0
+              CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
+            end
+            if CDoom.nomonsters != 0
+              CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
+            end
+            if CDoom.respawnparm != 0
+              CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
+            end
+            CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
+            CDoom.netbuffer.value.player = CDoom::VERSION
+            CDoom.netbuffer.value.numtics = 0
+            CDoom.h_send_packet(CDoom.doomcom.value.numnodes, NCMD_SETUP)
+
+            CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
           end
           i -= 1
         end
 
-        i = 1
-        while i < CDoom.doomcom.value.numnodes
-          break if gotinfo[i] == 0
-          i += 1
-        end
+        # NEED BREAK
 
-        break unless i < CDoom.doomcom.value.numnodes
+        # Space to start game and end waiting for connections
+        poll_key(SPACE, Space)
+        if CDoom.doomcom.value.numnodes >= CDoom::MAXPLAYERS ||
+           @@keystates[CDoom::DoomKey::SPACE.value] != 0
+          # Distribute ips
+          CDoom.netbuffer.value.retransmitfrom = 0
+          CDoom.netbuffer.value.starttic = 69
+          CDoom.netbuffer.value.player = 420
+          CDoom.netbuffer.value.numtics = CDoom.doomcom.value.numnodes - 1 # Minus host
+
+          ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+
+          # Build ips into ticcmds
+          @@sendaddress.each do |add|
+            break unless add
+            add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
+              ipnums.value = ipnum
+              ipnums += 1
+            end
+          end
+
+          # Send out
+          CDoom.doomcom.value.numnodes.times do |i|
+            h_send_packet(i, NCMD_DISTRIBUTE)
+          end
+        end
       end
     end
   end
@@ -2557,7 +2615,7 @@ module LibDoom
     4.times do |i|
       (CDoom.doomcom.value.numnodes - 1).times do |j|
         j += 1
-        CDoom.h_send_packet(j, CDoom::NCMD_EXIT) if CDoom.nodeingame[j] != 0
+        CDoom.h_send_packet(j, NCMD_EXIT) if CDoom.nodeingame[j] != 0
         CDoom.i_wait_vbl(1)
       end
     end
@@ -4995,7 +5053,7 @@ module LibDoom
     begin
       c = sock.send(bytes, to: dest)
     rescue ex
-        i_error("Error: packet_send: Failed to send packet to #{dest.address}:#{dest.port}")
+      i_error("Error: packet_send: Failed to send packet to #{dest.address}:#{dest.port}")
     end
   end
 
@@ -5028,9 +5086,25 @@ module LibDoom
       i += 1
     end
 
+    # Received address is not loaded, or invalid
     if i == CDoom.doomcom.value.numnodes
-      CDoom.doomcom.value.remotenode = -1
-      return
+      # Not server
+      if CDoom.doomcom.value.consoleplayer != 0
+        CDoom.doomcom.value.remotenode = -1
+        return
+      end
+
+      if CDoom.doomcom.value.numnodes < CDoom::MAXPLAYERS
+        # We have room, return if invalid data
+        if sw.checksum & NCMD_CONNECT != 0 &&
+           sw.retransmitfrom == 69 && sw.starttic == 0 &&
+           sw.numtics == 420
+          # Add it in
+          @@sendaddress[i] = fromaddress
+        else
+          return # Invalid
+        end
+      end
     end
 
     CDoom.doomcom.value.remotenode = i
@@ -6099,8 +6173,6 @@ module LibDoom
     poll_button(LEFT, Left)
     poll_button(RIGHT, Right)
     poll_button(MIDDLE, Middle)
-
-    
   end
 
   def self.i_update_no_blit
@@ -7167,7 +7239,6 @@ module LibDoom
           @@lastx += MENU_SCROLL_DEADZONE
           @@menumousex = @@lastx
         end
-
 
         if ev.value.data1 & 2 != 0
           ch = CDoom::KEY_BACKSPACE
