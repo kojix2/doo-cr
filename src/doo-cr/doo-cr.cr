@@ -2486,8 +2486,10 @@ module LibDoom
 
         i = 10
         while i != 0 && CDoom.h_get_packet != 0
+          puts "DEBUG got packet, player=#{CDoom.netbuffer.value.player}, numnodes=#{CDoom.doomcom.value.numnodes}"
           if (CDoom.netbuffer.value.player & 0x7f) < CDoom::MAXNETNODES
             gotinfo[CDoom.netbuffer.value.player & 0x7f] = 1
+            puts "DEBUG gotinfo[#{CDoom.netbuffer.value.player & 0x7f}] set"
           end
           i -= 1
         end
@@ -2497,6 +2499,8 @@ module LibDoom
           break if gotinfo[i] == 0
           i += 1
         end
+        puts "DEBUG loop check: i=#{i} numnodes=#{CDoom.doomcom.value.numnodes} gotinfo[1]=#{gotinfo[1]?}"
+
 
         break unless i < CDoom.doomcom.value.numnodes
       end
