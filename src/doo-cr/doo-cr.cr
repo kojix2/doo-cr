@@ -2454,7 +2454,6 @@ module LibDoom
         h_send_packet(1, NCMD_CONNECT) # Assume second node is host
 
         next if CDoom.h_get_packet == 0
-        puts "Here I am #{CDoom.netbuffer.value.checksum}"
         if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
           if CDoom.netbuffer.value.player != CDoom::VERSION
             CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
@@ -2475,7 +2474,7 @@ module LibDoom
             # Host is sending ips
             if CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
               if CDoom.netbuffer.value.retransmitfrom != 19 ||
-                 CDoom.netbuffer.value.starttic != 69 ||
+                 CDoom.netbuffer.value.starttic != 69
                  i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
               end
 
