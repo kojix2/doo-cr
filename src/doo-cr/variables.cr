@@ -23,7 +23,14 @@ module LibDoom
 
   NEEDS_BYTE_SWAP = IO::ByteFormat::SystemEndian != IO::ByteFormat::NetworkEndian
 
+  MENU_SCROLL_DEADZONE = 80
+
   CDoom.precache = 1
+
+  class_getter menukeydown = Array(Bool).new(CDoom::NUMKEYS, false)
+  class_getter menumousebuttons = Array(Bool).new(3, false)
+
+  @@mousedelta = Raylib::Vector2.new
 
   @@st_notify : CDoom::Event = CDoom::Event.new
   @@lastlevel = -1

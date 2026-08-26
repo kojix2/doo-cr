@@ -292,6 +292,7 @@ module LibDoom
 
   def self.doom_button_down(button : CDoom::DoomButton)
     CDoom.button_states[button.value] = 1
+    @@menumousebuttons[button.value] = true
 
     event = CDoom::Event.new
     event.type = CDoom::Evtype::Mouse
@@ -306,6 +307,7 @@ module LibDoom
 
   def self.doom_button_up(button : CDoom::DoomButton)
     CDoom.button_states[button.value] = 0
+    @@menumousebuttons[button.value] = false
 
     event = CDoom::Event.new
     event.type = CDoom::Evtype::Mouse
@@ -6011,9 +6013,13 @@ module LibDoom
   end
 
   def self.i_start_frame
+    @@mousedelta = Raylib.get_mouse_delta * 2
   end
 
   def self.i_start_tic
+    LibDoom.doom_mouse_move(@@mousedelta.x.to_i32, @@mousedelta.y.to_i32)
+    @@mousedelta = Raylib::Vector2.new
+
     poll_key(TAB, Tab)
     poll_key(ENTER, Enter)
     poll_key(ESCAPE, Escape)
@@ -6093,8 +6099,7 @@ module LibDoom
     poll_button(RIGHT, Right)
     poll_button(MIDDLE, Middle)
 
-    delta = Raylib.get_mouse_delta * 2
-    LibDoom.doom_mouse_move(delta.x.to_i32, delta.y.to_i32)
+    
   end
 
   def self.i_update_no_blit
@@ -7095,10 +7100,12 @@ module LibDoom
 
   @@joywait = 0
   @@mousewait = 0
-  @@mousey = 0
+  @@menumousey = 0
   @@lasty = 0
-  @@mousex = 0
+  @@menumousex = 0
   @@lastx = 0
+  @@mousex = 0
+  @@mousey = 0
 
   #
   # m_responder
@@ -7133,43 +7140,48 @@ module LibDoom
       end
     else
       if ev.value.type == CDoom::Evtype::Mouse && @@mousewait < CDoom.i_get_time
-        @@mousey += ev.value.data3
-        if @@mousey < @@lasty - 30
+        @@menumousey += ev.value.data3
+
+        if @@menumousey < @@lasty - MENU_SCROLL_DEADZONE
           ch = CDoom::KEY_DOWNARROW
           @@mousewait = CDoom.i_get_time + 5
-          @@lasty -= 30
-          @@mousey = @@lasty
-        elsif @@mousey > @@lasty + 30
+          @@lasty -= MENU_SCROLL_DEADZONE
+          @@menumousey = @@lasty
+        elsif @@menumousey > @@lasty + MENU_SCROLL_DEADZONE
           ch = CDoom::KEY_UPARROW
           @@mousewait = CDoom.i_get_time + 5
-          @@lasty += 30
-          @@mousey = @@lasty
+          @@lasty += MENU_SCROLL_DEADZONE
+          @@menumousey = @@lasty
         end
 
-        @@mousex += ev.value.data2
-        if @@mousex < @@lastx - 30
+        @@menumousex += ev.value.data2
+        if @@menumousex < @@lastx - MENU_SCROLL_DEADZONE
           ch = CDoom::KEY_LEFTARROW
           @@mousewait = CDoom.i_get_time + 5
-          @@lastx -= 30
-          @@mousex = @@lastx
-        elsif @@mousex > @@lastx + 30
+          @@lastx -= MENU_SCROLL_DEADZONE
+          @@menumousex = @@lastx
+        elsif @@menumousex > @@lastx + MENU_SCROLL_DEADZONE
           ch = CDoom::KEY_RIGHTARROW
           @@mousewait = CDoom.i_get_time + 5
-          @@lastx += 30
-          @@mousex = @@lastx
+          @@lastx += MENU_SCROLL_DEADZONE
+          @@menumousex = @@lastx
         end
 
-        if ev.value.data1 & 1 != 0
-          ch = CDoom::KEY_ENTER
-          @@mousewait = CDoom.i_get_time + 15
-        end
 
         if ev.value.data1 & 2 != 0
           ch = CDoom::KEY_BACKSPACE
           @@mousewait = CDoom.i_get_time + 15
+        elsif ev.value.data1 & 1 != 0
+          ch = CDoom::KEY_ENTER
+          @@mousewait = CDoom.i_get_time + 15
         end
       else
-        ch = ev.value.data1 if ev.value.type == CDoom::Evtype::Keydown
+        if ev.value.type == CDoom::Evtype::Keydown
+        ch = ev.value.data1 
+        @@menukeydown[ch] = true if ev.value.data1 < CDoom::NUMKEYS
+        elsif  ev.value.type == CDoom::Evtype::Keyup
+          @@menukeydown[ev.value.data1] = false if ev.value.data1 < CDoom::NUMKEYS
+        end
       end
     end
 
