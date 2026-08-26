@@ -2448,7 +2448,10 @@ module LibDoom
       puts "listening for network start info..."
       while true
         CDoom.check_abort
-        next if CDoom.h_get_packet == 0
+        if CDoom.h_get_packet == 0
+    sleep 1.millisecond
+    next
+  end
         if CDoom.netbuffer.value.checksum & CDoom::NCMD_SETUP != 0
           if CDoom.netbuffer.value.player != CDoom::VERSION
             CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
@@ -2499,6 +2502,7 @@ module LibDoom
         end
 
         break unless i < CDoom.doomcom.value.numnodes
+            sleep 10.milliseconds
       end
     end
   end
@@ -4995,6 +4999,12 @@ module LibDoom
   @@first = true
 
   def self.packet_get
+  sock = @@insocket
+  unless sock
+    CDoom.doomcom.value.remotenode = -1
+    return
+  end
+
   select
   when result = @@recv_channel.receive
     sw, fromaddress = result
@@ -5126,24 +5136,23 @@ end
     CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numnodes
 
     @@insocket = udp_socket()
-    bind_to_local_port(@@insocket.not_nil!, @@doomport)
-    @@insocket.not_nil!.read_timeout = 69.millisecond
+bind_to_local_port(@@insocket.not_nil!, @@doomport)
 
-    @@sendsocket = udp_socket()
+@@sendsocket = udp_socket()
 
-    spawn do
-    sock = @@insocket.not_nil!
-    loop do
-      sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
-      buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
-      begin
-        c, fromaddress = sock.receive(buf)
-        @@recv_channel.send({sw_ptr.value, fromaddress})
-      rescue ex
-        break
-      end
+spawn do
+  sock = @@insocket.not_nil!
+  loop do
+    sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
+    buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
+    begin
+      c, fromaddress = sock.receive(buf)
+      @@recv_channel.send({sw_ptr.value, fromaddress})
+    rescue ex
+      break
     end
   end
+end
   end
 
   def self.i_net_cmd
