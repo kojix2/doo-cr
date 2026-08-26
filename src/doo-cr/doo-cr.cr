@@ -2146,7 +2146,7 @@ module LibDoom
   end
 
   def self.h_send_packet(node : Int32, flags : Int32)
-    CDoom.netbuffer.value.checksum = CDoom.net_buffer_checksum | flags.to_u32
+    CDoom.netbuffer.value.checksum = CDoom.net_buffer_checksum | flags.to_u32!
 
     if node == 0
       CDoom.netbuffer.copy_to(pointerof(CDoom.reboundstore), 1)
@@ -3786,14 +3786,14 @@ module LibDoom
     if CDoom.players[playernum].mo.null?
       # first spawn of level, before corpses
       playernum.times do |i|
-        return 0 if (CDoom.players[i].mo.value.x == mthing.value.x << FRACBITS &&
-                    CDoom.players[i].mo.value.y == mthing.value.y << FRACBITS)
+        return 0 if (CDoom.players[i].mo.value.x == mthing.value.x.to_i32! << FRACBITS &&
+                    CDoom.players[i].mo.value.y == mthing.value.y.to_i32! << FRACBITS)
       end
       return 1
     end
 
-    x = mthing.value.x << FRACBITS
-    y = mthing.value.y << FRACBITS
+    x = mthing.value.x.to_i32! << FRACBITS
+    y = mthing.value.y.to_i32! << FRACBITS
 
     return 0 if CDoom.p_check_position(CDoom.players[playernum].mo, x, y) == 0
 
@@ -3808,7 +3808,7 @@ module LibDoom
     ss = CDoom.r_point_in_subsector(x, y)
     an = (ANG45 &* (mthing.value.angle // 45)) >> CDoom::ANGLETOFINESHIFT
 
-    mo = CDoom.p_spawn_mobj(x &+ 20 &* @@finecosine[an], y &+ 20 &* @@finesine[an],
+    mo = CDoom.p_spawn_mobj(x + 20 * @@finecosine[an], y + 20 * @@finesine[an],
       ss.value.sector.value.floorheight, CDoom::Mobjtype::MT_TFOG)
 
     CDoom.s_start_sound(mo, CDoom::Sfxenum::SFX_telept) if CDoom.players[CDoom.consoleplayer].viewz != 1 # don't start sound on first frame
