@@ -22,13 +22,17 @@ MIDI_BANK        = 16
 RANGECHECK = true
 
 macro poll_key(doomkey, raylibkey)
-  LibDoom.doom_key_up(CDoom::DoomKey::{{doomkey}}) if Raylib::KeyboardKey::{{raylibkey}}.released?
-  LibDoom.doom_key_down(CDoom::DoomKey::{{doomkey}}) if Raylib::KeyboardKey::{{raylibkey}}.pressed?
+  was_down = CDoom.gamekeydown[CDoom::DoomKey::{{doomkey}}.value] != 0
+  is_down = Raylib::KeyboardKey::{{raylibkey}}.down?
+  LibDoom.doom_key_down(CDoom::DoomKey::{{doomkey}}) if is_down && !was_down
+  LibDoom.doom_key_up(CDoom::DoomKey::{{doomkey}}) if !is_down && was_down
 end
 
 macro poll_button(doombutton, raylibbutton)
-  LibDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if Raylib::MouseButton::{{raylibbutton}}.released?
-  LibDoom.doom_button_down(CDoom::DoomButton::{{doombutton}}) if Raylib::MouseButton::{{raylibbutton}}.pressed?
+  was_down = CDoom.mousebuttons[CDoom::DoomButton::{{doombutton}}.value] != 0
+  is_down = Raylib::MouseButton::{{raylibbutton}}.down?
+  LibDoom.doom_button_down(CDoom::DoomButton::{{doombutton}}) if is_down && !was_down
+  LibDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if !is_down && was_down
 end
 
 Fiber::ExecutionContext.default.resize(maximum: System.cpu_count)
