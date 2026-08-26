@@ -3806,9 +3806,9 @@ module LibDoom
 
     # spawn a teleport fog
     ss = CDoom.r_point_in_subsector(x, y)
-    an = (ANG45 * (mthing.value.angle // 45)) >> CDoom::ANGLETOFINESHIFT
+    an = (ANG45 &* (mthing.value.angle // 45)) >> CDoom::ANGLETOFINESHIFT
 
-    mo = CDoom.p_spawn_mobj(x + 20 * @@finecosine[an], y + 20 * @@finesine[an],
+    mo = CDoom.p_spawn_mobj(x &+ 20 &* @@finecosine[an], y &+ 20 &* @@finesine[an],
       ss.value.sector.value.floorheight, CDoom::Mobjtype::MT_TFOG)
 
     CDoom.s_start_sound(mo, CDoom::Sfxenum::SFX_telept) if CDoom.players[CDoom.consoleplayer].viewz != 1 # don't start sound on first frame
