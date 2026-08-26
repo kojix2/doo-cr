@@ -296,7 +296,7 @@ module LibDoom
     return Pointer(UInt8).null
   end
 
-  def self.doom_tick_midi : LibC::ULong
+  def self.doom_tick_midi : UInt64
     return CDoom.i_tick_song
   end
 
