@@ -5004,14 +5004,14 @@ module LibDoom
 
     select
     when result = @@recv_channel.receive
-      sw, fromaddress = result
+      sw, c, fromaddress = result
     else
       CDoom.doomcom.value.remotenode = -1
       return
     end
 
     if @@first
-      puts "len=p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
+      puts "len=#{c}=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
     end
     @@first = false
 
@@ -5028,7 +5028,7 @@ module LibDoom
     end
 
     CDoom.doomcom.value.remotenode = i
-    CDoom.doomcom.value.datalength = sizeof(CDoom::Doomdata)
+    CDoom.doomcom.value.datalength = c
 
     CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
     CDoom.netbuffer.value.player = sw.player
@@ -5144,7 +5144,7 @@ module LibDoom
         buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
         begin
           c, fromaddress = sock.receive(buf)
-          @@recv_channel.send({sw_ptr.value, fromaddress})
+          @@recv_channel.send({sw_ptr.value, c, fromaddress})
         rescue ex
           break
         end
