@@ -2455,6 +2455,7 @@ module LibDoom
         h_send_packet(1, NCMD_CONNECT) # Assume second node is host
 
         next if CDoom.h_get_packet == 0
+        puts "Here I am #{CDoom.netbuffer.value.checksum}"
         if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
           if CDoom.netbuffer.value.player != CDoom::VERSION
             CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
@@ -2523,7 +2524,7 @@ module LibDoom
         i = 10
         while i != 0 && CDoom.h_get_packet != 0
           if CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
-            CDoom.netbuffer.value.player & 0x7f == CDoom.doomcom.value.numplayers + 1
+            CDoom.netbuffer.value.player & 0x7f == CDoom.doomcom.value.numplayers
             CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
             CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
             puts "connected client!"
