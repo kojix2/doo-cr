@@ -206,7 +206,8 @@ module LibDoom
     @@screen_texture.try do |st|
       fb = CDoom.doom_get_framebuffer(4)
       next if fb.null?
-      Raylib.update_texture(st, fb)
+      next unless Raylib.texture_valid?(st)
+      Raylib.update_texture(st, fb) # God said this line should crash
 
       scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
       scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
@@ -2356,10 +2357,11 @@ module LibDoom
   # sends out a packet
   #
   def self.net_update
+    # Packet Punching
     if @@punch_countdown > 0
-    punch_peers
-    @@punch_countdown -= 1
-  end
+      punch_peers
+      @@punch_countdown -= 1
+    end
 
     # check time
     nowtime = CDoom.i_get_time // CDoom.ticdup
@@ -5042,6 +5044,48 @@ module LibDoom
     end
   end
 
+  def self.upnp_open_port(port : Int32)
+  # 1. Discover the router
+  sock = UDPSocket.new(Socket::Family::INET)
+  sock.read_timeout = 2.seconds
+  sock.send(
+    "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\n" \
+    "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n\r\n",
+    to: Socket::IPAddress.new("239.255.255.250", 1900))
+
+  buf = Bytes.new(2048)
+  len, _ = sock.receive(buf)
+  sock.close
+  resp = String.new(buf[0, len])
+  location = resp.each_line.find(&.starts_with?("LOCATION:")).try { |l| l.split(":", 2)[1].strip }
+  return unless location
+
+  # 2. Fetch device description, pull out controlURL with a plain string search
+  desc = HTTP::Client.get(location).body
+  return unless desc.includes?("WANIPConnection") || desc.includes?("WANPPPConnection")
+  control_path = desc[/<controlURL>(.*?)<\/controlURL>/, 1]?
+  return unless control_path
+
+  uri = URI.parse(location)
+  control_url = control_path.starts_with?("http") ? control_path : "#{uri.scheme}://#{uri.host}:#{uri.port}#{control_path}"
+
+  # 3. Ask it to forward the port
+  local_ip = Socket::Addrinfo.resolve(System.hostname, nil, family: Socket::Family::INET, type: Socket::Type::DGRAM).first.ip_address.address
+
+  body = "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body>" \
+    "<u:AddPortMapping xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\">" \
+    "<NewRemoteHost></NewRemoteHost><NewExternalPort>#{port}</NewExternalPort><NewProtocol>UDP</NewProtocol>" \
+    "<NewInternalPort>#{port}</NewInternalPort><NewInternalClient>#{local_ip}</NewInternalClient>" \
+    "<NewEnabled>1</NewEnabled><NewPortMappingDescription>doom-cr</NewPortMappingDescription><NewLeaseDuration>0</NewLeaseDuration>" \
+    "</u:AddPortMapping></s:Body></s:Envelope>"
+
+  HTTP::Client.post(control_url,
+    headers: HTTP::Headers{"Content-Type" => "text/xml; charset=\"utf-8\"", "SOAPAction" => "\"urn:schemas-upnp-org:service:WANIPConnection:1#AddPortMapping\""},
+    body: body)
+rescue
+  puts "UPnP: couldn't open port automatically — forward #{port}/UDP manually if needed"
+end
+
   def self.bind_to_local_port(socket : UDPSocket, port : Int32)
     begin
       socket.bind("0.0.0.0", port)
@@ -5246,6 +5290,8 @@ module LibDoom
     bind_to_local_port(@@insocket.not_nil!, @@doomport)
 
     @@sendsocket = udp_socket()
+
+    upnp_open_port(@@doomport) if CDoom.doomcom.value.consoleplayer == 0
 
     spawn do
       sock = @@insocket.not_nil!
@@ -6268,8 +6314,8 @@ module LibDoom
     Raylib.init_window(1024, 768, "LibDoom")
     Raylib.set_exit_key(Raylib::KeyboardKey::Null)
     @@was_focused = false
-    Raylib.toggle_fullscreen if @@rlfullscreen != 0
-    # Raylib.set_target_fps(35)
+    Raylib.toggle_borderless_windowed if @@rlfullscreen != 0
+    Raylib.set_target_fps(35)
 
     image = Raylib.gen_image_color(320, 200, Raylib::BLACK)
     @@screen_texture = Raylib.load_texture_from_image(image)
@@ -6981,7 +7027,7 @@ module LibDoom
 
   def self.m_toggle_fullscreen(choice : Int32)
     @@rlfullscreen = 1 - @@rlfullscreen
-    Raylib.toggle_fullscreen
+    Raylib.toggle_borderless_windowed
   end
 
   def self.m_toggle_smoothpan(choice : Int32)

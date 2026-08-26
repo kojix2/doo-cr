@@ -1,4 +1,5 @@
 require "socket"
+require "http/client"
 
 require "./doo-cr/lib.cr"
 require "./doo-cr/variables.cr"
