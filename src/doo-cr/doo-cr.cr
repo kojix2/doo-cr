@@ -5135,7 +5135,7 @@ module LibDoom
 
     @@insocket = udp_socket()
     bind_to_local_port(@@insocket.not_nil!, @@doomport)
-    @@insocket.not_nil!.blocking = false
+    Socket.set_blocking(@@insocket.not_nil!.fd, false)
 
     @@sendsocket = udp_socket()
   end

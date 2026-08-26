@@ -43,7 +43,19 @@ endif
 all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \
 	shards install
-	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC)
+	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC) --link-flags="-LC:/Crystal/doo-cr -LC:/msys64/clangarm64/lib"
+	mv -f libcvars.$(LIB_EXT) ./bin
+	cp -f libraylib.$(LIB_EXT) ./bin
+	cp -f libADLMIDI.$(LIB_EXT) ./bin
+	$(CHANGE_LIB_NAMES)
+
+	cd ./bin && \
+	./doo-cr
+
+arm: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
+	test -d bin || mkdir bin && \
+	shards install
+	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC) --link-flags="-LC:/Crystal/doo-cr -LC:/msys64/clangarm64/lib"
 	mv -f libcvars.$(LIB_EXT) ./bin
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
@@ -72,7 +84,7 @@ libraylib.$(LIB_EXT):
 	cd raylib && \
 	test -d build || mkdir build && \
 	cd build && \
-	cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DBUILD_SHARED_LIBS=ON && \
+	cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5" && \
 	$(RLMAKE) && \
 	cp ./raylib/$(RLOUT) ../../libraylib.$(LIB_EXT)
 
