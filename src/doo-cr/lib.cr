@@ -6836,8 +6836,8 @@ lib CDoom
   $channelstepremainder : LibC::UInt[NUM_CHANNELS]
 
   # The channel data pointers, start and end.
-  $channels : LibC::Char*[NUM_CHANNELS]
-  $channelsend : LibC::Char*[NUM_CHANNELS]
+  $channels : LibC::UChar*[NUM_CHANNELS]
+  $channelsend : LibC::UChar*[NUM_CHANNELS]
 
   # Time/gametic that the channel started playing,
   #  used to determine oldest, which automatically

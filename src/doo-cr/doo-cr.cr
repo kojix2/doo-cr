@@ -45,8 +45,9 @@ module LibDoom
   end
 
   def self.doom_gettime_impl(sec : Int32*, usec : Int32*)
-    sec.value = Time.local.to_unix.to_i32
-    usec.value = (Time.local.nanosecond // 1_000).to_i32
+    now = Time.local
+  sec.value = now.to_unix.to_i32
+  usec.value = (now.nanosecond // 1_000).to_i32
   end
 
   def self.doom_exit_impl(code : Int32)
@@ -1365,7 +1366,7 @@ module LibDoom
         CDoom.d_do_advance_demo if CDoom.advancedemo != 0
         CDoom.m_ticker
         CDoom.g_ticker
-        CDoom.gametic += 1
+        CDoom.gametic &+= 1
         CDoom.maketic += 1
       else
         CDoom.try_run_tics # will run at least one tic
@@ -2355,6 +2356,11 @@ module LibDoom
   # sends out a packet
   #
   def self.net_update
+    if @@punch_countdown > 0
+    punch_peers
+    @@punch_countdown -= 1
+  end
+
     # check time
     nowtime = CDoom.i_get_time // CDoom.ticdup
     newtics = nowtime - CDoom.gametime
@@ -2432,6 +2438,19 @@ module LibDoom
       end
       CDoom.eventtail += 1
       CDoom.eventtail = (CDoom.eventtail) & (CDoom::MAXEVENTS - 1)
+    end
+  end
+
+    @@punch_countdown = 0
+
+  def self.punch_peers
+    @@sendaddress.each_with_index do |addr, i|
+      next unless addr
+      next if i == CDoom.consoleplayer
+      begin
+        @@insocket.try &.send(Bytes.new(1) { 0_u8 }, to: addr)
+      rescue
+      end
     end
   end
 
@@ -2600,6 +2619,7 @@ module LibDoom
 
     CDoom.doomcom.value.numplayers.times { |i| CDoom.playeringame[i] = 1 }
     CDoom.doomcom.value.numnodes.times { |i| CDoom.nodeingame[i] = 1 }
+    @@punch_countdown = 70
 
     puts "player #{CDoom.consoleplayer + 1} of #{CDoom.doomcom.value.numplayers}" +
          " (#{CDoom.doomcom.value.numnodes} nodes)"
@@ -2718,7 +2738,7 @@ module LibDoom
         CDoom.d_do_advance_demo if CDoom.advancedemo != 0
         CDoom.m_ticker
         CDoom.g_ticker
-        CDoom.gametic += 1
+        CDoom.gametic &+= 1
 
         # modify command for duplicated tics
         if i != CDoom.ticdup - 1
@@ -5031,7 +5051,10 @@ module LibDoom
   end
 
   def self.packet_send
-    sock = @@sendsocket
+    # sock = @@sendsocket
+# Use insocket because in and out ports will both be doomport
+# Helps prevent port forwarding
+    sock = @@insocket 
     return unless sock
     dest = @@sendaddress[CDoom.doomcom.value.remotenode]
     return unless dest
@@ -5081,7 +5104,7 @@ module LibDoom
     end
 
     if @@first
-      puts "len=#{c}=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
+      # puts "len=#{c}=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
     end
     @@first = false
 
@@ -5331,6 +5354,7 @@ module LibDoom
     return (paddedsfx + 8).as(Void*)
   end
 
+  @@sound_mutex = Sync::Mutex.new
   @@handlenums : UInt16 = 0
 
   #
@@ -5342,6 +5366,7 @@ module LibDoom
   #
   def self.addsfx(sfxid : Int32, volume : Int32, step : Int32, seperation : Int32) : Int32
     rc = -1
+      @@sound_mutex.synchronize do
     oldest = CDoom.gametic
     oldestnum = 0
 
@@ -5430,6 +5455,7 @@ module LibDoom
     # Preserve sound SFX id,
     #  e.g. for avoiding duplicates of chainsaw.
     CDoom.channelids[slot] = sfxid
+  end
 
     # You tell me.
     return rc.to_i32
@@ -5512,18 +5538,22 @@ module LibDoom
   end
 
   def self.i_stop_sound(handle : Int32)
+      @@sound_mutex.synchronize do
     CDoom::NUM_CHANNELS.times do |chan|
       if CDoom.channelhandles[chan] == handle && !CDoom.channels[chan].null?
         CDoom.channels[chan] = Pointer(UInt8).null
         break
       end
     end
+    end
   end
 
   def self.i_sound_is_playing(handle : Int32) : Int32
+      @@sound_mutex.synchronize do
     CDoom::NUM_CHANNELS.times do |chan|
       return (!CDoom.channels[chan].null?).to_unsafe if CDoom.channelhandles[chan] == handle
     end
+  end
 
     return 0
   end
@@ -5551,6 +5581,8 @@ module LibDoom
     # Determine end, for left channel only
     #  (right channel is implicit).
     leftend = CDoom.mixbuffer.to_unsafe + CDoom::SAMPLECOUNT * step
+
+      @@sound_mutex.synchronize do
 
     # Mix sounds into the mixing buffer.
     # Loop over step*SAMPLECOUNT,
@@ -5613,9 +5645,11 @@ module LibDoom
       leftout += step
       rightout += step
     end
+    end
   end
 
   def self.i_update_sound_params(handle : LibC::Int, vol : LibC::Int, sep : LibC::Int, pitch : LibC::Int)
+      @@sound_mutex.synchronize do
     # I fail too see that this is used.
     # Would be using the handle to identify
     #  on which channel the sound might be active,
@@ -5643,13 +5677,13 @@ module LibDoom
         break
       end
     end
+    end
   end
 
   def self.i_shutdown_sound
     # Wait till all pending sounds are finished.
     hopetill = i_get_time + 1*70 # Give a second to finish
 
-    # FIXME (below).
     print "i_shutdown_sound: Finishing pending sounds..."
 
     loop do
@@ -10099,7 +10133,7 @@ module LibDoom
           ok = 1
           break
         end
-        break if ok != 0
+        break unless ok != 0
       end
     end
     return rtn
@@ -13007,7 +13041,7 @@ module LibDoom
     an = CDoom.r_point_to_angle2(source.value.x, source.value.y, dest.value.x, dest.value.y)
 
     # fuzzy player
-    an += (CDoom.p_random - CDoom.p_random) << 20 if dest.value.flags & CDoom::Mobjflag::MF_SHADOW.value != 0
+    an &+= (CDoom.p_random - CDoom.p_random) << 20 if dest.value.flags & CDoom::Mobjflag::MF_SHADOW.value != 0
 
     th.value.angle = an
     an >>= CDoom::ANGLETOFINESHIFT

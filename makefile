@@ -48,10 +48,7 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
 	$(CHANGE_LIB_NAMES)
-
-	cd ./bin && \
-	./doo-cr -net -deathmatch -nomonsters -warp 01
-
+	
 arm: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \
 	shards install
@@ -60,9 +57,6 @@ arm: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
 	$(CHANGE_LIB_NAMES)
-
-	cd ./bin && \
-	./doo-cr.exe -net 192.168.0.233
 
 clean:
 	rm -rf raylib
