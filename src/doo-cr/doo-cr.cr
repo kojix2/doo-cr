@@ -2114,17 +2114,18 @@ module LibDoom
   # Checksum
   #
   def self.net_buffer_checksum : UInt32
-    c = 0x1234567_u32
+    # c = 0x1234567_u32
 
-    l = (CDoom.net_buffer_size - offsetof(CDoom::Doomdata, @retransmitfrom)) // 4
-    l.times do |i|
-      value = (pointerof(CDoom.netbuffer.value.@retransmitfrom)
-        .as(UInt32*))[i]
+    # l = (CDoom.net_buffer_size - offsetof(CDoom::Doomdata, @retransmitfrom)) // 4
+    # l.times do |i|
+    #   value = (pointerof(CDoom.netbuffer.value.@retransmitfrom)
+    #     .as(UInt32*))[i]
 
-      c = c &+ (value &* (i + 1).to_u32)
-    end
+    #   c = c &+ (value &* (i + 1).to_u32)
+    # end
 
-    return c & CDoom::NCMD_CHECKSUM
+    # return c & CDoom::NCMD_CHECKSUM
+    return 0_u32
   end
 
   def self.expand_tics(low : Int32) : Int32
