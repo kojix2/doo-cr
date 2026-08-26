@@ -2500,7 +2500,7 @@ module LibDoom
       end
     else
       # key player, send the setup info
-      puts "sending network start info..."
+      puts "sending network start info... PRESS SPACE TO START"
       loop do
         doom_draw
         CDoom.check_abort
@@ -2528,6 +2528,7 @@ module LibDoom
             CDoom.h_send_packet(CDoom.doomcom.value.numnodes, NCMD_SETUP)
 
             CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
+            puts "connect client!"
           end
           i -= 1
         end
@@ -2535,9 +2536,9 @@ module LibDoom
         # NEED BREAK
 
         # Space to start game and end waiting for connections
-        poll_key(SPACE, Space)
         if CDoom.doomcom.value.numnodes >= CDoom::MAXPLAYERS ||
-           @@keystates[CDoom::DoomKey::SPACE.value] != 0
+           Raylib::KeyboardKey::Space.down?
+           puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
           # Distribute ips
           CDoom.netbuffer.value.retransmitfrom = 0
           CDoom.netbuffer.value.starttic = 69
@@ -2547,8 +2548,9 @@ module LibDoom
           ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
 
           # Build ips into ticcmds
-          @@sendaddress.each do |add|
+          @@sendaddress.each_with_index do |add, i|
             break unless add
+            next if add == @@sendaddress[i]
             add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
               ipnums.value = ipnum
               ipnums += 1
@@ -2559,6 +2561,8 @@ module LibDoom
           CDoom.doomcom.value.numnodes.times do |i|
             h_send_packet(i, NCMD_DISTRIBUTE)
           end
+
+          break
         end
       end
     end
