@@ -2449,13 +2449,13 @@ module LibDoom
       puts "sending connection info..."
       loop do
         doom_draw
-        i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[0]
+        i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[1]
         check_abort
         CDoom.netbuffer.value.retransmitfrom = 69
-        CDoom.netbuffer.value.starttic = 0
+        CDoom.netbuffer.value.starttic = 420
         CDoom.netbuffer.value.player = CDoom.doomcom.value.consoleplayer.to_u8!
-        CDoom.netbuffer.value.numtics = 420
-        h_send_packet(0, NCMD_CONNECT) # Assume first node is host
+        CDoom.netbuffer.value.numtics = 0
+        h_send_packet(1, NCMD_CONNECT) # Assume second node is host
 
         next if CDoom.h_get_packet == 0
         if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
@@ -2477,9 +2477,8 @@ module LibDoom
 
             # Host is sending ips
             if CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
-              if CDoom.netbuffer.value.retransmitfrom != 0 ||
+              if CDoom.netbuffer.value.retransmitfrom != 420 ||
                  CDoom.netbuffer.value.starttic != 69 ||
-                 CDoom.netbuffer.value.player != 420 ||
                  i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
               end
 
@@ -2540,21 +2539,20 @@ module LibDoom
            Raylib::KeyboardKey::Space.down?
            puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
           # Distribute ips
-          CDoom.netbuffer.value.retransmitfrom = 0
+          CDoom.netbuffer.value.retransmitfrom = 420
           CDoom.netbuffer.value.starttic = 69
-          CDoom.netbuffer.value.player = 420
-          CDoom.netbuffer.value.numtics = CDoom.doomcom.value.numnodes - 1 # Minus host
+          CDoom.netbuffer.value.numtics = 0
 
           ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
 
           # Build ips into ticcmds
           @@sendaddress.each_with_index do |add, i|
-            break unless add
-            next if add == @@sendaddress[i]
+            next if !add || add == @@sendaddress[i]
             add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
               ipnums.value = ipnum
               ipnums += 1
             end
+            CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1
           end
 
           # Send out
@@ -5101,8 +5099,8 @@ module LibDoom
       if CDoom.doomcom.value.numnodes < CDoom::MAXPLAYERS
         # We have room, return if invalid data
         if sw.checksum & NCMD_CONNECT != 0 &&
-           sw.retransmitfrom == 69 && sw.starttic == 0 &&
-           sw.numtics == 420
+           sw.retransmitfrom == 69 && sw.starttic == 420 &&
+           sw.numtics == 0
           # Add it in
           @@sendaddress[i] = fromaddress
         else
