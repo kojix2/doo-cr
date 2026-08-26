@@ -5073,7 +5073,6 @@ module LibDoom
     when result = @@recv_channel.receive
       sw, c, fromaddress = result
     else
-      puts "Invalid"
       CDoom.doomcom.value.remotenode = -1
       return
     end
@@ -5104,7 +5103,7 @@ module LibDoom
            sw.numtics == 0
           # Add it in
 
-          @@sendaddress[i] = fromaddress
+          @@sendaddress[i] = Socket::IPAddress.new(fromaddress.address, @@doomport)
         else
           CDoom.doomcom.value.remotenode = -1
           return # Invalid
