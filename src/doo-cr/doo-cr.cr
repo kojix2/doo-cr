@@ -2473,6 +2473,7 @@ module LibDoom
 
             # Host is sending ips
             if CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
+              puts "retrieving all clients info"
               if CDoom.netbuffer.value.retransmitfrom != 19 ||
                  CDoom.netbuffer.value.starttic != 69
                  i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
@@ -2482,10 +2483,11 @@ module LibDoom
               ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
 
               numips.times do |i|
+                puts "Loading ip"
                 # Load other client's IP addresses
                 CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
                 CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
-                @@sendaddress[i + 1] = Socket::IPAddress.v4(
+                @@sendaddress[i + 2] = Socket::IPAddress.v4(
                   ipnums[0], ipnums[1], ipnums[2], ipnums[3],
                   port: @@doomport)
                 ipnums += 4
@@ -2549,6 +2551,7 @@ module LibDoom
           CDoom.doomcom.value.numnodes.times do |i|
             @@sendaddress.each do |add|
               next if !add || add == @@sendaddress[i]
+              puts "sending ip"
               add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
                 ipnums.value = ipnum
                 ipnums += 1
