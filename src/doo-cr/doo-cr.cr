@@ -4995,58 +4995,49 @@ module LibDoom
   @@first = true
 
   def self.packet_get
-    sock = @@insocket
-    unless sock
-      CDoom.doomcom.value.remotenode = -1
-      return
-    end
-
-    sw = uninitialized CDoom::Doomdata
-    buf = Bytes.new(pointerof(sw).as(UInt8*), sizeof(CDoom::Doomdata))
-
-    fromaddress = uninitialized Socket::IPAddress
-    begin
-      c, fromaddress = sock.receive(buf)
-    rescue ex
-      CDoom.doomcom.value.remotenode = -1
-      return
-    end
-
-    if @@first
-      puts "len=#{c}:p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
-    end
-    @@first = false
-
-    i = 0
-    while i < CDoom.doomcom.value.numnodes
-      addr = @@sendaddress[i]
-      break if addr && addr.address == fromaddress.address
-      i += 1
-    end
-
-    if i == CDoom.doomcom.value.numnodes
-      CDoom.doomcom.value.remotenode = -1
-      return
-    end
-
-    CDoom.doomcom.value.remotenode = i
-    CDoom.doomcom.value.datalength = c
-
-    CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
-    CDoom.netbuffer.value.player = sw.player
-    CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
-    CDoom.netbuffer.value.starttic = sw.starttic
-    CDoom.netbuffer.value.numtics = sw.numtics
-
-    CDoom.netbuffer.value.numtics.times do |c|
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
-      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
-    end
+  select
+  when result = @@recv_channel.receive
+    sw, fromaddress = result
+  else
+    CDoom.doomcom.value.remotenode = -1
+    return
   end
+
+  if @@first
+    puts "len=p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
+  end
+  @@first = false
+
+  i = 0
+  while i < CDoom.doomcom.value.numnodes
+    addr = @@sendaddress[i]
+    break if addr && addr.address == fromaddress.address
+    i += 1
+  end
+
+  if i == CDoom.doomcom.value.numnodes
+    CDoom.doomcom.value.remotenode = -1
+    return
+  end
+
+  CDoom.doomcom.value.remotenode = i
+  CDoom.doomcom.value.datalength = sizeof(CDoom::Doomdata)
+
+  CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
+  CDoom.netbuffer.value.player = sw.player
+  CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
+  CDoom.netbuffer.value.starttic = sw.starttic
+  CDoom.netbuffer.value.numtics = sw.numtics
+
+  CDoom.netbuffer.value.numtics.times do |c|
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
+    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
+  end
+end
 
   def self.get_local_address : Int32
     hostname = System.hostname
@@ -5139,6 +5130,20 @@ module LibDoom
     @@insocket.not_nil!.read_timeout = 69.millisecond
 
     @@sendsocket = udp_socket()
+
+    spawn do
+    sock = @@insocket.not_nil!
+    loop do
+      sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
+      buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
+      begin
+        c, fromaddress = sock.receive(buf)
+        @@recv_channel.send({sw_ptr.value, fromaddress})
+      rescue ex
+        break
+      end
+    end
+  end
   end
 
   def self.i_net_cmd

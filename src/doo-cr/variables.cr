@@ -41,6 +41,7 @@ module LibDoom
   @@insocket : UDPSocket? = nil
   @@sendsocket : UDPSocket? = nil
   @@sendaddress = Array(Socket::IPAddress?).new(CDoom::MAXNETNODES, nil)
+  @@recv_channel = Channel(Tuple(CDoom::Doomdata, Socket::IPAddress)).new(32)
 
   @@netget : Proc(Nil) = -> { nil }
   @@netsend : Proc(Nil) = -> { nil }
