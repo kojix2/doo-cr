@@ -2463,9 +2463,6 @@ module LibDoom
           CDoom.respawnparm = (CDoom.netbuffer.value.retransmitfrom & 0x10) > 0
           CDoom.startmap = CDoom.netbuffer.value.starttic & 0x3f
           CDoom.startepisode = CDoom.netbuffer.value.starttic >> 6
-          CDoom.doomcom.value.consoleplayer = CDoom.netbuffer.value.numtics
-          CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
-
 
           puts "connected! waiting for host to start"
           loop do
@@ -2483,6 +2480,8 @@ module LibDoom
 
               numips = CDoom.netbuffer.value.numtics
               ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+              CDoom.doomcom.value.consoleplayer = CDoom.netbuffer.value.player
+              CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
 
               numips.times do |i|
                 # Load other client's IP addresses
@@ -2493,8 +2492,8 @@ module LibDoom
                   port: @@doomport)
                 ipnums += 4
               end
+              return
             end
-            return
           end
         end
       end
@@ -2519,14 +2518,14 @@ module LibDoom
           end
           CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
           CDoom.netbuffer.value.player = CDoom::VERSION
-          CDoom.netbuffer.value.numtics = i
+          CDoom.netbuffer.value.numtics = 0
           CDoom.h_send_packet(i, NCMD_SETUP)
         end
 
         CDoom::MAXPLAYERS.times do |i|
           if CDoom.h_get_packet != 0 && 
           CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
-             i == CDoom.doomcom.value.numplayers
+             CDoom.doomcom.value.remotenode == CDoom.doomcom.value.numplayers
             CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
             CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
             puts "connected client!"
@@ -2548,12 +2547,12 @@ module LibDoom
 
           # Send out
           CDoom.doomcom.value.numnodes.times do |i|
+            CDoom.netbuffer.value.player = i
           CDoom.netbuffer.value.numtics = 0
           ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
 
             @@sendaddress.each do |add|
               next if !add || add == @@sendaddress[i]
-              puts "sending ip"
               add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
                 ipnums.value = ipnum
                 ipnums += 1
@@ -5124,9 +5123,6 @@ module LibDoom
     CDoom.netbuffer.value.starttic = sw.starttic
     CDoom.netbuffer.value.numtics = sw.numtics
 
-    # Setup uses numtics
-    return if doom_htonl(sw.checksum) == NCMD_SETUP
-
     CDoom.netbuffer.value.numtics.times do |c|
       (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
       (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
@@ -5216,8 +5212,8 @@ module LibDoom
 
           Socket::IPAddress.new(hostentry.not_nil!.ip_address.address, @@doomport)
         end
-      CDoom.doomcom.value.numnodes = -1 # Setup in d_arbitrate_net_start
-      CDoom.doomcom.value.consoleplayer = -1
+      CDoom.doomcom.value.numnodes = 2 # At least
+      CDoom.doomcom.value.consoleplayer = -1 # Setup in d_arbitrate_net_start
     end
 
     CDoom.doomcom.value.id = CDoom::DOOMCOM_ID
