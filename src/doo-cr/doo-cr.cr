@@ -2210,9 +2210,7 @@ module LibDoom
     CDoom.doomcom.value.command = CDoom::Command::GET
     CDoom.i_net_cmd
 
-    puts "here"
     return 0 if CDoom.doomcom.value.remotenode == -1
-    puts "there"
     if CDoom.doomcom.value.datalength != CDoom.net_buffer_size
       if !CDoom.debugfile.null?
         CDoom.doom_fprint(CDoom.debugfile, "bad packet length ")
@@ -2455,7 +2453,12 @@ module LibDoom
         CDoom.netbuffer.value.numtics = 0
         h_send_packet(1, NCMD_CONNECT) # Assume second node is host
 
-        next if CDoom.h_get_packet == 0
+        got = false
+        100.times do
+          got = CDoom.h_get_packet != 0
+          break if got
+        end
+        next unless got
         puts "Here I am #{CDoom.netbuffer.value.checksum}"
         if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
           if CDoom.netbuffer.value.player != CDoom::VERSION
@@ -2506,26 +2509,26 @@ module LibDoom
 
         CDoom.doomcom.value.numnodes.times do |i|
           # Send out setup until everyones loaded
-            CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
-            if CDoom.deathmatch != 0
-              CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
-            end
-            if CDoom.nomonsters != 0
-              CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
-            end
-            if CDoom.respawnparm != 0
-              CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
-            end
-            CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
-            CDoom.netbuffer.value.player = CDoom::VERSION
-            CDoom.netbuffer.value.numtics = 0
-            CDoom.h_send_packet(i, NCMD_SETUP)
+          CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
+          if CDoom.deathmatch != 0
+            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
           end
+          if CDoom.nomonsters != 0
+            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
+          end
+          if CDoom.respawnparm != 0
+            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
+          end
+          CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
+          CDoom.netbuffer.value.player = CDoom::VERSION
+          CDoom.netbuffer.value.numtics = 0
+          CDoom.h_send_packet(i, NCMD_SETUP)
+        end
 
         i = 10
         while i != 0 && CDoom.h_get_packet != 0
           if CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
-            CDoom.netbuffer.value.player & 0x7f == CDoom.doomcom.value.numplayers
+             CDoom.netbuffer.value.player & 0x7f == CDoom.doomcom.value.numplayers
             CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
             CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
             puts "connected client!"
@@ -2547,18 +2550,19 @@ module LibDoom
           ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
 
           # Build ips into ticcmds
-          @@sendaddress.each_with_index do |add, i|
-            next if !add || add == @@sendaddress[i]
-            add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
-              ipnums.value = ipnum
-              ipnums += 1
-            end
-            CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1 if i % 2 == 0
-          end
 
           # Send out
-          1000.times do
-            CDoom.doomcom.value.numnodes.times do |i|
+          CDoom.doomcom.value.numnodes.times do |i|
+            @@sendaddress.each do |add|
+              next if !add || add == @@sendaddress[i]
+              add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
+                ipnums.value = ipnum
+                ipnums += 1
+              end
+              CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1 if i % 2 == 0
+            end
+
+            1000.times do
               h_send_packet(i, NCMD_DISTRIBUTE)
             end
           end
