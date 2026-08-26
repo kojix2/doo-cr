@@ -1387,11 +1387,11 @@ typedef enum
 typedef struct
 {
     spritenum_t sprite;
-    long frame;
-    long tics;
+    long long frame;
+    long long tics;
     actionf_t action;
     statenum_t nextstate;
-    long misc1, misc2;
+    long long misc1, misc2;
 } state_t;
 
 typedef enum
@@ -2011,7 +2011,7 @@ typedef struct
 typedef struct
 {
     // Supposed to be DOOMCOM_ID?
-    long id;
+    long long id;
 
     // DOOM executes an int to execute commands.
     short intnum;
@@ -3442,7 +3442,7 @@ signed short mixbuffer[MIXBUFFERSIZE];
 
 // unsigned long
 
-unsigned long queued_midi_msgs[MAX_QUEUED_MIDI_MSGS];
+unsigned long long queued_midi_msgs[MAX_QUEUED_MIDI_MSGS];
 
 // char
 

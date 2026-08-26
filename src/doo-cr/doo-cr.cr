@@ -5803,34 +5803,19 @@ c = c &+ (value &* (i + 1).to_u32)
   end
 
   # Is the song playing?
-  def self.i_tick_song : LibC::ULong
-    if @@mus_is_midi
-      {% if sizeof(LibC::ULong) == 8 %}
-        return 0_u64
-      {% else %}
-        return 0_u32
-      {% end %}
-    end
+  def self.i_tick_song : UInt64
+    return 0_u64 if @@mus_is_midi
     midi_event : UInt64 | UInt32 = 0
 
     # Dequeue MIDI events
     if CDoom.queue_midi_head != CDoom.queue_midi_tail
       CDoom.queue_midi_head += 1
       r = CDoom.queued_midi_msgs[(CDoom.queue_midi_head - 1).remainder(CDoom::MAX_QUEUED_MIDI_MSGS)]
-      {% if sizeof(LibC::ULong) == 8 %}
-        return r.to_u64!
-      {% else %}
-        return r.to_u32!
-      {% end %}
+      r.to_u64!
     end
 
     if CDoom.mus_playing == 0 || CDoom.mus_data.null?
-      r = 0
-      {% if sizeof(LibC::ULong) == 8 %}
-        return r.to_u64!
-      {% else %}
-        return r.to_u32!
-      {% end %}
+      return 0_u64
     end
 
     if CDoom.mus_delay <= 0
@@ -5918,12 +5903,7 @@ c = c &+ (value &* (i + 1).to_u32)
           CDoom.mus_offset = CDoom.mus_header.score_start
         else
           CDoom.mus_playing = 0
-          r = 0
-          {% if sizeof(LibC::ULong) == 8 %}
-            return r.to_u64!
-          {% else %}
-            return r.to_u32!
-          {% end %}
+          return 0_u64
         end
       when CDoom::EVENT_UNUSED
         dummy = CDoom.mus_data[CDoom.mus_offset].to_i32
@@ -5941,23 +5921,13 @@ c = c &+ (value &* (i + 1).to_u32)
           break unless delay_byte & 0b10000000 != 0
         end
 
-        r = midi_event
-        {% if sizeof(LibC::ULong) == 8 %}
-          return r.to_u64!
-        {% else %}
-          return r.to_u32!
-        {% end %}
+        return  midi_event.to_u64!
       end
     end
 
     CDoom.mus_delay -= 1
 
-    r = midi_event
-    {% if sizeof(LibC::ULong) == 8 %}
-      return r.to_u64!
-    {% else %}
-      return r.to_u32!
-    {% end %}
+    return  midi_event.to_u64!
   end
 
   def self.i_tactile(on : LibC::Int, off : LibC::Int, total : LibC::Int)

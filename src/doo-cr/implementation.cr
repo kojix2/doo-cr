@@ -144,7 +144,7 @@ fun doom_get_framebuffer(channels : Int32) : UInt8*
   LibDoom.doom_get_framebuffer(channels)
 end
 
-fun doom_tick_midi : LibC::ULong
+fun doom_tick_midi : LibC::ULongLong
   LibDoom.doom_tick_midi
 end
 
@@ -873,7 +873,7 @@ fun i_qry_song_playing = I_QrySongPlaying(handle : LibC::Int) : LibC::Int
   LibDoom.i_qry_song_playing(handle)
 end
 
-fun i_tick_song = I_TickSong : LibC::ULong
+fun i_tick_song = I_TickSong : LibC::ULongLong
   LibDoom.i_tick_song
 end
 

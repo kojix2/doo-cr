@@ -232,7 +232,7 @@ lib CDoom
 
   # Call this 140 times per second. Or about every 7ms.
   # Returns midi message. Keep calling it until it returns 0.
-  fun doom_tick_midi : LibC::ULong
+  fun doom_tick_midi : LibC::ULongLong
 
   # Events
   fun doom_key_down(key : DoomKey)
@@ -2822,12 +2822,12 @@ lib CDoom
 
   struct State
     sprite : Spritenum
-    frame : LibC::Long
-    tics : LibC::Long
+    frame : LibC::LongLong
+    tics : LibC::LongLong
     action : Void*
     nextstate : Statenum
-    misc1 : LibC::Long
-    misc2 : LibC::Long
+    misc1 : LibC::LongLong
+    misc2 : LibC::LongLong
   end
 
   $states : State*
@@ -3980,7 +3980,7 @@ lib CDoom
 
   struct Doomcom
     # Supposed to be DOOMCOM_ID?
-    id : LibC::Long
+    id : LibC::LongLong
 
     # DOOM executes an int to execute commands.
     intnum : LibC::Short
@@ -4299,7 +4299,7 @@ lib CDoom
   fun i_unregister_song = I_UnRegisterSong(handle : LibC::Int)
 
   # Get next MIDI message
-  fun i_tick_song = I_TickSong : LibC::ULong
+  fun i_tick_song = I_TickSong : LibC::ULongLong
 
   # __P_INTER__
 
@@ -6875,7 +6875,7 @@ lib CDoom
   $channelleftvol_lookup : LibC::Int*[NUM_CHANNELS]
   $channelrightvol_lookup : LibC::Int*[NUM_CHANNELS]
 
-  $queued_midi_msgs : LibC::ULong[MAX_QUEUED_MIDI_MSGS]
+  $queued_midi_msgs : LibC::ULongLong[MAX_QUEUED_MIDI_MSGS]
   $queue_midi_head : LibC::Int
   $queue_midi_tail : LibC::Int
 
