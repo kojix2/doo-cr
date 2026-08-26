@@ -5028,7 +5028,7 @@ module LibDoom
     end
 
     CDoom.doomcom.value.remotenode = i
-    CDoom.doomcom.value.datalength = c
+    CDoom.doomcom.value.datalength = c.to_i16!
 
     CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
     CDoom.netbuffer.value.player = sw.player
