@@ -2170,7 +2170,7 @@ c = c &+ (value &* (i + 1).to_u32)
     CDoom.netbuffer.value.checksum = CDoom.net_buffer_checksum | flags.to_u32
 
     if node == 0
-      CDoom.reboundstore = CDoom.netbuffer.value
+      CDoom.netbuffer.copy_to(pointerof(CDoom.reboundstore), 1)
       CDoom.reboundpacket = 1
       return
     end
@@ -2216,7 +2216,7 @@ c = c &+ (value &* (i + 1).to_u32)
   #
   def self.h_get_packet : CDoom::DoomBool
     if CDoom.reboundpacket != 0
-      CDoom.netbuffer.value = CDoom.reboundstore
+      CDoom.netbuffer.copy_from(pointerof(CDoom.reboundstore), 1)
       CDoom.doomcom.value.remotenode = 0
       CDoom.reboundpacket = 0
       return 1
@@ -2361,9 +2361,9 @@ c = c &+ (value &* (i + 1).to_u32)
       src = CDoom.netbuffer.value.cmds.to_unsafe + start
 
       while CDoom.nettics[netnode] < realend
-        dest = CDoom.netcmds[netconsole].to_unsafe + (CDoom.nettics[netnode] % CDoom::BACKUPTICS)
-        CDoom.nettics[netnode] += 1
-        dest.value = src.value
+        dest = (CDoom.netcmds.to_unsafe + netconsole).value.to_unsafe + (CDoom.nettics[netnode] % CDoom::BACKUPTICS)
+        CDoom.nettics[netnode] = CDoom.nettics[netnode] + 1
+        dest.copy_from(src, 1)
         src += 1
       end
     end
@@ -2417,8 +2417,8 @@ c = c &+ (value &* (i + 1).to_u32)
           CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
 
           CDoom.netbuffer.value.numtics.times do |j|
-            CDoom.netbuffer.value.cmds[j] =
-              CDoom.localcmds[(realstart + j) % CDoom::BACKUPTICS]
+            (CDoom.netbuffer.value.cmds.to_unsafe + j).copy_from(
+              CDoom.localcmds.to_unsafe + ((realstart + j) % CDoom::BACKUPTICS), 1)
           end
 
           if CDoom.remoteresend[i] != 0
@@ -3672,7 +3672,12 @@ c = c &+ (value &* (i + 1).to_u32)
       if CDoom.playeringame[i] != 0
         cmd = ((CDoom.players.to_unsafe + i).as(UInt8*) + offsetof(CDoom::Player, @cmd)).as(CDoom::Ticcmd*) # Gotta be a better way to do this
 
-        CDoom.doom_memcpy(cmd, (CDoom.netcmds.to_unsafe + i).value.to_unsafe + buf, sizeof(CDoom::Ticcmd))
+        CDoom.doom_memcpy(cmd, CDoom.netcmds[i].to_unsafe + buf, sizeof(CDoom::Ticcmd))
+        puts "Net"
+        puts (CDoom.netcmds[i].to_unsafe + buf).value.forwardmove
+        puts "Cmd"
+        puts cmd.value.forwardmove
+        puts
 
         CDoom.g_read_demo_ticcmd(cmd) if CDoom.demoplayback != 0
         CDoom.g_write_demo_ticcmd(cmd) if CDoom.demorecording != 0
