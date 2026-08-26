@@ -2210,8 +2210,9 @@ module LibDoom
     CDoom.doomcom.value.command = CDoom::Command::GET
     CDoom.i_net_cmd
 
+    puts "here"
     return 0 if CDoom.doomcom.value.remotenode == -1
-
+    puts "there"
     if CDoom.doomcom.value.datalength != CDoom.net_buffer_size
       if !CDoom.debugfile.null?
         CDoom.doom_fprint(CDoom.debugfile, "bad packet length ")
