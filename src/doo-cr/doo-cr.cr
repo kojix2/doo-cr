@@ -2453,12 +2453,7 @@ module LibDoom
         CDoom.netbuffer.value.numtics = 0
         h_send_packet(1, NCMD_CONNECT) # Assume second node is host
 
-        got = false
-        100.times do
-          got = CDoom.h_get_packet != 0
-          break if got
-        end
-        next unless got
+        next if CDoom.h_get_packet == 0
         puts "Here I am #{CDoom.netbuffer.value.checksum}"
         if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
           if CDoom.netbuffer.value.player != CDoom::VERSION
@@ -5078,6 +5073,7 @@ module LibDoom
     when result = @@recv_channel.receive
       sw, c, fromaddress = result
     else
+      puts "Invalid"
       CDoom.doomcom.value.remotenode = -1
       return
     end
