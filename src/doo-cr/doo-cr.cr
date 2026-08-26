@@ -2452,7 +2452,7 @@ module LibDoom
         i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[1]
         check_abort
         CDoom.netbuffer.value.retransmitfrom = 69
-        CDoom.netbuffer.value.starttic = 420
+        CDoom.netbuffer.value.starttic = 19
         CDoom.netbuffer.value.player = CDoom.doomcom.value.consoleplayer.to_u8!
         CDoom.netbuffer.value.numtics = 0
         h_send_packet(1, NCMD_CONNECT) # Assume second node is host
@@ -2477,7 +2477,7 @@ module LibDoom
 
             # Host is sending ips
             if CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
-              if CDoom.netbuffer.value.retransmitfrom != 420 ||
+              if CDoom.netbuffer.value.retransmitfrom != 19 ||
                  CDoom.netbuffer.value.starttic != 69 ||
                  i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
               end
@@ -2499,7 +2499,7 @@ module LibDoom
       end
     else
       # key player, send the setup info
-      puts "sending network start info... PRESS SPACE TO START"
+      puts "waiting for client info... PRESS SPACE TO START"
       loop do
         doom_draw
         CDoom.check_abort
@@ -2539,7 +2539,7 @@ module LibDoom
            Raylib::KeyboardKey::Space.down?
            puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
           # Distribute ips
-          CDoom.netbuffer.value.retransmitfrom = 420
+          CDoom.netbuffer.value.retransmitfrom = 19
           CDoom.netbuffer.value.starttic = 69
           CDoom.netbuffer.value.numtics = 0
 
@@ -5095,15 +5095,17 @@ module LibDoom
         CDoom.doomcom.value.remotenode = -1
         return
       end
-
       if CDoom.doomcom.value.numnodes < CDoom::MAXPLAYERS
         # We have room, return if invalid data
-        if sw.checksum & NCMD_CONNECT != 0 &&
-           sw.retransmitfrom == 69 && sw.starttic == 420 &&
+        puts sw.starttic
+        if doom_htonl(sw.checksum) & NCMD_CONNECT != 0 &&
+           sw.retransmitfrom == 69 && sw.starttic == 19 &&
            sw.numtics == 0
           # Add it in
+          
           @@sendaddress[i] = fromaddress
         else
+          CDoom.doomcom.value.remotenode = -1
           return # Invalid
         end
       end
