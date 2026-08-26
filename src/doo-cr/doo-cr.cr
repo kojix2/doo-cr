@@ -201,24 +201,24 @@ module LibDoom
   end
 
   def self.doom_draw
-      return unless Raylib.window_ready?
-      @@screen_texture.try do |st|
-        fb = CDoom.doom_get_framebuffer(4)
-        next if fb.null?
-        Raylib.update_texture(st, fb)
+    return unless Raylib.window_ready?
+    @@screen_texture.try do |st|
+      fb = CDoom.doom_get_framebuffer(4)
+      next if fb.null?
+      Raylib.update_texture(st, fb)
 
-        scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
-        scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
-        scale = [scalew, scaleh].min
+      scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
+      scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
+      scale = [scalew, scaleh].min
 
-        Raylib.begin_drawing
-        # Raylib.clear_background(Raylib::BLACK)
-        Raylib.draw_texture_pro(st,
-          Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
-          Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
-            width: SRES_X.to_f * scale, height: SRES_Y.to_f * scale),
-          Raylib::Vector2.new, 0, Raylib::WHITE)
-        Raylib.end_drawing
+      Raylib.begin_drawing
+      # Raylib.clear_background(Raylib::BLACK)
+      Raylib.draw_texture_pro(st,
+        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
+        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
+          width: SRES_X.to_f * scale, height: SRES_Y.to_f * scale),
+        Raylib::Vector2.new, 0, Raylib::WHITE)
+      Raylib.end_drawing
     end
   end
 
@@ -2449,6 +2449,7 @@ module LibDoom
       while true
         CDoom.check_abort
         next if CDoom.h_get_packet == 0
+        puts "Goe a packet! checksum = #{CDoom.netbuffer.value.checksum}"
         if CDoom.netbuffer.value.checksum & CDoom::NCMD_SETUP != 0
           if CDoom.netbuffer.value.player != CDoom::VERSION
             CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
@@ -4990,61 +4991,60 @@ module LibDoom
 
     bytes = Bytes.new(pointerof(sw).as(UInt8*), CDoom.doomcom.value.datalength)
     c = sock.send(bytes, to: dest)
-        puts "[SEND] to #{dest} at #{Time.local}"
   end
 
   @@first = true
 
   def self.packet_get
-  sock = @@insocket
-  unless sock
-    CDoom.doomcom.value.remotenode = -1
-    return
+    sock = @@insocket
+    unless sock
+      CDoom.doomcom.value.remotenode = -1
+      return
+    end
+
+    select
+    when result = @@recv_channel.receive
+      sw, fromaddress = result
+    else
+      CDoom.doomcom.value.remotenode = -1
+      return
+    end
+
+    if @@first
+      puts "len=p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
+    end
+    @@first = false
+
+    i = 0
+    while i < CDoom.doomcom.value.numnodes
+      addr = @@sendaddress[i]
+      break if addr && addr.address == fromaddress.address
+      i += 1
+    end
+
+    if i == CDoom.doomcom.value.numnodes
+      CDoom.doomcom.value.remotenode = -1
+      return
+    end
+
+    CDoom.doomcom.value.remotenode = i
+    CDoom.doomcom.value.datalength = sizeof(CDoom::Doomdata)
+
+    CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
+    CDoom.netbuffer.value.player = sw.player
+    CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
+    CDoom.netbuffer.value.starttic = sw.starttic
+    CDoom.netbuffer.value.numtics = sw.numtics
+
+    CDoom.netbuffer.value.numtics.times do |c|
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
+      (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
+    end
   end
-
-  select
-  when result = @@recv_channel.receive
-    sw, fromaddress = result
-  else
-    CDoom.doomcom.value.remotenode = -1
-    return
-  end
-
-  if @@first
-    puts "len=p=[0x#{sw.checksum.to_s(16)} 0x#{sw.player.to_s(16)}]"
-  end
-  @@first = false
-
-  i = 0
-  while i < CDoom.doomcom.value.numnodes
-    addr = @@sendaddress[i]
-    break if addr && addr.address == fromaddress.address
-    i += 1
-  end
-
-  if i == CDoom.doomcom.value.numnodes
-    CDoom.doomcom.value.remotenode = -1
-    return
-  end
-
-  CDoom.doomcom.value.remotenode = i
-  CDoom.doomcom.value.datalength = sizeof(CDoom::Doomdata)
-
-  CDoom.netbuffer.value.checksum = doom_htonl(sw.checksum)
-  CDoom.netbuffer.value.player = sw.player
-  CDoom.netbuffer.value.retransmitfrom = sw.retransmitfrom
-  CDoom.netbuffer.value.starttic = sw.starttic
-  CDoom.netbuffer.value.numtics = sw.numtics
-
-  CDoom.netbuffer.value.numtics.times do |c|
-    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.forwardmove = sw.cmds[c].forwardmove
-    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.sidemove = sw.cmds[c].sidemove
-    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.angleturn = doom_htons(sw.cmds[c].angleturn)
-    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.consistancy = doom_htons(sw.cmds[c].consistancy)
-    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.chatchar = sw.cmds[c].chatchar
-    (CDoom.netbuffer.value.cmds.to_unsafe + c).value.buttons = sw.cmds[c].buttons
-  end
-end
 
   def self.get_local_address : Int32
     hostname = System.hostname
@@ -5133,24 +5133,23 @@ end
     CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numnodes
 
     @@insocket = udp_socket()
-bind_to_local_port(@@insocket.not_nil!, @@doomport)
+    bind_to_local_port(@@insocket.not_nil!, @@doomport)
 
-@@sendsocket = udp_socket()
+    @@sendsocket = udp_socket()
 
-spawn do
-  sock = @@insocket.not_nil!
-  loop do
-    sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
-    buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
-    begin
-      c, fromaddress = sock.receive(buf)
-            puts "[RECV] from #{fromaddress} at #{Time.local} bytes=#{c}"
-      @@recv_channel.send({sw_ptr.value, fromaddress})
-    rescue ex
-      break
+    spawn do
+      sock = @@insocket.not_nil!
+      loop do
+        sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
+        buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
+        begin
+          c, fromaddress = sock.receive(buf)
+          @@recv_channel.send({sw_ptr.value, fromaddress})
+        rescue ex
+          break
+        end
+      end
     end
-  end
-end
   end
 
   def self.i_net_cmd
@@ -5593,8 +5592,8 @@ end
 
   def self.update_audio
     loop do
-      next unless Raylib.window_ready? && RAudio.audio_device_ready? && 
-      !@@audio_stream.nil? && !@@adl_player.nil?
+      next unless Raylib.window_ready? && RAudio.audio_device_ready? &&
+                  !@@audio_stream.nil? && !@@adl_player.nil?
       now = Raylib.get_time
       @@midi_tick_accumulator += now - @@last_time
       @@last_time = now
