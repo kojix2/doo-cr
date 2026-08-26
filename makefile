@@ -50,8 +50,7 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	$(CHANGE_LIB_NAMES)
 
 	cd ./bin && \
-	./doo-cr 
-#-net 1 192.168.0.107 -nomonsters -warp 01
+	./doo-cr -net 1 192.168.0.107 -deathmatch -nomonsters -warp 01
 
 arm: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \

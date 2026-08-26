@@ -46,7 +46,6 @@ end
 
 Fiber::ExecutionContext.default.resize(maximum: System.cpu_count)
 
-spawn { LibDoom.doom_init(ARGC_UNSAFE, ARGV_UNSAFE, 0) }
 spawn { LibDoom.update_audio } # virtual sound card thread
 
-sleep
+LibDoom.doom_init(ARGC_UNSAFE, ARGV_UNSAFE, 0)

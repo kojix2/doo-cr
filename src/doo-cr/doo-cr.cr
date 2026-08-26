@@ -2660,7 +2660,7 @@ module LibDoom
         if i != CDoom.ticdup - 1
           buf = (CDoom.gametic // CDoom.ticdup) % CDoom::BACKUPTICS
           CDoom::MAXPLAYERS.times do |j|
-            cmd = CDoom.netcmds[j].to_unsafe + buf
+            cmd = (CDoom.netcmds.to_unsafe + j).value.to_unsafe + buf
             cmd.value.chatchar = 0
             cmd.value.buttons = 0 if cmd.value.buttons & CDoom::Buttoncode::BT_SPECIAL.value != 0
           end
@@ -3654,7 +3654,7 @@ module LibDoom
       if CDoom.playeringame[i] != 0
         cmd = ((CDoom.players.to_unsafe + i).as(UInt8*) + offsetof(CDoom::Player, @cmd)).as(CDoom::Ticcmd*) # Gotta be a better way to do this
 
-        CDoom.doom_memcpy(cmd, CDoom.netcmds[i].to_unsafe + buf, sizeof(CDoom::Ticcmd))
+        CDoom.doom_memcpy(cmd, (CDoom.netcmds.to_unsafe + i).value.to_unsafe + buf, sizeof(CDoom::Ticcmd))
 
         CDoom.g_read_demo_ticcmd(cmd) if CDoom.demoplayback != 0
         CDoom.g_write_demo_ticcmd(cmd) if CDoom.demorecording != 0
@@ -3824,7 +3824,7 @@ module LibDoom
       CDoom.i_error("Error: Only #{selections} deathmatch spots, 4 required")
     end
 
-    20.times do |j|
+    selections.times do |j|
       i = CDoom.p_random % selections
       if CDoom.g_check_spot(playernum, CDoom.deathmatchstarts.to_unsafe + i) != 0
         (CDoom.deathmatchstarts.to_unsafe + i).value.type = playernum + 1
@@ -3975,7 +3975,7 @@ module LibDoom
       (CDoom.wminfo.plyr.to_unsafe + i).value.sitems = CDoom.players[i].itemcount
       (CDoom.wminfo.plyr.to_unsafe + i).value.ssecret = CDoom.players[i].secretcount
       (CDoom.wminfo.plyr.to_unsafe + i).value.stime = CDoom.leveltime
-      CDoom.doom_memcpy(CDoom.wminfo.plyr[i].frags, CDoom.players[i].frags,
+      CDoom.doom_memcpy((CDoom.wminfo.plyr.to_unsafe + i).value.frags, CDoom.players[i].frags,
         sizeof(typeof(CDoom.wminfo.plyr[i].frags)))
     end
 
@@ -5562,7 +5562,7 @@ module LibDoom
 
   def self.i_shutdown_sound
     # Wait till all pending sounds are finished.
-    hopetill = i_get_time + 2*70 # Give 2 seconds to finish
+    hopetill = i_get_time + 1*70 # Give a second to finish
 
     # FIXME (below).
     print "i_shutdown_sound: Finishing pending sounds..."
@@ -22040,7 +22040,7 @@ module LibDoom
     CDoom::MAXPLAYERS.times do |i|
       if CDoom.playeringame[i] != 0
         CDoom::MAXPLAYERS.times do |j|
-          (CDoom.dm_frags[i].to_unsafe + j).value = 0 if CDoom.playeringame[j] != 0
+          ((CDoom.dm_frags.to_unsafe + i).value.to_unsafe + j).value = 0 if CDoom.playeringame[j] != 0
         end
 
         CDoom.dm_totals[i] = 0
@@ -22059,7 +22059,7 @@ module LibDoom
       CDoom::MAXPLAYERS.times do |i|
         if CDoom.playeringame[i] != 0
           CDoom::MAXPLAYERS.times do |j|
-            (CDoom.dm_frags[i].to_unsafe + j).value = CDoom.plrs[i].frags[j] if CDoom.playeringame[j] != 0
+            ((CDoom.dm_frags.to_unsafe + i).value.to_unsafe + j).value = CDoom.plrs[i].frags[j] if CDoom.playeringame[j] != 0
           end
 
           CDoom.dm_totals[i] = CDoom.wi_frag_sum(i)
@@ -22081,16 +22081,16 @@ module LibDoom
             if CDoom.playeringame[j] != 0 &&
                CDoom.dm_frags[i][j] != CDoom.plrs[i].frags[j]
               if CDoom.plrs[i].frags[j] < 0
-                (CDoom.dm_frags[i].to_unsafe + j).value = CDoom.dm_frags[i][j] - 1
+                ((CDoom.dm_frags.to_unsafe + i).value.to_unsafe + j).value = CDoom.dm_frags[i][j] - 1
               else
-                (CDoom.dm_frags[i].to_unsafe + j).value = CDoom.dm_frags[i][j] + 1
+                ((CDoom.dm_frags.to_unsafe + i).value.to_unsafe + j).value = CDoom.dm_frags[i][j] + 1
               end
 
               if CDoom.dm_frags[i][j] > 99
-                (CDoom.dm_frags[i].to_unsafe + j).value = 99
+                ((CDoom.dm_frags.to_unsafe + i).value.to_unsafe + j).value = 99
               end
               if CDoom.dm_frags[i][j] < -99
-                (CDoom.dm_frags[i].to_unsafe + j).value = -99
+                ((CDoom.dm_frags.to_unsafe + i).value.to_unsafe + j).value = -99
               end
 
               stillticking = true
