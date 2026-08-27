@@ -41,6 +41,7 @@ module LibDoom
   # TODO: make a setting
   MIDI_BANK        = 16
 
+  # -- Macros for quick key polling --
   macro poll_key(doomkey, raylibkey)
   was_down = LibDoom.keystates[CDoom::DoomKey::{{doomkey}}.value]
   is_down = Raylib::KeyboardKey::{{raylibkey}}.down?
@@ -63,20 +64,17 @@ end
   LibDoom.doom_button_down(CDoom::DoomButton::{{doombutton}}) if is_down && !was_down
   LibDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if !is_down && was_down
 end
-
-  @@execsize = 1
+# -- Macros for quick key polling --
 
   unless ARGV.includes?("-nosound")
-    CDoom.i_error("Error: Cannot run sounds with less than #{@@execsize} cpu cores!\nUse -nosound to run.") if System.cpu_count < (@@execsize += 1)
-
+    # Create seperate thread so audio updates seperately from game code
     audio_context = Fiber::ExecutionContext::Isolated.new("doom-audio") do
       LibDoom.update_audio
     end
   end
 
   if ARGV.includes?("-net")
-    CDoom.i_error("Error: cannot run netgame with less than #{@@execsize} cpu cores!") if System.cpu_count < (@@execsize += 1)
-
+    # Create a seperate thread for the packets-in buffer during a netgame
     net_context = Fiber::ExecutionContext::Isolated.new("doom-net") do
       until @@insocket
       end
@@ -94,4 +92,5 @@ end
   end
 end
 
+# Make it happen!
 LibDoom.doom_init(ARGC_UNSAFE, ARGV_UNSAFE, 0)

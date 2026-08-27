@@ -15,6 +15,14 @@
 #
 # ==> Every method of DOOM
 
+# The majority of this file will be rewritten to be modernized,
+# Crystalized, and overall improved (changed to be how I want it lol)
+#
+# A lot of this should scare you. It sure scared me.
+# 99% of this is one to one with C, specifically PureDoom.
+# I reworked a lot of stuff already but even then the first line
+#  in this module is still a null pointer... so... it needs more work :)
+
 module LibDoom
   NULL_PROC   = Proc(Nil).new(Pointer(Void).null, Pointer(Void).null)
   NULL_PROCP1 = Proc(Int32, Nil).new(Pointer(Void).null, Pointer(Void).null)
@@ -1976,7 +1984,7 @@ module LibDoom
     end
 
 
-    puts " DOO-CR ".center(77, '=')
+    puts " DOO-CR V#{VERSION_STR} ".center(77, '=')
     puts @@title.center(77)
     puts "".ljust(77, '=')
     puts "Doo-cr is licensed under the GNU General Public License v3.0 license".center(77)

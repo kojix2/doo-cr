@@ -1,8 +1,8 @@
-name: Build Macos
+name: Macos Build
 on: [push, pull_request]
 jobs:
   build:
-    name: Build Macos
+    name: Macos Build
     runs-on: macos-latest
     steps:
       - name: Download source

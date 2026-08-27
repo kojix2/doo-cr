@@ -1,8 +1,8 @@
-name: Build Ubuntu
+name: Ubuntu Build
 on: [push, pull_request]
 jobs:
   build:
-    name: Build Ubuntu
+    name: Ubuntu Build
     runs-on: ubuntu-latest
     steps:
       - name: Download source

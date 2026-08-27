@@ -1,7 +1,7 @@
 ![logo](https://raw.githubusercontent.com/D-Shwagginz/doo-cr/master/logo/doo-cr.png)
 
-[![Build Ubuntu](https://github.com/D-Shwagginz/doo-cr/actions/workflows/ubuntu-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/ubuntu- build.yml)
-[![Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/macos-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/macos-build.yml)
+[![Ubuntu Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/ubuntu-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/ubuntu-build.yml)<br>
+[![Macos Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/macos-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/macos-build.yml)
 
 A DOOM source port written in Crystal Lang based on [PureDoom](https://github.com/Daivuk/PureDOOM) and [LinuxDoom](https://github.com/id-Software/DOOM)
 
@@ -13,8 +13,11 @@ A DOOM source port written in Crystal Lang based on [PureDoom](https://github.co
 - Bug fixes and little additions <sup>[ask me about them!](mailto:devin@shwaggi.nz)</sup>
 - Modern saving and loading system: no more crashing if saving a big map
 - *.midi music support
-- Extra command line args (see below)
-
+- Command line args (see below)
+- A scary look into what very unsafe low level Crystal code looks like!
+- Somewhat compatible demo playback
+- Runtime calculated finesine, finetangent, and tantoangle data tables (Remove -DPRECOMPUTED in makefile)
+- Smooth midi panning <sup>Thanks ADLMDI!</sup>
 
 ## Usage
 Running doo-cr will boot up an autodetected .wad file and will place the config file in the current directory.
@@ -85,6 +88,17 @@ The only thing that still remains in C is just variable declarations that I have
 All methods are fully written in Crystal. The only C usage is bindings to [Raylib](https://github.com/sol-vin/raylib-cr) and [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) <sup>rewriting those would be a completely seperate project</sup>
 
 Do note that this code is extremely [unsafe](https://crystal-lang.org/reference/1.21/syntax_and_semantics/unsafe.html) due to its current C-typed nature.
+
+## Plans
+- DeHackEd support
+- Hardware OpenGL rendering
+- By extension, shader effects
+- Crystalized code (Not a null pointer in sight)
+- Crystal test specs
+- No calls into a `lib`
+- Whatever I want
+- Comments to help make Doom's source easier to read
+- Reorganization and renaming of functions, ditto
 
 ## Contributing
 

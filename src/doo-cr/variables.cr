@@ -14,6 +14,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # ==> Most "global" variables and constants
+#
+# Essentially the "Header" file for doo-cr
 
 module LibDoom
   PI = 3.141592657
