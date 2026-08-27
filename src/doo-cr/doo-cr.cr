@@ -46,8 +46,8 @@ module LibDoom
 
   def self.doom_gettime_impl(sec : Int32*, usec : Int32*)
     now = Time.local
-  sec.value = now.to_unix.to_i32
-  usec.value = (now.nanosecond // 1_000).to_i32
+    sec.value = now.to_unix.to_i32
+    usec.value = (now.nanosecond // 1_000).to_i32
   end
 
   def self.doom_exit_impl(code : Int32)
@@ -2443,7 +2443,7 @@ module LibDoom
     end
   end
 
-    @@punch_countdown = 0
+  @@punch_countdown = 0
 
   def self.punch_peers
     @@sendaddress.each_with_index do |addr, i|
@@ -2496,7 +2496,7 @@ module LibDoom
               puts "retrieving all clients info"
               if CDoom.netbuffer.value.retransmitfrom != 19 ||
                  CDoom.netbuffer.value.starttic != 69
-                 i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
+                i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
               end
 
               numips = CDoom.netbuffer.value.numtics
@@ -2544,8 +2544,8 @@ module LibDoom
         end
 
         CDoom::MAXPLAYERS.times do |i|
-          if CDoom.h_get_packet != 0 && 
-          CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
+          if CDoom.h_get_packet != 0 &&
+             CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
              CDoom.doomcom.value.remotenode == CDoom.doomcom.value.numplayers
             CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
             CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
@@ -2563,14 +2563,13 @@ module LibDoom
           CDoom.netbuffer.value.retransmitfrom = 19
           CDoom.netbuffer.value.starttic = 69
 
-
           # Build ips into ticcmds
 
           # Send out
           CDoom.doomcom.value.numnodes.times do |i|
             CDoom.netbuffer.value.player = i
-          CDoom.netbuffer.value.numtics = 0
-          ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+            CDoom.netbuffer.value.numtics = 0
+            ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
 
             @@sendaddress.each do |add|
               next if !add || add == @@sendaddress[i]
@@ -5049,50 +5048,96 @@ module LibDoom
   end
 
   def self.upnp_open_port(port : Int32) : Bool
-    begin
-  # 1. Discover the router
-  sock = UDPSocket.new(Socket::Family::INET)
-  sock.read_timeout = 2.seconds
-  sock.send(
-    "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\n" \
-    "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n\r\n",
-    to: Socket::IPAddress.new("239.255.255.250", 1900))
+    # 1. Discover the router. Retry the multicast search a few times and
+    # read multiple replies - UDP multicast is lossy and other UPnP
+    # devices on the LAN may answer before the actual router does.
+    sock = UDPSocket.new(Socket::Family::INET)
+    sock.read_timeout = 1.5.seconds
+    dest = Socket::IPAddress.new("239.255.255.250", 1900)
+    search = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\n" \
+      "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n\r\n"
 
-  buf = Bytes.new(2048)
-  len, _ = sock.receive(buf)
-  sock.close
-  resp = String.new(buf[0, len])
-  location = resp.each_line.find(&.starts_with?("LOCATION:")).try { |l| l.split(":", 2)[1].strip }
-  return false unless location
+    location = nil
+    3.times do
+      break if location
+      sock.send(search, to: dest)
+      loop do
+        buf = Bytes.new(2048)
+        len, _ = sock.receive(buf)
+        resp = String.new(buf[0, len])
+        if loc = resp.each_line.find(&.downcase.starts_with?("location:")).try { |l| l.split(":", 2)[1].strip }
+          location = loc
+          break
+        end
+      end
+    end
+    sock.close
 
-  # 2. Fetch device description, pull out controlURL with a plain string search
-  desc = HTTP::Client.get(location).body
-  return false unless desc.includes?("WANIPConnection") || desc.includes?("WANPPPConnection")
-  control_path = desc[/<controlURL>(.*?)<\/controlURL>/, 1]?
-  return false unless control_path
+    unless location
+      puts "UPnP: no router responded to SSDP discovery"
+      return false
+    end
 
-  uri = URI.parse(location)
-  control_url = control_path.starts_with?("http") ? control_path : "#{uri.scheme}://#{uri.host}:#{uri.port}#{control_path}"
+    # 2. Fetch device description, and scope the controlURL match to the
+    # <service> block that actually declares the matching WAN service -
+    # grabbing the first controlURL in the whole doc can pick an unrelated
+    # service (Layer3Forwarding, WANCommonInterfaceConfig, etc).
+    desc = HTTP::Client.get(location).body
 
-  # 3. Ask it to forward the port
-  local_ip = Socket::Addrinfo.resolve(System.hostname, nil, family: Socket::Family::INET, type: Socket::Type::DGRAM).first.ip_address.address
+    service_type = desc.includes?("WANIPConnection") ? "WANIPConnection" :
+      (desc.includes?("WANPPPConnection") ? "WANPPPConnection" : nil)
+    unless service_type
+      puts "UPnP: device description has no WANIPConnection/WANPPPConnection service"
+      return false
+    end
 
-  body = "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body>" \
-    "<u:AddPortMapping xmlns:u=\"urn:schemas-upnp-org:service:WANIPConnection:1\">" \
-    "<NewRemoteHost></NewRemoteHost><NewExternalPort>#{port}</NewExternalPort><NewProtocol>UDP</NewProtocol>" \
-    "<NewInternalPort>#{port}</NewInternalPort><NewInternalClient>#{local_ip}</NewInternalClient>" \
-    "<NewEnabled>1</NewEnabled><NewPortMappingDescription>doom-cr</NewPortMappingDescription><NewLeaseDuration>0</NewLeaseDuration>" \
-    "</u:AddPortMapping></s:Body></s:Envelope>"
+    service_block = desc[/<service>(?:(?!<\/service>).)*?#{service_type}:\d+.*?<\/service>/m]?
+    unless service_block
+      puts "UPnP: couldn't isolate the #{service_type} service block"
+      return false
+    end
 
-  HTTP::Client.post(control_url,
-    headers: HTTP::Headers{"Content-Type" => "text/xml; charset=\"utf-8\"", "SOAPAction" => "\"urn:schemas-upnp-org:service:WANIPConnection:1#AddPortMapping\""},
-    body: body)
+    version = service_block[/#{service_type}:(\d+)/, 1]? || "1"
+    control_path = service_block[/<controlURL>(.*?)<\/controlURL>/, 1]?
+    unless control_path
+      puts "UPnP: #{service_type} service has no controlURL"
+      return false
+    end
 
-    return true
-rescue
-  return false
-end
-end
+    uri = URI.parse(location)
+    control_url = control_path.starts_with?("http") ? control_path : "#{uri.scheme}://#{uri.host}:#{uri.port}#{control_path}"
+    service_ns = "urn:schemas-upnp-org:service:#{service_type}:#{version}"
+
+    # 3. Ask it to forward the port. Use a UDP "connect" to a public
+    # address to learn our real outbound-facing local IP, instead of
+    # trusting hostname resolution (often loopback on Linux).
+    probe = UDPSocket.new(Socket::Family::INET)
+    probe.connect("8.8.8.8", 80)
+    local_ip = probe.local_address.address
+    probe.close
+
+    body = "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body>" \
+      "<u:AddPortMapping xmlns:u=\"#{service_ns}\">" \
+      "<NewRemoteHost></NewRemoteHost><NewExternalPort>#{port}</NewExternalPort><NewProtocol>UDP</NewProtocol>" \
+      "<NewInternalPort>#{port}</NewInternalPort><NewInternalClient>#{local_ip}</NewInternalClient>" \
+      "<NewEnabled>1</NewEnabled><NewPortMappingDescription>doom-cr</NewPortMappingDescription><NewLeaseDuration>0</NewLeaseDuration>" \
+      "</u:AddPortMapping></s:Body></s:Envelope>"
+
+    resp = HTTP::Client.post(control_url,
+      headers: HTTP::Headers{"Content-Type" => "text/xml; charset=\"utf-8\"", "SOAPAction" => "\"#{service_ns}#AddPortMapping\""},
+      body: body)
+
+    if resp.status_code >= 200 && resp.status_code < 300 && !resp.body.includes?("Fault")
+      true
+    else
+      puts "UPnP: router rejected AddPortMapping (#{resp.status_code}): #{resp.body[0, 200]}"
+      false
+    end
+  rescue ex
+    puts "UPnP: error opening port: #{ex.class}: #{ex.message}"
+    false
+  end
+
 
   def self.bind_to_local_port(socket : UDPSocket, port : Int32)
     begin
@@ -5104,9 +5149,9 @@ end
 
   def self.packet_send
     # sock = @@sendsocket
-# Use insocket because in and out ports will both be doomport
-# Helps prevent bugs on lan
-    sock = @@insocket 
+    # Use insocket because in and out ports will both be doomport
+    # Helps prevent bugs on lan
+    sock = @@insocket
     return unless sock
     dest = @@sendaddress[CDoom.doomcom.value.remotenode]
     return unless dest
@@ -5287,7 +5332,7 @@ end
 
           Socket::IPAddress.new(hostentry.not_nil!.ip_address.address, @@doomport)
         end
-      CDoom.doomcom.value.numnodes = 2 # At least
+      CDoom.doomcom.value.numnodes = 2       # At least
       CDoom.doomcom.value.consoleplayer = -1 # Setup in d_arbitrate_net_start
     end
 
@@ -5299,11 +5344,11 @@ end
 
     @@sendsocket = udp_socket()
 
-    if CDoom.doomcom.value.consoleplayer == 0
-      unless upnp_open_port(@@doomport)
-  puts "UPnP: couldn't open port automatically — forward #{@@doomport}/UDP manually if needed"
-      end
-    end
+    # if CDoom.doomcom.value.consoleplayer == 0
+    #   unless upnp_open_port(@@doomport)
+    #     puts "UPnP: couldn't open port automatically — forward #{@@doomport}/UDP manually if needed"
+    #   end
+    # end
 
     spawn do
       sock = @@insocket.not_nil!
@@ -5424,96 +5469,96 @@ end
   #
   def self.addsfx(sfxid : Int32, volume : Int32, step : Int32, seperation : Int32) : Int32
     rc = -1
-      @@sound_mutex.synchronize do
-    oldest = CDoom.gametic
-    oldestnum = 0
+    @@sound_mutex.synchronize do
+      oldest = CDoom.gametic
+      oldestnum = 0
 
-    # Chainsaw troubles.
-    # Play these sound effects only one at a time.
-    if sfxid == CDoom::Sfxenum::SFX_sawup.value ||
-       sfxid == CDoom::Sfxenum::SFX_sawidl.value ||
-       sfxid == CDoom::Sfxenum::SFX_sawful.value ||
-       sfxid == CDoom::Sfxenum::SFX_sawhit.value ||
-       sfxid == CDoom::Sfxenum::SFX_stnmov.value ||
-       sfxid == CDoom::Sfxenum::SFX_pistol.value
-      # Loop all channels, check.
-      CDoom::NUM_CHANNELS.times do |i|
-        # Active, and using the same SFX?
-        if !CDoom.channels[i].null? && CDoom.channelids[i] == sfxid
-          # Reset.
-          CDoom.channels[i] = Pointer(UInt8).null
-          # We are sure that iff,
-          #  there will only be one
-          break
+      # Chainsaw troubles.
+      # Play these sound effects only one at a time.
+      if sfxid == CDoom::Sfxenum::SFX_sawup.value ||
+         sfxid == CDoom::Sfxenum::SFX_sawidl.value ||
+         sfxid == CDoom::Sfxenum::SFX_sawful.value ||
+         sfxid == CDoom::Sfxenum::SFX_sawhit.value ||
+         sfxid == CDoom::Sfxenum::SFX_stnmov.value ||
+         sfxid == CDoom::Sfxenum::SFX_pistol.value
+        # Loop all channels, check.
+        CDoom::NUM_CHANNELS.times do |i|
+          # Active, and using the same SFX?
+          if !CDoom.channels[i].null? && CDoom.channelids[i] == sfxid
+            # Reset.
+            CDoom.channels[i] = Pointer(UInt8).null
+            # We are sure that iff,
+            #  there will only be one
+            break
+          end
         end
       end
-    end
 
-    i = 0
-    # Loop all channels to find oldest SFX.
-    while i < CDoom::NUM_CHANNELS && !CDoom.channels[i].null?
-      if CDoom.channelstart[i] < oldest
-        oldestnum = i
-        oldest = CDoom.channelstart[i]
+      i = 0
+      # Loop all channels to find oldest SFX.
+      while i < CDoom::NUM_CHANNELS && !CDoom.channels[i].null?
+        if CDoom.channelstart[i] < oldest
+          oldestnum = i
+          oldest = CDoom.channelstart[i]
+        end
+        i += 1
       end
-      i += 1
+
+      # Tales from the cryptic.
+      # If we found a channel, fine.
+      # If not, we simply overwrite the first one, 0.
+      # Probably only happens at startup.
+      slot = i
+      slot = oldestnum if i == CDoom::NUM_CHANNELS
+
+      # Okay, in the less recent channel,
+      #  we will handle the new SFX.
+      # Set pointer to raw data.
+      CDoom.channels[slot] = (CDoom.s_sfx + sfxid).value.data.as(UInt8*)
+      # Set pointer to end of raw data.
+      CDoom.channelsend[slot] = CDoom.channels[slot] + CDoom.lengths[sfxid]
+
+      # Reset current handle number, limited to 0..100.
+      @@handlenums = 100 if @@handlenums == 0
+
+      # Assign current handle number.
+      # Preserved so sounds could be stopped (unused).
+      CDoom.channelhandles[slot] = @@handlenums
+      rc = @@handlenums
+      @@handlenums += 1
+
+      # Set stepping???
+      # Kinda getting the impression this is never used.
+      CDoom.channelstep[slot] = step.to_u32
+      # ???
+      CDoom.channelstepremainder[slot] = 0
+      # Should be gametic, I presume.
+      CDoom.channelstart[slot] = CDoom.gametic
+
+      # Seperation, that is, orientation/stereo.
+      #  range is: 1 - 256
+      seperation += 1
+
+      # Per left/right channel.
+      #  x^2 seperation,
+      #  adjust volume properly.
+      leftvol = volume - ((volume * seperation * seperation) >> 16)
+      seperation = seperation - 257
+      rightvol = volume - ((volume * seperation * seperation) >> 16)
+
+      # Sanity check, clamp volume.
+      CDoom.i_error("Error: rightvol out of bounds") if rightvol < 0 || rightvol > 127
+      CDoom.i_error("Error: leftvol out of bounds") if leftvol < 0 || leftvol > 127
+
+      # Get the proper lookup table piece
+      #  for this volume level???
+      CDoom.channelleftvol_lookup[slot] = CDoom.vol_lookup.to_unsafe + leftvol*256
+      CDoom.channelrightvol_lookup[slot] = CDoom.vol_lookup.to_unsafe + rightvol*256
+
+      # Preserve sound SFX id,
+      #  e.g. for avoiding duplicates of chainsaw.
+      CDoom.channelids[slot] = sfxid
     end
-
-    # Tales from the cryptic.
-    # If we found a channel, fine.
-    # If not, we simply overwrite the first one, 0.
-    # Probably only happens at startup.
-    slot = i
-    slot = oldestnum if i == CDoom::NUM_CHANNELS
-
-    # Okay, in the less recent channel,
-    #  we will handle the new SFX.
-    # Set pointer to raw data.
-    CDoom.channels[slot] = (CDoom.s_sfx + sfxid).value.data.as(UInt8*)
-    # Set pointer to end of raw data.
-    CDoom.channelsend[slot] = CDoom.channels[slot] + CDoom.lengths[sfxid]
-
-    # Reset current handle number, limited to 0..100.
-    @@handlenums = 100 if @@handlenums == 0
-
-    # Assign current handle number.
-    # Preserved so sounds could be stopped (unused).
-    CDoom.channelhandles[slot] = @@handlenums
-    rc = @@handlenums
-    @@handlenums += 1
-
-    # Set stepping???
-    # Kinda getting the impression this is never used.
-    CDoom.channelstep[slot] = step.to_u32
-    # ???
-    CDoom.channelstepremainder[slot] = 0
-    # Should be gametic, I presume.
-    CDoom.channelstart[slot] = CDoom.gametic
-
-    # Seperation, that is, orientation/stereo.
-    #  range is: 1 - 256
-    seperation += 1
-
-    # Per left/right channel.
-    #  x^2 seperation,
-    #  adjust volume properly.
-    leftvol = volume - ((volume * seperation * seperation) >> 16)
-    seperation = seperation - 257
-    rightvol = volume - ((volume * seperation * seperation) >> 16)
-
-    # Sanity check, clamp volume.
-    CDoom.i_error("Error: rightvol out of bounds") if rightvol < 0 || rightvol > 127
-    CDoom.i_error("Error: leftvol out of bounds") if leftvol < 0 || leftvol > 127
-
-    # Get the proper lookup table piece
-    #  for this volume level???
-    CDoom.channelleftvol_lookup[slot] = CDoom.vol_lookup.to_unsafe + leftvol*256
-    CDoom.channelrightvol_lookup[slot] = CDoom.vol_lookup.to_unsafe + rightvol*256
-
-    # Preserve sound SFX id,
-    #  e.g. for avoiding duplicates of chainsaw.
-    CDoom.channelids[slot] = sfxid
-  end
 
     # You tell me.
     return rc.to_i32
@@ -5596,22 +5641,22 @@ end
   end
 
   def self.i_stop_sound(handle : Int32)
-      @@sound_mutex.synchronize do
-    CDoom::NUM_CHANNELS.times do |chan|
-      if CDoom.channelhandles[chan] == handle && !CDoom.channels[chan].null?
-        CDoom.channels[chan] = Pointer(UInt8).null
-        break
+    @@sound_mutex.synchronize do
+      CDoom::NUM_CHANNELS.times do |chan|
+        if CDoom.channelhandles[chan] == handle && !CDoom.channels[chan].null?
+          CDoom.channels[chan] = Pointer(UInt8).null
+          break
+        end
       end
-    end
     end
   end
 
   def self.i_sound_is_playing(handle : Int32) : Int32
-      @@sound_mutex.synchronize do
-    CDoom::NUM_CHANNELS.times do |chan|
-      return (!CDoom.channels[chan].null?).to_unsafe if CDoom.channelhandles[chan] == handle
+    @@sound_mutex.synchronize do
+      CDoom::NUM_CHANNELS.times do |chan|
+        return (!CDoom.channels[chan].null?).to_unsafe if CDoom.channelhandles[chan] == handle
+      end
     end
-  end
 
     return 0
   end
@@ -5640,101 +5685,100 @@ end
     #  (right channel is implicit).
     leftend = CDoom.mixbuffer.to_unsafe + CDoom::SAMPLECOUNT * step
 
-      @@sound_mutex.synchronize do
+    @@sound_mutex.synchronize do
+      # Mix sounds into the mixing buffer.
+      # Loop over step*SAMPLECOUNT,
+      #  that is 512 values for two channels.
+      while leftout != leftend
+        # Reset left/right value.
 
-    # Mix sounds into the mixing buffer.
-    # Loop over step*SAMPLECOUNT,
-    #  that is 512 values for two channels.
-    while leftout != leftend
-      # Reset left/right value.
+        dl = 0
+        dr = 0
 
-      dl = 0
-      dr = 0
-
-      # Love thy L2 chache - made this a loop.
-      # Now more channels could be set at compile time
-      #  as well. Thus loop those  channels.
-      CDoom::NUM_CHANNELS.times do |chan|
-        # Check channel, if active.
-        if !CDoom.channels[chan].null?
-          # Get the raw data from the channel.
-          sample = CDoom.channels[chan].value
-          # Add left and right part
-          #  for this channel (sound)
-          #  to the current data.
-          # Adjust volume accordingly.
-          dl += CDoom.channelleftvol_lookup[chan][sample]
-          dr += CDoom.channelrightvol_lookup[chan][sample]
-          # Increment index ???
-          CDoom.channelstepremainder[chan] = CDoom.channelstepremainder[chan] + CDoom.channelstep[chan]
-          # MSB is next sample???
-          CDoom.channels[chan] = CDoom.channels[chan] + (CDoom.channelstepremainder[chan] >> 16)
-          # Limit to LSB???
-          CDoom.channelstepremainder[chan] = CDoom.channelstepremainder[chan] & (65536 - 1)
-          # Check whether we are done.
-          CDoom.channels[chan] = Pointer(UInt8).null if CDoom.channels[chan] >= CDoom.channelsend[chan]
+        # Love thy L2 chache - made this a loop.
+        # Now more channels could be set at compile time
+        #  as well. Thus loop those  channels.
+        CDoom::NUM_CHANNELS.times do |chan|
+          # Check channel, if active.
+          if !CDoom.channels[chan].null?
+            # Get the raw data from the channel.
+            sample = CDoom.channels[chan].value
+            # Add left and right part
+            #  for this channel (sound)
+            #  to the current data.
+            # Adjust volume accordingly.
+            dl += CDoom.channelleftvol_lookup[chan][sample]
+            dr += CDoom.channelrightvol_lookup[chan][sample]
+            # Increment index ???
+            CDoom.channelstepremainder[chan] = CDoom.channelstepremainder[chan] + CDoom.channelstep[chan]
+            # MSB is next sample???
+            CDoom.channels[chan] = CDoom.channels[chan] + (CDoom.channelstepremainder[chan] >> 16)
+            # Limit to LSB???
+            CDoom.channelstepremainder[chan] = CDoom.channelstepremainder[chan] & (65536 - 1)
+            # Check whether we are done.
+            CDoom.channels[chan] = Pointer(UInt8).null if CDoom.channels[chan] >= CDoom.channelsend[chan]
+          end
         end
+
+        # Clamp to range. Left hardware channel.
+        # Has been char instead of short.
+        # if (dl > 127) *leftout = 127;
+        # else if (dl < -128) *leftout = -128;
+        # else *leftout = dl;
+
+        if dl > 0x7fff
+          leftout.value = 0x7fff
+        elsif dl < -0x8000
+          leftout.value = -0x8000
+        else
+          leftout.value = dl.to_i16!
+        end
+
+        # Same for right hardware channel.
+        if dr > 0x7fff
+          rightout.value = 0x7fff
+        elsif dr < -0x8000
+          rightout.value = -0x8000
+        else
+          rightout.value = dr.to_i16!
+        end
+
+        # Increment current pointers in mixbuffer.
+        leftout += step
+        rightout += step
       end
-
-      # Clamp to range. Left hardware channel.
-      # Has been char instead of short.
-      # if (dl > 127) *leftout = 127;
-      # else if (dl < -128) *leftout = -128;
-      # else *leftout = dl;
-
-      if dl > 0x7fff
-        leftout.value = 0x7fff
-      elsif dl < -0x8000
-        leftout.value = -0x8000
-      else
-        leftout.value = dl.to_i16!
-      end
-
-      # Same for right hardware channel.
-      if dr > 0x7fff
-        rightout.value = 0x7fff
-      elsif dr < -0x8000
-        rightout.value = -0x8000
-      else
-        rightout.value = dr.to_i16!
-      end
-
-      # Increment current pointers in mixbuffer.
-      leftout += step
-      rightout += step
-    end
     end
   end
 
   def self.i_update_sound_params(handle : LibC::Int, vol : LibC::Int, sep : LibC::Int, pitch : LibC::Int)
-      @@sound_mutex.synchronize do
-    # I fail too see that this is used.
-    # Would be using the handle to identify
-    #  on which channel the sound might be active,
-    #  and resetting the channel parameters.
-    CDoom::NUM_CHANNELS.times do |chan|
-      # Found channel
-      if CDoom.channelhandles[chan] == handle
-        pitch = 128 if @@randompitch == 0
-        step = CDoom.steptable[pitch]
-        CDoom.channelstep[chan] = step.to_u32
-        CDoom.channelstart[chan] = CDoom.gametic
+    @@sound_mutex.synchronize do
+      # I fail too see that this is used.
+      # Would be using the handle to identify
+      #  on which channel the sound might be active,
+      #  and resetting the channel parameters.
+      CDoom::NUM_CHANNELS.times do |chan|
+        # Found channel
+        if CDoom.channelhandles[chan] == handle
+          pitch = 128 if @@randompitch == 0
+          step = CDoom.steptable[pitch]
+          CDoom.channelstep[chan] = step.to_u32
+          CDoom.channelstart[chan] = CDoom.gametic
 
-        sep += 1
+          sep += 1
 
-        leftvol = vol - ((vol * sep * sep) >> 16)
-        sep = sep - 257
-        rightvol = vol - ((vol * sep * sep) >> 16)
+          leftvol = vol - ((vol * sep * sep) >> 16)
+          sep = sep - 257
+          rightvol = vol - ((vol * sep * sep) >> 16)
 
-        CDoom.i_error("Error: rightvol out of bounds") if rightvol < 0 || rightvol > 127
-        CDoom.i_error("Error: leftvol out of bounds") if leftvol < 0 || leftvol > 127
+          CDoom.i_error("Error: rightvol out of bounds") if rightvol < 0 || rightvol > 127
+          CDoom.i_error("Error: leftvol out of bounds") if leftvol < 0 || leftvol > 127
 
-        CDoom.channelleftvol_lookup[chan] = CDoom.vol_lookup.to_unsafe + leftvol*256
-        CDoom.channelrightvol_lookup[chan] = CDoom.vol_lookup.to_unsafe + rightvol*256
+          CDoom.channelleftvol_lookup[chan] = CDoom.vol_lookup.to_unsafe + leftvol*256
+          CDoom.channelrightvol_lookup[chan] = CDoom.vol_lookup.to_unsafe + rightvol*256
 
-        break
+          break
+        end
       end
-    end
     end
   end
 
