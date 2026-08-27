@@ -73,7 +73,6 @@ end
           c, fromaddress = sock.receive(buf)
           @@recv_channel.send({sw_ptr.value, c, fromaddress})
         rescue ex
-          break
         end
       end
     end
