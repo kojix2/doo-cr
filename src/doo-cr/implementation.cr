@@ -132,10 +132,6 @@ fun doom_init(argc : Int32, argv : UInt8**, flags : Int32)
   LibDoom.doom_init(argc, argv, flags)
 end
 
-fun doom_get_framebuffer(channels : Int32) : UInt8*
-  LibDoom.doom_get_framebuffer(channels)
-end
-
 fun doom_tick_midi : LibC::ULongLong
   LibDoom.doom_tick_midi
 end

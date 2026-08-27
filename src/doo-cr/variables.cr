@@ -64,7 +64,7 @@ module LibDoom
 
   @@closing = false
 
-  @@screen_texture : Raylib::Texture?
+  @@screen_texture : Raylib::RenderTexture?
   @@audio_stream : RAudio::AudioStream?
   @@adl_player : ADLMIDI::Player*?
   @@music_stream : RAudio::AudioStream?

@@ -204,10 +204,10 @@ module LibDoom
   def self.doom_draw
     return unless Raylib.window_ready?
     @@screen_texture.try do |st|
-      fb = CDoom.doom_get_framebuffer(4)
-      next if fb.null?
-      next unless Raylib.texture_valid?(st)
-      Raylib.update_texture(st, fb) # God said this line should crash
+      next unless Raylib.render_texture_valid?(st)
+      Raylib.begin_texture_mode(st)
+      draw_framebuffer
+      Raylib.end_texture_mode
 
       scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
       scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
@@ -215,8 +215,8 @@ module LibDoom
 
       Raylib.begin_drawing
       # Raylib.clear_background(Raylib::BLACK)
-      Raylib.draw_texture_pro(st,
-        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
+      Raylib.draw_texture_pro(st.texture,
+        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.texture.width.to_f, height: -st.texture.height.to_f),
         Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
           width: SRES_X.to_f * scale, height: SRES_Y.to_f * scale),
         Raylib::Vector2.new, 0, Raylib::WHITE)
@@ -224,9 +224,7 @@ module LibDoom
     end
   end
 
-  def self.doom_get_framebuffer(channels : Int32) : UInt8*
-    doom_memcpy(CDoom.screen_buffer.as(Void*), CDoom.screens[0].as(Void*), CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT)
-
+  def self.draw_framebuffer
     # Draw crosshair
     if (CDoom.crosshair != 0 &&
        CDoom.menuactive == 0 &&
@@ -244,29 +242,15 @@ module LibDoom
       end
     end
 
-    if channels == 1
-      return CDoom.screen_buffer
-    elsif channels == 3
-      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |i|
-        k = i * 3
-        kpal = CDoom.screen_buffer[i] * 3
-        CDoom.final_screen_buffer[k + 0] = CDoom.screen_palette[kpal + 0]
-        CDoom.final_screen_buffer[k + 1] = CDoom.screen_palette[kpal + 1]
-        CDoom.final_screen_buffer[k + 2] = CDoom.screen_palette[kpal + 2]
+      CDoom::SCREENWIDTH.times do |x|
+        CDoom::SCREENHEIGHT.times do |y|
+        Raylib.draw_pixel(x, y, Raylib::Color.new(
+          r: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3],
+          g: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3 + 1],
+          b: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3 + 2],
+          a: 255))
       end
-      return CDoom.final_screen_buffer
-    elsif channels == 4
-      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |i|
-        k = i * 4
-        kpal = CDoom.screen_buffer[i].to_i32 * 3
-        CDoom.final_screen_buffer[k + 0] = CDoom.screen_palette[kpal + 0]
-        CDoom.final_screen_buffer[k + 1] = CDoom.screen_palette[kpal + 1]
-        CDoom.final_screen_buffer[k + 2] = CDoom.screen_palette[kpal + 2]
-        CDoom.final_screen_buffer[k + 3] = 255
       end
-      return CDoom.final_screen_buffer
-    end
-    return Pointer(UInt8).null
   end
 
   def self.doom_tick_midi : UInt64
@@ -2266,6 +2250,7 @@ module LibDoom
   def self.get_packets
     while CDoom.h_get_packet != 0
       next if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0 # extra setup packet
+      puts "get_packets: Got packet with checksum #{CDoom.netbuffer.value.checksum}"
 
       netconsole = CDoom.netbuffer.value.player & ~PL_DRONE
       netnode = CDoom.doomcom.value.remotenode
@@ -2343,6 +2328,7 @@ module LibDoom
       src = CDoom.netbuffer.value.cmds.to_unsafe + start
 
       while CDoom.nettics[netnode] < realend
+        puts "get_packet: Copying tics"
         dest = (CDoom.netcmds.to_unsafe + netconsole).value.to_unsafe + (CDoom.nettics[netnode] % CDoom::BACKUPTICS)
         CDoom.nettics[netnode] = CDoom.nettics[netnode] + 1
         dest.copy_from(src, 1)
@@ -2394,6 +2380,7 @@ module LibDoom
 
       # send the packet to the other nodes
       CDoom.doomcom.value.numnodes.times do |i|
+        puts "net_update : Sending packets to other nodes"
         if CDoom.nodeingame[i] != 0
           CDoom.netbuffer.value.starttic = CDoom.resendto[i]
           realstart = CDoom.resendto[i]
@@ -5067,6 +5054,8 @@ module LibDoom
 
     sw = CDoom::Doomdata.new
 
+    puts "SEND : Sending packet to #{dest.address}"
+
     # byte swap
     sw.checksum = doom_htonl(CDoom.netbuffer.value.checksum)
     sw.player = CDoom.netbuffer.value.player
@@ -5125,6 +5114,7 @@ module LibDoom
     if i == CDoom.doomcom.value.numnodes
       # Not server
       if CDoom.doomcom.value.consoleplayer != 0
+        puts "GET : Invalid ip"
         CDoom.doomcom.value.remotenode = -1
         return
       end
@@ -5143,6 +5133,7 @@ module LibDoom
       end
     end
 
+    puts "GET : Got valid packet from #{fromaddress.address}"
     CDoom.doomcom.value.remotenode = i
     CDoom.doomcom.value.datalength = c.to_i16!
 
@@ -5733,7 +5724,7 @@ module LibDoom
             command = status & 0xF0
             channel = status & 0x0F
 
-            break if @@closing
+            return if @@closing
             @@adl_player.try do |ap|
               case command
               when 0x80
@@ -5761,7 +5752,7 @@ module LibDoom
         end
       end
 
-      break if @@closing
+      return if @@closing
       unless CDoom.mus_playing == 0
         @@music_stream.try do |m|
           @@adl_player.try do |ap|
@@ -5777,7 +5768,7 @@ module LibDoom
         end
       end
 
-      break if @@closing
+      return if @@closing
       @@audio_stream.try do |a|
         if RAudio.audio_stream_processed?(a)
           RAudio.update_audio_stream(a, CDoom.doom_get_sound_buffer, 512)
@@ -6132,7 +6123,7 @@ module LibDoom
   end
 
   def self.i_shutdown_graphics
-    @@screen_texture.try { |st| Raylib.unload_texture(st) }
+    @@screen_texture.try { |st| Raylib.unload_render_texture(st) }
     Raylib.close_window if Raylib.window_ready?
   end
 
@@ -6276,10 +6267,8 @@ module LibDoom
     Raylib.toggle_borderless_windowed if @@rlfullscreen != 0
     Raylib.set_target_fps(35)
 
-    image = Raylib.gen_image_color(320, 200, Raylib::BLACK)
-    @@screen_texture = Raylib.load_texture_from_image(image)
-    Raylib.unload_image(image)
-    Raylib.set_texture_filter(@@screen_texture.not_nil!, Raylib::TextureFilter::Point)
+    @@screen_texture = Raylib.load_render_texture(CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
+    Raylib.set_texture_filter(@@screen_texture.not_nil!.texture, Raylib::TextureFilter::Point)
   end
 
   #
