@@ -5047,97 +5047,6 @@ module LibDoom
     end
   end
 
-  def self.upnp_open_port(port : Int32) : Bool
-    # 1. Discover the router. Retry the multicast search a few times and
-    # read multiple replies - UDP multicast is lossy and other UPnP
-    # devices on the LAN may answer before the actual router does.
-    sock = UDPSocket.new(Socket::Family::INET)
-    sock.read_timeout = 1.5.seconds
-    dest = Socket::IPAddress.new("239.255.255.250", 1900)
-    search = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\n" \
-      "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n\r\n"
-
-    location = nil
-    3.times do
-      break if location
-      sock.send(search, to: dest)
-      loop do
-        buf = Bytes.new(2048)
-        len, _ = sock.receive(buf)
-        resp = String.new(buf[0, len])
-        if loc = resp.each_line.find(&.downcase.starts_with?("location:")).try { |l| l.split(":", 2)[1].strip }
-          location = loc
-          break
-        end
-      end
-    end
-    sock.close
-
-    unless location
-      puts "UPnP: no router responded to SSDP discovery"
-      return false
-    end
-
-    # 2. Fetch device description, and scope the controlURL match to the
-    # <service> block that actually declares the matching WAN service -
-    # grabbing the first controlURL in the whole doc can pick an unrelated
-    # service (Layer3Forwarding, WANCommonInterfaceConfig, etc).
-    desc = HTTP::Client.get(location).body
-
-    service_type = desc.includes?("WANIPConnection") ? "WANIPConnection" :
-      (desc.includes?("WANPPPConnection") ? "WANPPPConnection" : nil)
-    unless service_type
-      puts "UPnP: device description has no WANIPConnection/WANPPPConnection service"
-      return false
-    end
-
-    service_block = desc[/<service>(?:(?!<\/service>).)*?#{service_type}:\d+.*?<\/service>/m]?
-    unless service_block
-      puts "UPnP: couldn't isolate the #{service_type} service block"
-      return false
-    end
-
-    version = service_block[/#{service_type}:(\d+)/, 1]? || "1"
-    control_path = service_block[/<controlURL>(.*?)<\/controlURL>/, 1]?
-    unless control_path
-      puts "UPnP: #{service_type} service has no controlURL"
-      return false
-    end
-
-    uri = URI.parse(location)
-    control_url = control_path.starts_with?("http") ? control_path : "#{uri.scheme}://#{uri.host}:#{uri.port}#{control_path}"
-    service_ns = "urn:schemas-upnp-org:service:#{service_type}:#{version}"
-
-    # 3. Ask it to forward the port. Use a UDP "connect" to a public
-    # address to learn our real outbound-facing local IP, instead of
-    # trusting hostname resolution (often loopback on Linux).
-    probe = UDPSocket.new(Socket::Family::INET)
-    probe.connect("8.8.8.8", 80)
-    local_ip = probe.local_address.address
-    probe.close
-
-    body = "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body>" \
-      "<u:AddPortMapping xmlns:u=\"#{service_ns}\">" \
-      "<NewRemoteHost></NewRemoteHost><NewExternalPort>#{port}</NewExternalPort><NewProtocol>UDP</NewProtocol>" \
-      "<NewInternalPort>#{port}</NewInternalPort><NewInternalClient>#{local_ip}</NewInternalClient>" \
-      "<NewEnabled>1</NewEnabled><NewPortMappingDescription>doom-cr</NewPortMappingDescription><NewLeaseDuration>0</NewLeaseDuration>" \
-      "</u:AddPortMapping></s:Body></s:Envelope>"
-
-    resp = HTTP::Client.post(control_url,
-      headers: HTTP::Headers{"Content-Type" => "text/xml; charset=\"utf-8\"", "SOAPAction" => "\"#{service_ns}#AddPortMapping\""},
-      body: body)
-
-    if resp.status_code >= 200 && resp.status_code < 300 && !resp.body.includes?("Fault")
-      true
-    else
-      puts "UPnP: router rejected AddPortMapping (#{resp.status_code}): #{resp.body[0, 200]}"
-      false
-    end
-  rescue ex
-    puts "UPnP: error opening port: #{ex.class}: #{ex.message}"
-    false
-  end
-
 
   def self.bind_to_local_port(socket : UDPSocket, port : Int32)
     begin
@@ -5343,12 +5252,6 @@ module LibDoom
     bind_to_local_port(@@insocket.not_nil!, @@doomport)
 
     @@sendsocket = udp_socket()
-
-    # if CDoom.doomcom.value.consoleplayer == 0
-    #   unless upnp_open_port(@@doomport)
-    #     puts "UPnP: couldn't open port automatically — forward #{@@doomport}/UDP manually if needed"
-    #   end
-    # end
 
     spawn do
       sock = @@insocket.not_nil!
