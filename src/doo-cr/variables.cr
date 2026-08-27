@@ -5823,6 +5823,8 @@ module LibDoom
   c_array(CDoom.yspeed, 0, 47000, FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000)
   CDoom.traceangle = 0xc000000
 
+  @@merge_files : Array(String) = [] of String
+
   # Floor/ceiling animation sequences,
   #  defined by first and last frame,
   #  i.e. the flat (64x64 tile) name to

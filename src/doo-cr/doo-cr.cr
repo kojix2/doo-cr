@@ -1490,6 +1490,10 @@ module LibDoom
     CDoom.wadfiles[numwadfiles] = newfile.as(UInt8*)
   end
 
+  def self.d_merge_file(file : UInt8*)
+    @@merge_files << String.new(file)
+  end
+
   #
   # Confirms a WAD files type
   # based off of data in the WAD
@@ -1891,6 +1895,16 @@ module LibDoom
       end
     end
 
+    p = CDoom.m_check_parm("-merge")
+    if p != 0
+      # the parms after p are wadfile/lump names,
+      # until end of parms or another - preceded parm
+      CDoom.modifiedgame = 1 # homebrew levels
+      while (p += 1) != CDoom.myargc && CDoom.myargv[p][0].chr != '-'
+        d_merge_file(CDoom.myargv[p])
+      end
+    end
+
     p = CDoom.m_check_parm("-playdemo")
 
     p = CDoom.m_check_parm("-timedemo") if p == 0
@@ -1955,6 +1969,9 @@ module LibDoom
 
     puts "w_init: Init Wadfiles."
     CDoom.w_init_multiple_files(CDoom.wadfiles)
+
+    puts "        Init Mergefiles"
+    w_merge_multiple_files(@@merge_files)
 
     confirm_version()
 
@@ -14564,11 +14581,11 @@ module LibDoom
       block = block >= CDoom.bmapheight ? CDoom.bmapheight - 1 : block
       sector.value.blockbox[CDoom::BOXTOP] = block
 
-      block = (bbox[CDoom::BOXBOTTOM] - CDoom.bmaporgy - CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+      block = (bbox[CDoom::BOXBOTTOM] &- CDoom.bmaporgy - CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
       block = block < 0 ? 0 : block
       sector.value.blockbox[CDoom::BOXBOTTOM] = block
 
-      block = (bbox[CDoom::BOXRIGHT] - CDoom.bmaporgx + CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+      block = (bbox[CDoom::BOXRIGHT] &- CDoom.bmaporgx + CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
       block = block >= CDoom.bmapwidth ? CDoom.bmapwidth - 1 : block
       sector.value.blockbox[CDoom::BOXRIGHT] = block
 
@@ -17183,7 +17200,7 @@ module LibDoom
         patch.value.originy = mpatch.value.originy
         patch.value.patch = patchlookup[mpatch.value.patch]
         if patch.value.patch == -1
-          CDoom.i_error("Error: r_init_textures: Missing patch in texture #{texture.value.name}")
+          CDoom.i_error("Error: r_init_textures: Missing patch in texture #{String.new(texture.value.name.to_unsafe, 8)}")
         end
 
         mpatch += 1
@@ -21644,6 +21661,119 @@ module LibDoom
     GC.free(allocated.as(Void*)) unless allocated.null?
   end
 
+  def self.w_merge_file(filename : String)
+    allocated = Pointer(CDoom::Filelump).null
+
+    # open the file and add to directory
+
+    # handle reload indicator.
+    if filename[0] == '~'
+      filename == 1
+      CDoom.reloadname = filename
+      CDoom.reloadlump = CDoom.numlumps
+    end
+
+    unless File.exists?(filename)
+      puts " couldn't open #{filename}"
+      return
+    end
+
+    puts " adding #{filename}"
+    startlump = CDoom.numlumps
+    num_merge_lumps = 0
+
+    header = CDoom::Wadinfo.new
+    singleinfo = CDoom::Filelump.new
+    file = File.new(filename, "rb")
+    if filename[-3..-1].downcase.compare("wad") != 0
+      # single lump file
+      fileinfo = pointerof(singleinfo)
+      singleinfo.filepos = 0
+      singleinfo.size = file.size
+      CDoom.extract_file_base(filename, singleinfo.name)
+      num_merge_lumps += 1
+    else
+      # WAD file
+      slice = Slice.new(pointerof(header).as(UInt8*), sizeof(typeof(header)))
+      file.read(slice)
+      if CDoom.doom_strncmp(header.identification, "IWAD", 4) != 0
+        # Homebrew levels?
+        if CDoom.doom_strncmp(header.identification, "PWAD", 4) != 0
+          CDoom.i_error("Error: Wad file #{filename} doesn't have IWAD or PWAD id")
+        end
+
+        # ???CDoom.modifiedgame = 1
+      end
+      length = header.numlumps * sizeof(CDoom::Filelump)
+      fileinfo = GC.malloc(length).as(CDoom::Filelump*)
+      allocated = fileinfo
+      file.seek(header.infotableofs, IO::Seek::Set)
+      slice = Slice.new(fileinfo.as(UInt8*), length)
+      file.read(slice)
+      num_merge_lumps += header.numlumps
+    end
+
+    # Find files in lump and overwrite them
+    # Starts from the beginning instead of the end to truly add as an iwad merging
+    # Adds the lump if it isn't already found (same as -file)
+    mlump = 0
+    while mlump < num_merge_lumps
+      name_str = String.new(fileinfo[mlump].name.to_unsafe, 8).downcase.delete('\0')
+      ismap = (name_str[0]? == 'e' && name_str[2]? == 'm') || name_str.starts_with?("map")
+
+      # Find lump
+      lump_num = 0
+      CDoom.numlumps.times do |j|
+        if String.new(CDoom.lumpinfo[j].name.to_unsafe, 8).downcase.delete('\0') == String.new(fileinfo[mlump].name.to_unsafe, 8).downcase.delete('\0')
+          # puts String.new(CDoom.lumpinfo[j].name.to_unsafe, 8)
+          # puts String.new(fileinfo[mlump].name.to_unsafe, 8)
+          break
+        end
+        lump_num += 1
+      end
+
+      if lump_num == CDoom.numlumps
+        # Not been loaded. Initialize lump
+        CDoom.numlumps += ismap ? CDoom::ML_BLOCKMAP + 1 : 1
+        new_lumpinfo = Pointer(CDoom::Lumpinfo).malloc(CDoom.numlumps)
+        CDoom.doom_memcpy(new_lumpinfo, CDoom.lumpinfo, @@previous_realloc_size)
+        @@previous_realloc_size = CDoom.numlumps * sizeof(CDoom::Lumpinfo)
+        CDoom.lumpinfo = new_lumpinfo.as(CDoom::Lumpinfo*)
+        CDoom.i_error("Error: Couldn't realloc lumpinfo") if CDoom.lumpinfo.null?
+
+        lump_p = CDoom.lumpinfo + startlump
+
+        startlump += 1
+      else
+        # Lump exists
+        lump_p = CDoom.lumpinfo + lump_num 
+      end
+        # Set the lump
+        if ismap
+          (CDoom::ML_BLOCKMAP + 1).times do |m|
+            lump_p.value.handle = !CDoom.reloadname.null? ? Pointer(Void).null : Box.box(file)
+            lump_p.value.position = fileinfo[mlump].filepos
+            lump_p.value.size = fileinfo[mlump].size
+            CDoom.doom_strncpy(lump_p.value.name, fileinfo[mlump].name, 8)
+            mlump += 1
+            lump_p += 1
+          end
+        else
+          lump_p.value.handle = !CDoom.reloadname.null? ? Pointer(Void).null : Box.box(file)
+          lump_p.value.position = fileinfo[mlump].filepos
+          lump_p.value.size = fileinfo[mlump].size
+          CDoom.doom_strncpy(lump_p.value.name, fileinfo[mlump].name, 8)
+        mlump += 1
+        end
+    end
+
+    
+
+    file.close if !CDoom.reloadname.null?
+
+    GC.free(allocated.as(Void*)) unless allocated.null?
+  end
+
   #
   # Flushes any of the reloadable lumps in memory
   #  and reloads the directory.
@@ -21685,6 +21815,22 @@ module LibDoom
     GC.free(fileinfo.as(Void*))
   end
 
+  def self.w_merge_multiple_files(filenames : Array(String))
+    # will be realloced as lumps are added
+    
+    filenames.each { |fn| w_merge_file(fn) }
+
+    CDoom.i_error("Error: w_merge_multiple_files: no files found") if CDoom.numlumps == 0
+
+    # set up caching
+    size = CDoom.numlumps * sizeof(Void*)
+    CDoom.lumpcache = GC.malloc(size).as(Void**)
+
+    CDoom.i_error("Error: Couldn't allocate lumpcache") if CDoom.lumpcache.null?
+
+    CDoom.doom_memset(CDoom.lumpcache, 0, size)
+  end
+
   #
   # Pass a null terminated list of files to use.
   # All files are optional, but at least one file
@@ -21709,7 +21855,7 @@ module LibDoom
       filenames += 1
     end
 
-    CDoom.i_error("Error: w_init_files: no files found") if CDoom.numlumps == 0
+    CDoom.i_error("Error: w_init_multiple_files: no files found") if CDoom.numlumps == 0
 
     # set up caching
     size = CDoom.numlumps * sizeof(Void*)
