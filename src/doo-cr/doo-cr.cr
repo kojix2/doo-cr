@@ -19145,11 +19145,11 @@ module LibDoom
     if rotation == 0
       # the lump should be used for all rotations
       if CDoom.sprtemp[frame].rotate == 0
-        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has multip rot=0 lump")
+        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{String.new(CDoom.spritename)} frame #{'A' + frame} has multip rot=0 lump")
       end
 
       if CDoom.sprtemp[frame].rotate == 1
-        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has rotations")
+        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{String.new(CDoom.spritename)} frame #{'A' + frame} has rotations")
       end
 
       (CDoom.sprtemp.to_unsafe + frame).value.rotate = 0
@@ -19162,7 +19162,7 @@ module LibDoom
 
     # the lump is only used for one rotation
     if CDoom.sprtemp[frame].rotate == 0
-      CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has rotations")
+      CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{String.new(CDoom.spritename)} frame #{'A' + frame} has rotations")
     end
 
     (CDoom.sprtemp.to_unsafe + frame).value.rotate = 1
@@ -19170,7 +19170,7 @@ module LibDoom
     # make - based
     rotation -= 1
     if CDoom.sprtemp[frame].lump[rotation] != -1
-      CDoom.i_error("Error: r_install_sprite_lump: Sprite #{CDoom.spritename} : #{'A' + frame} : #{'1' + rotation} ")
+      CDoom.i_error("Error: r_install_sprite_lump: Sprite #{String.new(CDoom.spritename)} : #{'A' + frame} : #{'1' + rotation} ")
     end
 
     ((CDoom.sprtemp.to_unsafe + frame).value.lump.to_unsafe + rotation).value = (lump - CDoom.firstspritelump).to_i16!
