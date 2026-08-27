@@ -54,8 +54,6 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
 	$(CHANGE_LIB_NAMES)
-
-	cd ./bin && ./doo-cr
 	
 clean:
 	rm -rf raylib

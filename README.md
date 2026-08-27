@@ -1,7 +1,7 @@
 ![logo](https://raw.githubusercontent.com/D-Shwagginz/doo-cr/master/logo/doo-cr.png)
 
-[![Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/build.yml)
-[![Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/build.yml)
+[![Build Ubuntu](https://github.com/D-Shwagginz/doo-cr/actions/workflows/ubuntu-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/ubuntu- build.yml)
+[![Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/macos-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/macos-build.yml)
 
 A DOOM source port written in Crystal Lang based on [PureDoom](https://github.com/Daivuk/PureDOOM) and [LinuxDoom](https://github.com/id-Software/DOOM)
 
