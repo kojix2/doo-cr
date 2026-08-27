@@ -226,24 +226,7 @@ module LibDoom
   end
 
   def self.draw_framebuffer
-    # Draw crosshair
-    if (CDoom.crosshair != 0 &&
-       CDoom.menuactive == 0 &&
-       CDoom.gamestate == CDoom::Gamestate::Level &&
-       CDoom.automapactive == 0)
-      y = CDoom::SCREENHEIGHT // 2
-      y += CDoom.setblocks == 11 ? 8 : -8
-      2.times do |i|
-        CDoom.screen_buffer[CDoom::SCREENWIDTH // 2 - 2 - i + y * CDoom::SCREENWIDTH] = 4
-        CDoom.screen_buffer[CDoom::SCREENWIDTH // 2 + 2 + i + y * CDoom::SCREENWIDTH] = 4
-      end
-      2.times do |i|
-        CDoom.screen_buffer[CDoom::SCREENWIDTH // 2 + (y - 2 - i) * CDoom::SCREENWIDTH] = 4
-        CDoom.screen_buffer[CDoom::SCREENWIDTH // 2 + (y + 2 + i) * CDoom::SCREENWIDTH] = 4
-      end
-    end
-
-      CDoom::SCREENWIDTH.times do |x|
+    CDoom::SCREENWIDTH.times do |x|
         CDoom::SCREENHEIGHT.times do |y|
         Raylib.draw_pixel(x, y, Raylib::Color.new(
           r: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3],
@@ -252,6 +235,25 @@ module LibDoom
           a: 255))
       end
       end
+
+    # Draw crosshair
+    if (CDoom.crosshair != 0 &&
+       CDoom.menuactive == 0 &&
+       CDoom.gamestate == CDoom::Gamestate::Level &&
+       CDoom.automapactive == 0)
+      y = CDoom::SCREENHEIGHT // 2
+      y += CDoom.setblocks == 11 ? 8 : -8
+      2.times do |i|
+        Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 - 2 - i, y, Raylib::RAYWHITE)
+        Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 + 2 + i, y, Raylib::RAYWHITE)
+      end
+      2.times do |i|
+        Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y - 2 - i), Raylib::RAYWHITE)
+        Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y + 2 + i), Raylib::RAYWHITE)
+      end
+    end
+
+      
   end
 
   def self.doom_tick_midi : UInt64
@@ -5244,6 +5246,8 @@ module LibDoom
     bind_to_local_port(@@insocket.not_nil!, @@doomport)
 
     @@sendsocket = udp_socket()
+
+    i_error("Error: cannot run netgame with less than 3 cpu cores!") if System.cpu_count < 3
 
   Fiber::ExecutionContext.default.resize(maximum: 3)
     spawn do

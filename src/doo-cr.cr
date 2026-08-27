@@ -45,8 +45,12 @@ macro poll_button(doombutton, raylibbutton)
   LibDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if !is_down && was_down
 end
 
-Fiber::ExecutionContext.default.resize(maximum: 2)
 
-spawn { LibDoom.update_audio } # virtual sound card thread
+unless ARGV.includes?("-nosound")
+  CDoom.i_error("Error: Cannot run sounds with less than 2 cpu cores!\nUse -nosound to run.") if System.cpu_count < 2
+  Fiber::ExecutionContext.default.resize(maximum: 2)
+
+  spawn { LibDoom.update_audio } # virtual sound card thread
+end
 
 LibDoom.doom_init(ARGC_UNSAFE, ARGV_UNSAFE, 0)
