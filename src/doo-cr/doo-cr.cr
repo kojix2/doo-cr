@@ -6606,12 +6606,7 @@ module LibDoom
   #
   def self.m_draw_readthis1
     CDoom.inhelpscreens = 1
-    case CDoom.gamemode
-    when CDoom::GameMode::Commercial
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP", CDoom::PU_CACHE).as(CDoom::Patch*))
-    when CDoom::GameMode::Shareware, CDoom::GameMode::Registered, CDoom::GameMode::Retail
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP1", CDoom::PU_CACHE).as(CDoom::Patch*))
-    end
+      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP2", CDoom::PU_CACHE).as(CDoom::Patch*))
   end
 
   #
@@ -6619,13 +6614,12 @@ module LibDoom
   #
   def self.m_draw_readthis2
     CDoom.inhelpscreens = 1
-    case CDoom.gamemode
-    when CDoom::GameMode::Retail, CDoom::GameMode::Commercial
-      # This hack keeps us from having to change menus.
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("CREDIT", CDoom::PU_CACHE).as(CDoom::Patch*))
-    when CDoom::GameMode::Shareware, CDoom::GameMode::Registered
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP2", CDoom::PU_CACHE).as(CDoom::Patch*))
-    end
+      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP1", CDoom::PU_CACHE).as(CDoom::Patch*))
+  end
+
+  def self.m_draw_commercial
+    CDoom.inhelpscreens = 1
+      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP", CDoom::PU_CACHE).as(CDoom::Patch*))
   end
 
   #
@@ -7412,11 +7406,7 @@ module LibDoom
       when CDoom::KEY_F1 # Help key
         CDoom.m_start_control_panel
 
-        if CDoom.gamemode == CDoom::GameMode::Retail
-          CDoom.current_menu = pointerof(CDoom.readdef2)
-        else
-          CDoom.current_menu = pointerof(CDoom.readdef1)
-        end
+        CDoom.current_menu = pointerof(CDoom.readdef1)
 
         CDoom.item_on = 0
         CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_swtchn)
@@ -7665,25 +7655,24 @@ module LibDoom
 
     case CDoom.gamemode
     when CDoom::GameMode::Commercial
-      # This is used because DOOM 2 had only one HELP
-      #  page. I use CREDIT as second page now, but
-      #  kept this hack for educational purposes.
+      # Setup read menu for Doom II
       (CDoom.mainmenu.to_unsafe + CDoom::Mainenum::Readthis.value).value = CDoom.mainmenu[CDoom::Mainenum::Quitdoom.value]
       CDoom.maindef.numitems = CDoom.maindef.numitems - 1
       CDoom.maindef.y = CDoom.maindef.y + 8
       CDoom.newdef.prev_menu = pointerof(CDoom.maindef)
-      CDoom.readdef1.routine = ->CDoom.m_draw_readthis1
+      CDoom.readdef1.routine = ->m_draw_commercial
       CDoom.readdef1.x = 330
       CDoom.readdef1.y = 165
       CDoom.readmenu1.to_unsafe.value.routine = ->CDoom.m_finish_readthis(Int32)
+    when CDoom::GameMode::Retail
+      # Skip first menu on Ultimate Doom
+      pointerof(CDoom.readdef1).value = CDoom.readdef2
     when CDoom::GameMode::Shareware, CDoom::GameMode::Registered
       # Episode 2 and 3 are handled,
       #  branching to an ad screen.
       #
       # We need to remove the fourth episode.
       CDoom.epidef.numitems = CDoom.epidef.numitems - 1
-    when CDoom::GameMode::Retail
-      # We are fine.
     end
   end
 
