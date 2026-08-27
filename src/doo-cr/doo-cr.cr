@@ -205,7 +205,6 @@ module LibDoom
     return unless Raylib.window_ready?
     @@screen_texture.try do |st|
       next unless Raylib.render_texture_valid?(st)
-      puts "draw call thread: #{LibC.pthread_self}"
       Raylib.begin_texture_mode(st)
       draw_framebuffer
       Raylib.end_texture_mode
@@ -2271,6 +2270,10 @@ module LibDoom
         CDoom.doom_strcpy(CDoom.exitmsg, "Player 1 left the game")
         CDoom.exitmsg[7] = CDoom.exitmsg[7] + netconsole
         (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message = CDoom.exitmsg
+        if netconsole != CDoom.consoleplayer
+          # Despawn the player
+          g_despawn_player(netconsole)
+        end
         CDoom.g_check_demo_status if CDoom.demorecording != 0
         next
       end
@@ -3914,6 +3917,27 @@ module LibDoom
 
     # no good spot, so the player will probably get stuck
     CDoom.p_spawn_player(CDoom.playerstarts.to_unsafe + playernum)
+  end
+
+  def self.g_despawn_player(playernum : Int32)
+    pmo = CDoom.players[playernum].mo
+    pmo.value.player = Pointer(CDoom::Player).null
+    
+    x = pmo.value.x.to_i32! << FRACBITS
+    y = pmo.value.y.to_i32! << FRACBITS
+
+    # spawn a teleport fog
+    ss = CDoom.r_point_in_subsector(x, y)
+    an = (ANG45 &* (pmo.value.angle // 45)) >> CDoom::ANGLETOFINESHIFT
+
+    mo = CDoom.p_spawn_mobj(x + 20 * @@finecosine[an], y + 20 * @@finesine[an],
+      ss.value.sector.value.floorheight, CDoom::Mobjtype::MT_TFOG)
+
+    CDoom.s_start_sound(mo, CDoom::Sfxenum::SFX_telept) if CDoom.players[CDoom.consoleplayer].viewz != 1 # don't start sound on first frame
+
+    # Despawn player mobj
+    p_remove_mobj(pmo)
+    (CDoom.players.to_unsafe + playernum).value.mo = Pointer(CDoom::Mobj).null
   end
 
   #
@@ -6269,7 +6293,6 @@ module LibDoom
 
     Raylib.set_config_flags(Raylib::ConfigFlags::WindowResizable)
     Raylib.init_window(1024, 768, "LibDoom")
-    puts "GL init thread: #{LibC.pthread_self}"
     Raylib.set_exit_key(Raylib::KeyboardKey::Null)
     @@was_focused = false
     Raylib.toggle_borderless_windowed if @@rlfullscreen != 0
