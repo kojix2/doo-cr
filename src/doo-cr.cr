@@ -45,7 +45,7 @@ macro poll_button(doombutton, raylibbutton)
   LibDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if !is_down && was_down
 end
 
-Fiber::ExecutionContext.default.resize(maximum: System.cpu_count)
+Fiber::ExecutionContext.default.resize(maximum: 2)
 
 spawn { LibDoom.update_audio } # virtual sound card thread
 

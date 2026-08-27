@@ -205,6 +205,7 @@ module LibDoom
     return unless Raylib.window_ready?
     @@screen_texture.try do |st|
       next unless Raylib.render_texture_valid?(st)
+      puts "draw call thread: #{LibC.pthread_self}"
       Raylib.begin_texture_mode(st)
       draw_framebuffer
       Raylib.end_texture_mode
@@ -214,7 +215,7 @@ module LibDoom
       scale = [scalew, scaleh].min
 
       Raylib.begin_drawing
-      # Raylib.clear_background(Raylib::BLACK)
+     Raylib.clear_background(Raylib::BLACK)
       Raylib.draw_texture_pro(st.texture,
         Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.texture.width.to_f, height: -st.texture.height.to_f),
         Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
@@ -2450,10 +2451,10 @@ module LibDoom
     CDoom.autostart = 1
 
     if CDoom.doomcom.value.consoleplayer != 0
+        i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[1]
       puts "sending connection info..."
       loop do
         doom_draw
-        i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[1]
         check_abort
         CDoom.netbuffer.value.retransmitfrom = 69
         CDoom.netbuffer.value.starttic = 19
@@ -5054,7 +5055,7 @@ module LibDoom
 
     sw = CDoom::Doomdata.new
 
-    puts "SEND : Sending packet to #{dest.address}"
+    # puts "SEND : Sending packet to #{dest.address}"
 
     # byte swap
     sw.checksum = doom_htonl(CDoom.netbuffer.value.checksum)
@@ -5114,7 +5115,7 @@ module LibDoom
     if i == CDoom.doomcom.value.numnodes
       # Not server
       if CDoom.doomcom.value.consoleplayer != 0
-        puts "GET : Invalid ip"
+        # puts "GET : Invalid ip"
         CDoom.doomcom.value.remotenode = -1
         return
       end
@@ -5133,7 +5134,7 @@ module LibDoom
       end
     end
 
-    puts "GET : Got valid packet from #{fromaddress.address}"
+    # puts "GET : Got valid packet from #{fromaddress.address}"
     CDoom.doomcom.value.remotenode = i
     CDoom.doomcom.value.datalength = c.to_i16!
 
@@ -5244,6 +5245,7 @@ module LibDoom
 
     @@sendsocket = udp_socket()
 
+  Fiber::ExecutionContext.default.resize(maximum: 3)
     spawn do
       sock = @@insocket.not_nil!
       loop do
@@ -6259,13 +6261,15 @@ module LibDoom
 
   def self.i_init_graphics
     CDoom.screens[0] = GC.malloc(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
+    CDoom.screens[0].clear(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT)
 
     Raylib.set_config_flags(Raylib::ConfigFlags::WindowResizable)
     Raylib.init_window(1024, 768, "LibDoom")
+    puts "GL init thread: #{LibC.pthread_self}"
     Raylib.set_exit_key(Raylib::KeyboardKey::Null)
     @@was_focused = false
     Raylib.toggle_borderless_windowed if @@rlfullscreen != 0
-    Raylib.set_target_fps(35)
+    # Raylib.set_target_fps(35)
 
     @@screen_texture = Raylib.load_render_texture(CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
     Raylib.set_texture_filter(@@screen_texture.not_nil!.texture, Raylib::TextureFilter::Point)
