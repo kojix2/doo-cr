@@ -1,3 +1,20 @@
+# Copyright (C) 2026 Devin Shwagginz
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# ==> Every method of DOOM
+
 module LibDoom
   NULL_PROC   = Proc(Nil).new(Pointer(Void).null, Pointer(Void).null)
   NULL_PROCP1 = Proc(Int32, Nil).new(Pointer(Void).null, Pointer(Void).null)
@@ -1532,14 +1549,6 @@ module LibDoom
     # French stuff
     doom2fwad = String.new(doomwaddir) + "/doom2f.wad"
 
-    {% if !CDoom.has_constant?("DOOM_WIN32") %}
-      home = CDoom.doom_getenv.call("HOME".to_unsafe)
-      if home.null?
-        CDoom.i_error("Error: Please set $HOME to your home directory")
-      end
-    {% else %}
-      home = ".".to_unsafe
-    {% end %}
     home = ".".to_unsafe # Don't be cute. Just use binary dir
 
     CDoom.doom_strcpy(CDoom.basedefault, home)
@@ -1782,29 +1791,25 @@ module LibDoom
       CDoom.deathmatch = 1
     end
 
-    @@title = "                         "
     case CDoom.gamemode
     when CDoom::GameMode::Retail
-      @@title += "The Ultimate DOOM Startup v"
+      @@title = "The Ultimate DOOM Startup"
     when CDoom::GameMode::Shareware
-      @@title += "DOOM Shareware Startup v"
+      @@title = "DOOM Shareware Startup"
     when CDoom::GameMode::Registered
-      @@title += "DOOM Registered Startup v"
+      @@title = "DOOM Registered Startup"
     when CDoom::GameMode::Commercial
       case CDoom.gamemission
       when CDoom::GameMission::PackPlut
-        @@title += "Final Doom: The Plutonia Experiment v"
+        @@title = "Final Doom: The Plutonia Experiment"
       when CDoom::GameMission::PackTnt
-        @@title += "Final Doom: TNT: Evilution v"
+        @@title = "Final Doom: TNT: Evilution"
       else
-        @@title += "DOOM 2: Hell on Earth v"
+        @@title = "DOOM 2: Hell on Earth"
       end
     else
-      @@title += "Public DOOM - v"
+      @@title = "Public DOOM"
     end
-
-    @@title += "#{CDoom::VERSION // 100}.#{CDoom::VERSION % 100}" + "                           "
-    puts @@title
 
     print CDoom::D_DEVSTR if CDoom.devparm != 0
 
@@ -1970,29 +1975,15 @@ module LibDoom
       end
     end
 
-    # Iff additonal PWAD files are used, print modified banner
-    if CDoom.modifiedgame != 0
-      puts("===========================================================================\n" +
-           "ATTENTION:  This version of DOOM has been modified.  If you would like to\n" +
-           "get a copy of the original game, call 1-800-IDGAMES or see the readme file.\n" +
-           "        You will not receive technical support for modified games.\n" +
-           "===========================================================================")
-    end
 
-    # Check and print which version is executed.
-    case CDoom.gamemode
-    when CDoom::GameMode::Shareware, CDoom::GameMode::Indetermined
-      puts("===========================================================================\n" +
-           "                                Shareware!\n" +
-           "===========================================================================")
-    when CDoom::GameMode::Registered, CDoom::GameMode::Retail, CDoom::GameMode::Commercial
-      puts("===========================================================================\n" +
-           "                 Commercial product - do not distribute!\n" +
-           "         Please report software piracy to the SPA: 1-800-388-PIR8\n" +
-           "===========================================================================")
-    else
-      # Ouch
-    end
+    puts " DOO-CR ".center(77, '=')
+    puts @@title.center(77)
+    puts "".ljust(77, '=')
+    puts "Doo-cr is licensed under the GNU General Public License v3.0 license".center(77)
+    puts "Doo-cr comes with ABSOLUTELY NO WARRANTY".center(77)
+    puts "Doo-cr is free software, and you are welcome to redistribute it".center(77)
+    puts "".ljust(77, '=')
+
 
     Raylib.set_trace_log_level(Raylib::TraceLogLevel::Warning)
 
@@ -2465,7 +2456,7 @@ module LibDoom
 
         next if CDoom.h_get_packet == 0
         if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
-          if CDoom.netbuffer.value.player != CDoom::VERSION
+          if CDoom.netbuffer.value.player != VERSION
             CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
           end
           CDoom.startskill = CDoom::Skill.new(CDoom.netbuffer.value.retransmitfrom & 15)
@@ -2510,7 +2501,7 @@ module LibDoom
       end
     else
       # key player, send the setup info
-      puts "waiting for client info... PRESS SPACE TO START"
+      puts "waiting for client info..."
       loop do
         doom_draw
         CDoom.check_abort
@@ -2528,7 +2519,7 @@ module LibDoom
             CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
           end
           CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
-          CDoom.netbuffer.value.player = CDoom::VERSION
+          CDoom.netbuffer.value.player = VERSION
           CDoom.netbuffer.value.numtics = 0
           CDoom.h_send_packet(i, NCMD_SETUP)
         end
@@ -2574,7 +2565,7 @@ module LibDoom
               CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1 # A bit lazy, no?
             end
 
-            1000.times do
+            50.times do
               h_send_packet(i, NCMD_DISTRIBUTE)
             end
           end
@@ -3887,7 +3878,7 @@ module LibDoom
 
     # spawn a teleport fog
     ss = CDoom.r_point_in_subsector(x, y)
-    an = (ANG45 &* (mthing.value.angle // 45)) >> CDoom::ANGLETOFINESHIFT
+    an = (ANG45 &* (mthing.value.angle.tdiv(45))) >> CDoom::ANGLETOFINESHIFT
 
     mo = CDoom.p_spawn_mobj(x + 20 * @@finecosine[an], y + 20 * @@finesine[an],
       ss.value.sector.value.floorheight, CDoom::Mobjtype::MT_TFOG)
@@ -3924,7 +3915,7 @@ module LibDoom
 
     # spawn a teleport fog
     ss = CDoom.r_point_in_subsector(x, y)
-    an = (ANG45 &* (pmo.value.angle // 45)) >> CDoom::ANGLETOFINESHIFT
+    an = (ANG45 &* (pmo.value.angle.tdiv(45))) >> CDoom::ANGLETOFINESHIFT
 
     mo = CDoom.p_spawn_mobj(x + 20 * @@finecosine[an], y + 20 * @@finesine[an],
       ss.value.sector.value.floorheight, CDoom::Mobjtype::MT_TFOG)
@@ -4133,7 +4124,7 @@ module LibDoom
     File.open(String.new(CDoom.savename.to_unsafe), "rb") do |file|
       file.pos += CDoom::SAVESTRINGSIZE
       # skip the description field
-      vcheck = "version #{CDoom::VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
+      vcheck = "version #{VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
       return if CDoom.doom_strcmp(file.read_string(CDoom::VERSIONSIZE).to_unsafe, vcheck.to_unsafe) != 0 # bad version
 
       CDoom.gameskill = CDoom::Skill.new(file.read_bytes(UInt8))
@@ -4184,7 +4175,7 @@ module LibDoom
     File.open(name, "wb") do |file|
       file.write_string(description[0...CDoom::SAVESTRINGSIZE])
 
-      name2 = "version #{CDoom::VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
+      name2 = "version #{VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
       file.write_string(name2.to_slice)
 
       file.write_byte(CDoom.gameskill.value.to_u8!)
@@ -4278,21 +4269,21 @@ module LibDoom
     if CDoom.fastparm != 0 || (skill == CDoom::Skill::Nightmare && CDoom.gameskill != CDoom::Skill::Nightmare)
       i = CDoom::Statenum::S_SARG_RUN1.value
       while i <= CDoom::Statenum::S_SARG_PAIN2.value
-        CDoom.states[i].tics = CDoom.states[i].tics >> 1
+        (CDoom.states + i).value.tics = CDoom.states[i].tics >> 1
         i += 1
       end
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_BRUISERSHOT.value].speed = 20 * FRACUNIT
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_HEADSHOT.value].speed = 20 * FRACUNIT
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_TROOPSHOT.value].speed = 20 * FRACUNIT
+      (CDoom.mobjinfo + CDoom::Mobjtype::MT_BRUISERSHOT.value).value.speed = 20 * FRACUNIT
+      (CDoom.mobjinfo + CDoom::Mobjtype::MT_HEADSHOT.value).value.speed = 20 * FRACUNIT
+      (CDoom.mobjinfo + CDoom::Mobjtype::MT_TROOPSHOT.value).value.speed = 20 * FRACUNIT
     elsif skill != CDoom::Skill::Nightmare && CDoom.gameskill == CDoom::Skill::Nightmare
       i = CDoom::Statenum::S_SARG_RUN1.value
       while i <= CDoom::Statenum::S_SARG_PAIN2.value
-        CDoom.states[i].tics = CDoom.states[i].tics << 1
+        (CDoom.states + i).value.tics = CDoom.states[i].tics << 1
         i += 1
       end
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_BRUISERSHOT.value].speed = 15 * FRACUNIT
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_HEADSHOT.value].speed = 10 * FRACUNIT
-      CDoom.mobjinfo[CDoom::Mobjtype::MT_TROOPSHOT.value].speed = 10 * FRACUNIT
+      (CDoom.mobjinfo + CDoom::Mobjtype::MT_BRUISERSHOT.value).value.speed = 15 * FRACUNIT
+      (CDoom.mobjinfo + CDoom::Mobjtype::MT_HEADSHOT.value).value.speed = 10 * FRACUNIT
+      (CDoom.mobjinfo + CDoom::Mobjtype::MT_TROOPSHOT.value).value.speed = 10 * FRACUNIT
     end
 
     # force players to be initialized upon first level load
@@ -4354,9 +4345,9 @@ module LibDoom
 
   def self.g_write_demo_ticcmd(cmd : CDoom::Ticcmd*)
     pstate = CDoom.players[CDoom.consoleplayer].playerstate
-    CDoom.g_check_demo_status if CDoom.gamekeydown['q'.ord] != 0 ||                                                         # press q to end demo recording
-                                 (@@prevstate == CDoom::Playerstate::PST_DEAD && pstate == CDoom::Playerstate::PST_LIVE) || # or if player is respawning
-                                 CDoom.gamestate != CDoom::Gamestate::Level                                                 # or if we are no longer on a level
+    CDoom.g_check_demo_status if CDoom.gamekeydown['q'.ord] != 0 # ||                                                         # press q to end demo recording
+                                # (@@prevstate == CDoom::Playerstate::PST_DEAD && pstate == CDoom::Playerstate::PST_LIVE) || # or if player is respawning
+                                # CDoom.gamestate != CDoom::Gamestate::Level                                                 # or if we are no longer on a level
     @@prevstate = pstate
     CDoom.demo_p.value = cmd.value.forwardmove.to_u8!
     CDoom.demo_p += 1
@@ -4397,7 +4388,7 @@ module LibDoom
 
     CDoom.demo_p = CDoom.demobuffer
 
-    CDoom.demo_p.value = CDoom::VERSION.to_u8
+    CDoom.demo_p.value = VERSION.to_u8
     CDoom.demo_p += 1
     CDoom.demo_p.value = CDoom.gameskill.value.to_u8
     CDoom.demo_p += 1
@@ -4437,8 +4428,8 @@ module LibDoom
     CDoom.demo_p = CDoom.demobuffer
     demo_version = CDoom.demo_p.value
     CDoom.demo_p += 1
-    if demo_version != CDoom::VERSION && demo_version != 109 # Demos seem to run fine with version 109
-      puts "Demo is from a different game version! Demo Verson = #{demo_version}, this version = #{CDoom::VERSION}"
+    if demo_version != VERSION && demo_version != 109 # Demos seem to run fine with version 109
+      puts "Demo is from a different game version! Demo Verson = #{demo_version}, this version = #{VERSION}"
       CDoom.gameaction = CDoom::Gameaction::Nothing
       return
     end
@@ -8860,9 +8851,9 @@ module LibDoom
       delta = (actor.value.angle &- (actor.value.movedir.to_u32! << 29)).to_i32!
 
       if delta > 0
-        actor.value.angle = actor.value.angle &- ANG90 // 2
+        actor.value.angle = actor.value.angle &- ANG90.tdiv(2)
       elsif delta < 0
-        actor.value.angle = actor.value.angle &+ ANG90 // 2
+        actor.value.angle = actor.value.angle &+ ANG90.tdiv(2)
       end
     end
 
@@ -9140,15 +9131,15 @@ module LibDoom
     dist = CDoom.p_aprox_distance(dest.value.x - actor.value.x,
       dest.value.y - actor.value.y)
 
-    dist = dist // actor.value.info.value.speed
+    dist = dist.tdiv(actor.value.info.value.speed)
 
     dist = 1 if dist < 1
-    slope = (dest.value.z + 40 * FRACUNIT - actor.value.z) // dist
+    slope = (dest.value.z + 40 * FRACUNIT - actor.value.z).tdiv(dist)
 
     if slope < actor.value.momz
-      actor.value.momz = actor.value.momz - FRACUNIT // 8
+      actor.value.momz = actor.value.momz - FRACUNIT.tdiv(8)
     else
-      actor.value.momz = actor.value.momz + FRACUNIT // 8
+      actor.value.momz = actor.value.momz + FRACUNIT.tdiv(8)
     end
   end
 
@@ -9367,13 +9358,13 @@ module LibDoom
     CDoom.a_face_target(actor)
 
     mo = CDoom.p_spawn_missile(actor, actor.value.target, CDoom::Mobjtype::MT_FATSHOT)
-    mo.value.angle = mo.value.angle &- CDoom::FATSPREAD // 2
+    mo.value.angle = mo.value.angle &- CDoom::FATSPREAD.tdiv(2)
     an = mo.value.angle >> CDoom::ANGLETOFINESHIFT
     mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, @@finecosine[an])
     mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, @@finesine[an])
 
     mo = CDoom.p_spawn_missile(actor, actor.value.target, CDoom::Mobjtype::MT_FATSHOT)
-    mo.value.angle = mo.value.angle &+ CDoom::FATSPREAD // 2
+    mo.value.angle = mo.value.angle &+ CDoom::FATSPREAD.tdiv(2)
     an = mo.value.angle >> CDoom::ANGLETOFINESHIFT
     mo.value.momx = CDoom.fixed_mul(mo.value.info.value.speed, @@finecosine[an])
     mo.value.momy = CDoom.fixed_mul(mo.value.info.value.speed, @@finesine[an])
@@ -9394,10 +9385,10 @@ module LibDoom
     actor.value.momx = CDoom.fixed_mul(CDoom::SKULLSPEED, @@finecosine[an])
     actor.value.momy = CDoom.fixed_mul(CDoom::SKULLSPEED, @@finesine[an])
     dist = CDoom.p_aprox_distance(dest.value.x - actor.value.x, dest.value.y - actor.value.y)
-    dist = dist // CDoom::SKULLSPEED
+    dist = dist.tdiv(CDoom::SKULLSPEED)
 
     dist = 1 if dist < 1
-    actor.value.momz = (dest.value.z + (dest.value.height >> 1) - actor.value.z) // dist
+    actor.value.momz = (dest.value.z + (dest.value.height >> 1) - actor.value.z).tdiv(dist)
   end
 
   def self.a_pain_shoot_skull(actor : CDoom::Mobj*, angle : CDoom::Angle)
@@ -9710,7 +9701,7 @@ module LibDoom
     newmobj = CDoom.p_spawn_missile(mo, targ, CDoom::Mobjtype::MT_SPAWNSHOT)
     newmobj.value.target = targ
     newmobj.value.reactiontime =
-      ((targ.value.y - mo.value.y) // newmobj.value.momy) // newmobj.value.state.value.tics
+      ((targ.value.y - mo.value.y).tdiv(newmobj.value.momy)).tdiv(newmobj.value.state.value.tics)
 
     CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_bospit.value)
   end
@@ -10657,7 +10648,7 @@ module LibDoom
         target.value.x,
         target.value.y)
 
-      thrust = damage*(FRACUNIT >> 3) &* 100//target.value.info.value.mass
+      thrust = damage*(FRACUNIT >> 3) &* 100.tdiv(target.value.info.value.mass)
 
       # make fall forwards sometimes
       if damage < 40 &&
@@ -10676,7 +10667,7 @@ module LibDoom
     # player specific
     if !player.null?
       # end of game hell hack
-      if target.value.subsector.value.sector.value.special == 1 &&
+      if target.value.subsector.value.sector.value.special == 11 &&
          damage >= target.value.health
         damage = target.value.health - 1
       end
@@ -11580,7 +11571,7 @@ module LibDoom
     thingtopslope = CDoom.topslope if thingtopslope > CDoom.topslope
     thingbottomslope = CDoom.bottomslope if thingbottomslope < CDoom.bottomslope
 
-    CDoom.aimslope = (thingtopslope + thingbottomslope) // 2
+    CDoom.aimslope = (thingtopslope + thingbottomslope).tdiv(2)
     CDoom.linetarget = th
 
     return 0 # don't go any farther
@@ -11850,7 +11841,7 @@ module LibDoom
       # spray blood in a random direction
       mo = CDoom.p_spawn_mobj(thing.value.x,
         thing.value.y,
-        thing.value.z + thing.value.height // 2, CDoom::Mobjtype::MT_BLOOD)
+        thing.value.z + thing.value.height.tdiv(2), CDoom::Mobjtype::MT_BLOOD)
 
       mo.value.momx = (CDoom.p_random - CDoom.p_random) << 12
       mo.value.momy = (CDoom.p_random - CDoom.p_random) << 12
@@ -12472,8 +12463,8 @@ module LibDoom
 
     loop do
       if xmove > CDoom::MAXMOVE // 2 || ymove > CDoom::MAXMOVE // 2
-        ptryx = mo.value.x + xmove // 2
-        ptryy = mo.value.y + ymove // 2
+        ptryx = mo.value.x + xmove.tdiv(2)
+        ptryy = mo.value.y + ymove.tdiv(2)
         xmove >>= 1
         ymove >>= 1
       else
@@ -12523,10 +12514,10 @@ module LibDoom
     return if mo.value.z > mo.value.floorz
 
     if (mo.value.flags & CDoom::Mobjflag::MF_CORPSE.value != 0) &&
-       (mo.value.momx > FRACUNIT // 4 ||
-       mo.value.momx < -FRACUNIT // 4 ||
-       mo.value.momy > FRACUNIT // 4 ||
-       mo.value.momy < -FRACUNIT // 4) &&
+       (mo.value.momx > FRACUNIT.tdiv(4) ||
+       mo.value.momx < -FRACUNIT.tdiv(4) ||
+       mo.value.momy > FRACUNIT.tdiv(4)||
+       mo.value.momy < -FRACUNIT.tdiv(4)) &&
        (mo.value.floorz != mo.value.subsector.value.sector.value.floorheight)
       # do not stop sliding
       # if halfway off a step with some momentum
@@ -12675,7 +12666,7 @@ module LibDoom
     # inherit attributes from deceased one
     mo = CDoom.p_spawn_mobj(x, y, z, mobj.value.type)
     mo.value.spawnpoint = mobj.value.spawnpoint
-    mo.value.angle = ANG45 &* (mthing.value.angle // 45)
+    mo.value.angle = ANG45 &* (mthing.value.angle.tdiv(45))
 
     if mthing.value.options & CDoom::MTF_AMBUSH != 0
       mo.value.flags = mo.value.flags | CDoom::Mobjflag::MF_AMBUSH.value
@@ -12841,7 +12832,7 @@ module LibDoom
 
     mo = CDoom.p_spawn_mobj(x, y, z, CDoom::Mobjtype.new(i))
     mo.value.spawnpoint = mthing.value
-    mo.value.angle = ANG45 &* (mthing.value.angle // 45)
+    mo.value.angle = ANG45 &* (mthing.value.angle.tdiv(45))
 
     # pull it from the que
     CDoom.iquetail = (CDoom.iquetail + 1) & (CDoom::ITEMQUESIZE - 1)
@@ -12872,7 +12863,7 @@ module LibDoom
       mobj.value.flags = mobj.value.flags | ((mthing.value.type - 1).to_i32 << CDoom::Mobjflag::MF_TRANSSHIFT.value)
     end
 
-    mobj.value.angle = ANG45 &* (mthing.value.angle // 45)
+    mobj.value.angle = ANG45 &* (mthing.value.angle.tdiv(45))
     mobj.value.player = p
     mobj.value.health = p.value.health
 
@@ -12984,7 +12975,7 @@ module LibDoom
       CDoom.totalitems += 1
     end
 
-    mobj.value.angle = ANG45 &* (mthing.value.angle // 45)
+    mobj.value.angle = ANG45 &* (mthing.value.angle.tdiv(45))
     if mthing.value.options & CDoom::MTF_AMBUSH != 0
       mobj.value.flags = mobj.value.flags | CDoom::Mobjflag::MF_AMBUSH.value
     end
@@ -13058,11 +13049,11 @@ module LibDoom
     th.value.momy = CDoom.fixed_mul(th.value.info.value.speed, @@finesine[an])
 
     dist = CDoom.p_aprox_distance(dest.value.x - source.value.x, dest.value.y - source.value.y)
-    dist = dist // th.value.info.value.speed
+    dist = dist.tdiv(th.value.info.value.speed)
 
     dist = 1 if dist < 1
 
-    th.value.momz = (dest.value.z - source.value.z) // dist
+    th.value.momz = (dest.value.z - source.value.z).tdiv(dist)
     CDoom.p_check_missile_spawn(th)
 
     return th
@@ -13497,7 +13488,7 @@ module LibDoom
     # bob the weapon based on movement speed
     angle = (128 * CDoom.leveltime) & CDoom::FINEMASK
     psp.value.sx = FRACUNIT + CDoom.fixed_mul(player.value.bob, @@finecosine[angle])
-    angle &= CDoom::FINEANGLES // 2 - 1
+    angle &= CDoom::FINEANGLES.tdiv(2) - 1
     psp.value.sy = CDoom::WEAPONTOP + CDoom.fixed_mul(player.value.bob, @@finesine[angle])
   end
 
@@ -13618,16 +13609,16 @@ module LibDoom
       CDoom.linetarget.value.x,
       CDoom.linetarget.value.y)
     if angle &- player.value.mo.value.angle > ANG180
-      if angle &- player.value.mo.value.angle < -ANG90 // 20
-        player.value.mo.value.angle = angle &+ ANG90 // 21
+      if angle &- player.value.mo.value.angle < (-ANG90).tdiv(20)
+        player.value.mo.value.angle = angle &+ ANG90.tdiv(21)
       else
-        player.value.mo.value.angle = player.value.mo.value.angle &- ANG90 // 20
+        player.value.mo.value.angle = player.value.mo.value.angle &- ANG90.tdiv(20)
       end
     else
-      if angle &- player.value.mo.value.angle > ANG90 // 20
-        player.value.mo.value.angle = angle &- ANG90 // 21
+      if angle &- player.value.mo.value.angle > ANG90.tdiv(20)
+        player.value.mo.value.angle = angle &- ANG90.tdiv(21)
       else
-        player.value.mo.value.angle = player.value.mo.value.angle &+ ANG90 // 20
+        player.value.mo.value.angle = player.value.mo.value.angle &+ ANG90.tdiv(20)
       end
     end
     player.value.mo.value.flags = player.value.mo.value.flags | CDoom::Mobjflag::MF_JUSTATTACKED.value
@@ -13777,7 +13768,7 @@ module LibDoom
   def self.a_bfg_spray(mo : CDoom::Mobj*)
     # offset angles from its attack angle
     40.times do |i|
-      an = mo.value.angle &- ANG90 // 2 &+ ANG90 // 40 &* i
+      an = mo.value.angle &- ANG90.tdiv(2) &+ ANG90.tdiv(40) &* i
 
       # mo->target is the originator (player)
       #  of the missile
@@ -16252,7 +16243,7 @@ module LibDoom
     # pause if in menu and at least one tic has been run
     if CDoom.netgame == 0 &&
        CDoom.menuactive != 0 &&
-       CDoom.demoplayback == 0
+       CDoom.demoplayback == 0 &&
       CDoom.players[CDoom.consoleplayer].viewz != 1
       return
     end
@@ -16309,8 +16300,8 @@ module LibDoom
       return
     end
 
-    angle = (CDoom::FINEANGLES // 20 * CDoom.leveltime) & CDoom::FINEMASK
-    bob = CDoom.fixed_mul(player.value.bob // 2, @@finesine[angle])
+    angle = (CDoom::FINEANGLES.tdiv(20) * CDoom.leveltime) & CDoom::FINEMASK
+    bob = CDoom.fixed_mul(player.value.bob.tdiv(2), @@finesine[angle])
 
     # move viewheight
     if player.value.playerstate == CDoom::Playerstate::PST_LIVE
@@ -18735,7 +18726,7 @@ module LibDoom
       if CDoom.segtextured != 0
         # calculate texture offset
         angle = (CDoom.rw_centerangle &+ CDoom.xtoviewangle[CDoom.rw_x]) >> CDoom::ANGLETOFINESHIFT
-        angle = 0_u32 if angle >= (FINEANGLES // 2)
+        angle = 0_u32 if angle >= (FINEANGLES.tdiv(2))
         texturecolumn = CDoom.rw_offset - CDoom.fixed_mul(@@finetangent[angle], CDoom.rw_distance)
         texturecolumn >>= FRACBITS
         # calculate lighting
@@ -19416,7 +19407,7 @@ module LibDoom
     if sprframe.value.rotate != 0
       # choose a different rotation based on player view
       ang = CDoom.r_point_to_angle(thing.value.x, thing.value.y)
-      rot = (ang &- thing.value.angle &+ (ANG45 // 2).to_u32! * 9) >> 29
+      rot = (ang &- thing.value.angle &+ (ANG45.tdiv(2)).to_u32! * 9) >> 29
       lump = sprframe.value.lump[rot]
       flip = sprframe.value.flip[rot]
     else

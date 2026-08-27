@@ -1,5 +1,10 @@
+# Copyright (C) 2026 Devin Shwagginz
+
 CRYSTAL_FLAGS := -DRANGECHECK -DPRECOMPUTED
 EXEC := doo-cr
+
+
+CURRENT_DIR := $(CURDIR)
 
 ifeq ($(OS),Windows_NT)
     # Windows-specific settings
@@ -44,21 +49,14 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \
 	shards install
 	shards update
-	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC) --link-flags="-LC:/Crystal/doo-cr -LC:/msys64/clangarm64/lib"
-	mv -f libcvars.$(LIB_EXT) ./bin
-	cp -f libraylib.$(LIB_EXT) ./bin
-	cp -f libADLMIDI.$(LIB_EXT) ./bin
-	$(CHANGE_LIB_NAMES)
-	
-arm: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
-	test -d bin || mkdir bin && \
-	shards install
-	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC) --link-flags="-LC:/Crystal/doo-cr -LC:/msys64/clangarm64/lib"
+	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC) --link-flags="-L$(CURRENT_DIR) -LC:/msys64/clangarm64/lib"
 	mv -f libcvars.$(LIB_EXT) ./bin
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
 	$(CHANGE_LIB_NAMES)
 
+	cd ./bin && ./doo-cr
+	
 clean:
 	rm -rf raylib
 	rm -rf libADLMIDI
@@ -71,7 +69,7 @@ libcvars.$(LIB_EXT):
 	cc -shared -fPIC -x c \
 		-Wl,-undefined,dynamic_lookup \
 		-DDOOM_IMPLEMENTATION \
-			cvars.h -o libcvars.$(LIB_EXT)
+			./src/cvars.h -o libcvars.$(LIB_EXT)
 
 libraylib.$(LIB_EXT):
 	test -d raylib || git clone --depth 1 --branch 6.0 --recursive https://github.com/raysan5/raylib 

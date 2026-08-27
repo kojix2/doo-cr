@@ -1,3 +1,20 @@
+# Copyright (C) 2026 Devin Shwagginz
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# ==> The entry point for Doo-cr
+
 require "socket"
 
 require "./doo-cr/lib.cr"
@@ -10,17 +27,19 @@ require "raylib-cr/audio.cr"
 require "./adlmidi.cr"
 
 module LibDoom
+  VERSION_STR = "1.0"
+  VERSION = 10
+
+  # The resolutions of the render target the screen puts on the screen
   SRES_X = 320
   SRES_Y = 240
 
+  # Midi info
   MIDI_BUFFER_SIZE =  2048
   MIDI_SAMPLE_RATE = 44100
   MIDI_TICK_TIME   = 1.0 / 140.0
+  # TODO: make a setting
   MIDI_BANK        = 16
-
-  # If rangecheck is undefined,
-  # most parameter validation debugging code will not be compiled
-  RANGECHECK = true
 
   macro poll_key(doomkey, raylibkey)
   was_down = LibDoom.keystates[CDoom::DoomKey::{{doomkey}}.value]
