@@ -201,13 +201,20 @@ module LibDoom
     CDoom.d_doom_main
   end
 
+  @@raylibbuffer = Bytes.new(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT * 4)
+
   def self.doom_draw
     return unless Raylib.window_ready?
     @@screen_texture.try do |st|
-      next unless Raylib.render_texture_valid?(st)
-      Raylib.begin_texture_mode(st)
-      draw_framebuffer
-      Raylib.end_texture_mode
+      next unless Raylib.texture_valid?(st)
+      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
+        @@raylibbuffer[p * 4] = CDoom.screen_palette[CDoom.screens[0][p].to_i32 * 3]
+        @@raylibbuffer[p * 4 + 1] = CDoom.screen_palette[CDoom.screens[0][p].to_i32 * 3 + 1]
+        @@raylibbuffer[p * 4 + 2] = CDoom.screen_palette[CDoom.screens[0][p].to_i32 * 3 + 2]
+        @@raylibbuffer[p * 4 + 3] = 255
+      end
+
+      Raylib.update_texture(st, @@raylibbuffer.to_unsafe)
 
       scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
       scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
@@ -215,41 +222,29 @@ module LibDoom
 
       Raylib.begin_drawing
       Raylib.clear_background(Raylib::BLACK)
-      Raylib.draw_texture_pro(st.texture,
-        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.texture.width.to_f, height: -st.texture.height.to_f),
+      Raylib.draw_texture_pro(st,
+        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
         Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
           width: SRES_X.to_f * scale, height: SRES_Y.to_f * scale),
         Raylib::Vector2.new, 0, Raylib::WHITE)
+
+      # Draw crosshair
+      if (CDoom.crosshair != 0 &&
+         CDoom.menuactive == 0 &&
+         CDoom.gamestate == CDoom::Gamestate::Level &&
+         CDoom.automapactive == 0)
+        y = CDoom::SCREENHEIGHT // 2
+        y += CDoom.setblocks == 11 ? 8 : -8
+        2.times do |i|
+          Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 - 2 - i, y, Raylib::RAYWHITE)
+          Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 + 2 + i, y, Raylib::RAYWHITE)
+        end
+        2.times do |i|
+          Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y - 2 - i), Raylib::RAYWHITE)
+          Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y + 2 + i), Raylib::RAYWHITE)
+        end
+      end
       Raylib.end_drawing
-    end
-  end
-
-  def self.draw_framebuffer
-    CDoom::SCREENWIDTH.times do |x|
-      CDoom::SCREENHEIGHT.times do |y|
-        Raylib.draw_pixel(x, y, Raylib::Color.new(
-          r: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3],
-          g: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3 + 1],
-          b: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3 + 2],
-          a: 255))
-      end
-    end
-
-    # Draw crosshair
-    if (CDoom.crosshair != 0 &&
-       CDoom.menuactive == 0 &&
-       CDoom.gamestate == CDoom::Gamestate::Level &&
-       CDoom.automapactive == 0)
-      y = CDoom::SCREENHEIGHT // 2
-      y += CDoom.setblocks == 11 ? 8 : -8
-      2.times do |i|
-        Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 - 2 - i, y, Raylib::RAYWHITE)
-        Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 + 2 + i, y, Raylib::RAYWHITE)
-      end
-      2.times do |i|
-        Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y - 2 - i), Raylib::RAYWHITE)
-        Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y + 2 + i), Raylib::RAYWHITE)
-      end
     end
   end
 
@@ -6132,7 +6127,7 @@ module LibDoom
   end
 
   def self.i_shutdown_graphics
-    @@screen_texture.try { |st| Raylib.unload_render_texture(st) }
+    @@screen_texture.try { |st| Raylib.unload_texture(st) }
     Raylib.close_window if Raylib.window_ready?
   end
 
@@ -6277,8 +6272,10 @@ module LibDoom
     Raylib.toggle_borderless_windowed if @@rlfullscreen != 0
     # Raylib.set_target_fps(35)
 
-    @@screen_texture = Raylib.load_render_texture(CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
-    Raylib.set_texture_filter(@@screen_texture.not_nil!.texture, Raylib::TextureFilter::Point)
+    image = Raylib.gen_image_color(CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT, Raylib::BLACK)
+    @@screen_texture = Raylib.load_texture_from_image(image)
+    Raylib.unload_image(image)
+    Raylib.set_texture_filter(@@screen_texture.not_nil!, Raylib::TextureFilter::Point)
   end
 
   #
