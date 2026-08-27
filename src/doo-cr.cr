@@ -63,6 +63,8 @@ end
 
     # Same reasoning: networking never touches raylib.
     net_context = Fiber::ExecutionContext::Isolated.new("doom-net") do
+      until @@insocket
+      end
       sock = @@insocket.not_nil!
       loop do
         sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)

@@ -203,15 +203,19 @@ module LibDoom
 
   @@raylibbuffer = Bytes.new(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT * 4)
 
+  @@palette_rgba = Array(UInt32).new(256, 0_u32)
+
   def self.doom_draw
     return unless Raylib.window_ready?
+    # Pointers for speed. "Oh! But it's oop!". I don't see you having a source port of Doom.
+     screen_ptr = CDoom.screens[0]
+      buf_ptr = @@raylibbuffer.to_unsafe.as(UInt32*)
+      palette_ptr = @@palette_rgba.to_unsafe
+
     @@screen_texture.try do |st|
       next unless Raylib.texture_valid?(st)
       (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
-        @@raylibbuffer[p * 4] = CDoom.screen_palette[CDoom.screens[0][p].to_i32 * 3]
-        @@raylibbuffer[p * 4 + 1] = CDoom.screen_palette[CDoom.screens[0][p].to_i32 * 3 + 1]
-        @@raylibbuffer[p * 4 + 2] = CDoom.screen_palette[CDoom.screens[0][p].to_i32 * 3 + 2]
-        @@raylibbuffer[p * 4 + 3] = 255
+        buf_ptr[p] = palette_ptr[screen_ptr[p]]
       end
 
       Raylib.update_texture(st, @@raylibbuffer.to_unsafe)
@@ -6250,12 +6254,16 @@ module LibDoom
 
   def self.i_set_palette(palette : CDoom::Byte*)
     256.times do |i|
-      CDoom.screen_palette[i*3] = CDoom.gammatable[CDoom.usegamma][palette.value] & ~3
+      r = CDoom.gammatable[CDoom.usegamma][palette.value] & ~3
       palette += 1
-      CDoom.screen_palette[i*3 + 1] = CDoom.gammatable[CDoom.usegamma][palette.value] & ~3
+      g = CDoom.gammatable[CDoom.usegamma][palette.value] & ~3
       palette += 1
-      CDoom.screen_palette[i*3 + 2] = CDoom.gammatable[CDoom.usegamma][palette.value] & ~3
+      b = CDoom.gammatable[CDoom.usegamma][palette.value] & ~3
       palette += 1
+      CDoom.screen_palette[i*3] = r
+      CDoom.screen_palette[i*3 + 1] = g
+      CDoom.screen_palette[i*3 + 2] = b
+      @@palette_rgba[i] = (255_u32 << 24) | (b.to_u32 << 16) | (g.to_u32 << 8) | r.to_u32
     end
   end
 
