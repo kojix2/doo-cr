@@ -2510,8 +2510,8 @@ module LibDoom
                 CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
                 @@sendaddress[i + 2] = Socket::IPAddress.v4(
                   ipnums[0], ipnums[1], ipnums[2], ipnums[3],
-                  port: @@doomport)
-                ipnums += 4
+                  port: ipnums[4].to_u16 + (ipnums[5].to_u16 << 8))
+                ipnums += 6
               end
               return
             end
@@ -2578,7 +2578,11 @@ module LibDoom
                 ipnums.value = ipnum
                 ipnums += 1
               end
-              CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1 if i % 2 == 0
+              ipnums.value = (add.port & 0xff).to_u8
+              ipnums += 1
+              ipnums.value = (add.port >> 8).to_u8
+              ipnums += 1
+              CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1 # A bit lazy, no?
             end
 
             1000.times do
@@ -5044,7 +5048,8 @@ module LibDoom
     end
   end
 
-  def self.upnp_open_port(port : Int32)
+  def self.upnp_open_port(port : Int32) : Bool
+    begin
   # 1. Discover the router
   sock = UDPSocket.new(Socket::Family::INET)
   sock.read_timeout = 2.seconds
@@ -5058,13 +5063,13 @@ module LibDoom
   sock.close
   resp = String.new(buf[0, len])
   location = resp.each_line.find(&.starts_with?("LOCATION:")).try { |l| l.split(":", 2)[1].strip }
-  return unless location
+  return false unless location
 
   # 2. Fetch device description, pull out controlURL with a plain string search
   desc = HTTP::Client.get(location).body
-  return unless desc.includes?("WANIPConnection") || desc.includes?("WANPPPConnection")
+  return false unless desc.includes?("WANIPConnection") || desc.includes?("WANPPPConnection")
   control_path = desc[/<controlURL>(.*?)<\/controlURL>/, 1]?
-  return unless control_path
+  return false unless control_path
 
   uri = URI.parse(location)
   control_url = control_path.starts_with?("http") ? control_path : "#{uri.scheme}://#{uri.host}:#{uri.port}#{control_path}"
@@ -5082,8 +5087,11 @@ module LibDoom
   HTTP::Client.post(control_url,
     headers: HTTP::Headers{"Content-Type" => "text/xml; charset=\"utf-8\"", "SOAPAction" => "\"urn:schemas-upnp-org:service:WANIPConnection:1#AddPortMapping\""},
     body: body)
+
+    return true
 rescue
-  puts "UPnP: couldn't open port automatically — forward #{port}/UDP manually if needed"
+  return false
+end
 end
 
   def self.bind_to_local_port(socket : UDPSocket, port : Int32)
@@ -5097,7 +5105,7 @@ end
   def self.packet_send
     # sock = @@sendsocket
 # Use insocket because in and out ports will both be doomport
-# Helps prevent port forwarding
+# Helps prevent bugs on lan
     sock = @@insocket 
     return unless sock
     dest = @@sendaddress[CDoom.doomcom.value.remotenode]
@@ -5173,7 +5181,7 @@ end
            sw.numtics == 0
           # Add it in
 
-          @@sendaddress[i] = Socket::IPAddress.new(fromaddress.address, @@doomport)
+          @@sendaddress[i] = fromaddress
         else
           CDoom.doomcom.value.remotenode = -1
           return # Invalid
@@ -5291,7 +5299,11 @@ end
 
     @@sendsocket = udp_socket()
 
-    upnp_open_port(@@doomport) if CDoom.doomcom.value.consoleplayer == 0
+    if CDoom.doomcom.value.consoleplayer == 0
+      unless upnp_open_port(@@doomport)
+  puts "UPnP: couldn't open port automatically — forward #{@@doomport}/UDP manually if needed"
+      end
+    end
 
     spawn do
       sock = @@insocket.not_nil!

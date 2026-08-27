@@ -43,6 +43,7 @@ endif
 all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	test -d bin || mkdir bin && \
 	shards install
+	shards update
 	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC) --link-flags="-LC:/Crystal/doo-cr -LC:/msys64/clangarm64/lib"
 	mv -f libcvars.$(LIB_EXT) ./bin
 	cp -f libraylib.$(LIB_EXT) ./bin
