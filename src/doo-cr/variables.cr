@@ -80,21 +80,6 @@ module LibDoom
 
   @@closing = false
 
-  @@software_rendering : Bool = true
-
-  @@screen_texture : Raylib::Texture?
-  @@viewport_target : Raylib::RenderTexture?
-  @@render_target : Raylib::RenderTexture?
-
-  @@software_screen = Bytes.new(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT)
-
-  @@audio_stream : RAudio::AudioStream?
-  @@adl_player : ADLMIDI::Player*?
-  @@music_stream : RAudio::AudioStream?
-  @@last_time = 0
-  @@music_buffer = Pointer(Int16).null
-  @@midi_tick_accumulator = 0.0
-
   @@switch_origins : Array(CDoom::Degenmobj) = [] of CDoom::Degenmobj
 
   CDoom.screen_buffer = Pointer(UInt8).null

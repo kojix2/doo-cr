@@ -1,10 +1,11 @@
 /docs/
 /lib/
 /bin/
+/*.wad
+/config.cfg
 /.shards/
 *.dwarf
 *.DS_Store
-/raylib/
 /libADLMIDI/
 *.dylib
 *.dll

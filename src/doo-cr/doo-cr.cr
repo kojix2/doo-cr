@@ -1229,17 +1229,9 @@ module LibDoom
   #  draw current display, possibly wiping it from the previous
   #
   def self.d_display
-    if @@was_focused != Raylib.window_focused?
-      if (@@was_focused = Raylib.window_focused?)
-        Raylib.disable_cursor
-      else
-        Raylib.enable_cursor
-      end
-    end
-
     return if CDoom.nodrawers != 0 # for comparative timing / profiling
 
-    redrawsbar = !@@software_rendering # Always redraw for transparency issues
+    redrawsbar = false
 
     # change the view size if needed
     if CDoom.setsizeneeded != 0
@@ -1254,8 +1246,6 @@ module LibDoom
       wipe = true
       CDoom.wipe_start_screen(0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
     end
-    CDoom.screens[0].fill(CDoom::SCREENHEIGHT * CDoom::SCREENWIDTH, 255) unless @@software_rendering
-
     CDoom.hu_erase if CDoom.gamestate == CDoom::Gamestate::Level && CDoom.gametic != 0
 
     # do buffered drawing
@@ -1343,12 +1333,6 @@ module LibDoom
     end
 
     # wipe update
-    unless @@software_rendering
-      @@viewport_target.try do |vt|
-        update_viewport(vt)
-      end
-    end
-
     CDoom.wipe_end_screen(0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
 
     wipestart = i_get_time - 1
@@ -1374,7 +1358,9 @@ module LibDoom
   end
 
   def self.d_doom_loop
-    until Raylib.close_window?
+    until @@closing
+      break unless platform_step
+
       # frame syncronous IO operations
       CDoom.i_start_frame
 
@@ -2028,8 +2014,6 @@ module LibDoom
     puts "Doo-cr is free software, and you are welcome to redistribute it".center(77)
     puts "".ljust(77, '=')
 
-    Raylib.set_trace_log_level(Raylib::TraceLogLevel::Error)
-
     puts "m_init: Init miscellaneous info."
     CDoom.m_init
 
@@ -2408,10 +2392,10 @@ module LibDoom
         remaining = newtics - i
         break if CDoom.maketic - gameticdiv >= CDoom::BACKUPTICS // 2 - 1 # can't hold any more
 
-        mouse_step = Raylib::Vector2.new(
+        mouse_step = MouseDelta.new(
           x: @@mouse_queued.x // remaining,
           y: @@mouse_queued.y // remaining)
-        @@mouse_queued = Raylib::Vector2.new(
+        @@mouse_queued = MouseDelta.new(
           x: @@mouse_queued.x - mouse_step.x,
           y: @@mouse_queued.y - mouse_step.y)
 
@@ -2616,7 +2600,7 @@ module LibDoom
 } connected")
         doom_draw
         if CDoom.doomcom.value.numnodes >= CDoom::MAXPLAYERS ||
-           Raylib::KeyboardKey::Space.down?
+           @@keystates[CDoom::DoomKey::SPACE.value]
           puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
           # Distribute ips
           CDoom.netbuffer.value.retransmitfrom = 19
@@ -6002,8 +5986,8 @@ sleep 1.millisecond # Let music stop
     # Dequeue MIDI events
     if CDoom.queue_midi_head != CDoom.queue_midi_tail
       CDoom.queue_midi_head += 1
-      r = CDoom.queued_midi_msgs[(CDoom.queue_midi_head - 1).remainder(CDoom::MAX_QUEUED_MIDI_MSGS)]
-      r.to_u64!
+      message = CDoom.queued_midi_msgs[(CDoom.queue_midi_head - 1).remainder(CDoom::MAX_QUEUED_MIDI_MSGS)]
+      return message.to_u64!
     end
 
     if CDoom.mus_playing == 0 || CDoom.mus_data.null?
@@ -6217,14 +6201,14 @@ sleep 1.millisecond # Let music stop
     Raylib.close_window if Raylib.window_ready?
   end
 
-  @@mouse_queued = Raylib::Vector2.new
+  @@mouse_queued = MouseDelta.new(0, 0)
 
   def self.i_poll_mouse
     Raylib.poll_input_events
     delta = Raylib.get_mouse_delta * 2 # Rough sensitivity increase
-    @@mouse_queued = Raylib::Vector2.new(
-      x: @@mouse_queued.x + delta.x,
-      y: @@mouse_queued.y + delta.y
+    @@mouse_queued = MouseDelta.new(
+      x: @@mouse_queued.x + delta.x.to_i32,
+      y: @@mouse_queued.y + delta.y.to_i32
     )
   end
 
@@ -6232,11 +6216,11 @@ sleep 1.millisecond # Let music stop
     i_poll_mouse
   end
 
-  def self.i_start_tic(in_delta : Raylib::Vector2? = nil)
+  def self.i_start_tic(in_delta : MouseDelta? = nil)
     mousedelta = in_delta || @@mouse_queued
     LibDoom.doom_mouse_move(mousedelta.x.to_i32!, mousedelta.y.to_i32)
     if in_delta.nil?
-      @@mouse_queued = Raylib::Vector2.new
+      @@mouse_queued = MouseDelta.new(0, 0)
     end
 
     poll_key(TAB, Tab)

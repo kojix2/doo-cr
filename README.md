@@ -8,6 +8,8 @@
 
 A DOOM source port written in Crystal Lang based on [PureDoom](https://github.com/Daivuk/PureDOOM) and [LinuxDoom](https://github.com/id-Software/DOOM)
 
+> **Note:** This is an unofficial fork that replaces the original raylib backend with [uing](https://github.com/kojix2/uing) and [raudio.cr](https://github.com/kojix2/raudio.cr).
+
 ## Features
 
 - Full DOOM, DOOM II, and Final Doom compatibility
@@ -78,6 +80,8 @@ Common command line arguments are:
 ## How to build
 Use a unix shell, on Windows I use msys2 with UCRT64, with make, cmake and tools, Crystal, and Shards all installed and run `make`.
 
+To download the free/libre Freedoom game data, run `make doom-data`. This installs `freedoom1.wad`, `freedoom2.wad`, and `freedm.wad`; launch the game with, for example, `./bin/doo-cr -iwad freedoom1.wad`.
+
 On Windows you may need to copy Crystal dlls over from wherever Crystal installed into your bin folder if you want to run doo-cr outside of your shell
 
 ## Status as a Source Port
@@ -87,6 +91,8 @@ If nothing else this project serves as proof that Crystal can be programmed as a
 
 ## Development
 
+The fork-specific platform code lives in `src/doo-cr/backends/`. These files reopen `LibDoom` after the upstream implementation is loaded, replacing only the methods owned by the uing and raudio backends. Keeping platform state and implementation there minimizes changes to upstream source files when syncing this fork.
+
 doo-cr utilized something I call two-way-bindings. I take a function in [PureDoom](https://github.com/Daivuk/PureDOOM), bind it into lib.cr,
 rewrite it in Crystal as a [fun](https://crystal-lang.org/reference/1.21/syntax_and_semantics/c_bindings/fun.html) at the top level <sup>Not in a [lib](https://crystal-lang.org/reference/1.21/syntax_and_semantics/c_bindings/lib.html)</sup>, and then turn the C function into an extern declaration.
 
@@ -94,7 +100,7 @@ Because of this, I was able to test each function I rewrote as I rewrote them. T
 
 The only thing that still remains in C is just variable declarations that I have been too lazy to move over to Crystal. 
 
-All methods are fully written in Crystal. The only C usage is bindings to [Raylib](https://github.com/sol-vin/raylib-cr) and [libADLMIDI](https://github.com/Wohlstand/libADLMIDI) <sup>rewriting those would be a completely seperate project</sup>
+All methods are fully written in Crystal. The native window and drawing backend is provided by [uing](https://github.com/kojix2/uing), audio streaming by [raudio.cr](https://github.com/kojix2/raudio.cr), and MIDI synthesis by [libADLMIDI](https://github.com/Wohlstand/libADLMIDI).
 
 Do note that this code is extremely [unsafe](https://crystal-lang.org/reference/1.21/syntax_and_semantics/unsafe.html) due to its current C-typed nature.
 
@@ -122,7 +128,7 @@ Do note that this code is extremely [unsafe](https://crystal-lang.org/reference/
 - [D. Shwagginz](https://github.com/d-shwagginz) - creator and maintainer
 
 ### Special thanks
-- [Ian Rash](https://github.com/sol-vin) for [raylib-cr](https://github.com/sol-vin/raylib-cr) and teaching me how to code!
+- [kojix2](https://github.com/kojix2) for [uing](https://github.com/kojix2/uing) and [raudio.cr](https://github.com/kojix2/raudio.cr)
+- [Ian Rash](https://github.com/sol-vin) for teaching me how to code!
 - [Daivuk](https://github.com/Daivuk) for [PureDoom](https://github.com/Daivuk/PureDOOM)
 - [Wohlstand](https://github.com/Wohlstand) for [libADLMIDI](https://github.com/Wohlstand/libADLMIDI)
-- [raysan5](https://github.com/raysan5) for [raylib](https://github.com/raysan5/raylib)

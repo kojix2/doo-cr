@@ -9,8 +9,11 @@ targets:
     main: src/doo-cr.cr
 
 dependencies:
-  raylib-cr:
-    github: d-shwagginz/raylib-cr
+  uing:
+    github: kojix2/uing
+    branch: main
+  raudio:
+    github: kojix2/raudio.cr
 
 crystal: '>= 1.21.0'
 

@@ -1,10 +1,15 @@
 # Copyright (C) 2026 Devin Shwagginz
 
-CRYSTAL_FLAGS := -DRANGECHECK -DPRECOMPUTED
+CRYSTAL_FLAGS := --release --no-debug -DRANGECHECK -DPRECOMPUTED
 EXEC := doo-cr
 OUTDIR := ./bin
 
-
+# Freedoom is free/libre game data that can be used with this source port.
+FREEDOOM_VERSION ?= 0.13.0
+FREEDOOM_URL := https://github.com/freedoom/freedoom/releases/download/v$(FREEDOOM_VERSION)/freedoom-$(FREEDOOM_VERSION).zip
+FREEDM_URL := https://github.com/freedoom/freedoom/releases/download/v$(FREEDOOM_VERSION)/freedm-$(FREEDOOM_VERSION).zip
+FREEDOOM_ARCHIVE := .freedoom-$(FREEDOOM_VERSION).zip
+FREEDM_ARCHIVE := .freedm-$(FREEDOOM_VERSION).zip
 
 ifeq ($(OS),Windows_NT)
     # Windows-specific settings
@@ -26,52 +31,64 @@ endif
 
 ifeq ($(DETECTED_OS),Windows)
 	LIB_EXT := dll
-	RLMAKE := cmake --build . --config Release
 	AMMAKE := cmake --build .
-	RLOUT := libraylib.dll
 	AMOUT := libADLMIDI.dll
-	CHANGE_LIB_NAMES := 
 	CRYSTAL_LIBS := libiconv-2.dll libgc-1.dll libwinpthread-1.dll
+	ADL_RUNTIME := libADLMIDI.dll
+	LIBCVARS_FLAGS := -shared -x c
+	PLATFORM_LINK_FLAGS := -L$(CURRENT_DIR)
 else ifeq ($(DETECTED_OS),Linux)
 	LIB_EXT := so
-	RLMAKE := make -Bj4 SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
 	AMMAKE := make
-	RLOUT := libraylib.so.6.0.0
 	AMOUT := libADLMIDI.so.1.6.3
-	CHANGE_LIB_NAMES := patchelf --replace-needed libADLMIDI.$(LIB_EXT).1 ./libADLMIDI.$(LIB_EXT) $(OUTDIR)/$(EXEC) && patchelf --replace-needed libraylib.$(LIB_EXT).600 ./libraylib.$(LIB_EXT) $(OUTDIR)/$(EXEC) && patchelf --replace-needed libcvars.$(LIB_EXT) ./libcvars.$(LIB_EXT) $(OUTDIR)/$(EXEC)
 	CRYSTAL_LIBS :=
+	ADL_RUNTIME := libADLMIDI.so.1
+	LIBCVARS_FLAGS := -shared -fPIC -x c
+	PLATFORM_LINK_FLAGS := -L$(CURRENT_DIR) -Wl,-rpath,\$${ORIGIN}
 else ifeq ($(DETECTED_OS),macOS)
 	LIB_EXT := dylib
-	RLMAKE := make -Bj4 SHAREDLIBS="-lglfw -framework OpenGL -framework OpenAL -framework Cocoa" SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
 	AMMAKE := make
-	RLOUT := libraylib.6.0.0.dylib
 	AMOUT := libADLMIDI.1.6.3.dylib
-	CHANGE_LIB_NAMES := install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" $(OUTDIR)/$(EXEC) && install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" $(OUTDIR)/$(EXEC)
 	CRYSTAL_LIBS :=
+	ADL_RUNTIME := libADLMIDI.1.dylib
+	LIBCVARS_FLAGS := -shared -fPIC -x c -Wl,-undefined,dynamic_lookup
+	PLATFORM_LINK_FLAGS := -L$(CURRENT_DIR) -Wl,-rpath,@executable_path
 endif
 
-.PHONY: all clean
-all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT) $(addprefix $(OUTDIR)/,$(CRYSTAL_LIBS))
-	test -d $(OUTDIR) || mkdir $(OUTDIR) && \
+.PHONY: all clean doom-data
+all: libcvars.$(LIB_EXT) libADLMIDI.$(LIB_EXT) $(addprefix $(OUTDIR)/,$(CRYSTAL_LIBS))
+	mkdir -p $(OUTDIR)
 	shards install
-	shards update
-	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o $(OUTDIR)/$(EXEC) --link-flags="-L$(CURRENT_DIR) -LC:/msys64/clangarm64/lib"
+	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o $(OUTDIR)/$(EXEC) --link-flags='$(PLATFORM_LINK_FLAGS)'
 	mv -f libcvars.$(LIB_EXT) $(OUTDIR)
-	cp -f libraylib.$(LIB_EXT) $(OUTDIR)
-	cp -f libADLMIDI.$(LIB_EXT) $(OUTDIR)
+	cp -f libADLMIDI.$(LIB_EXT) $(OUTDIR)/$(ADL_RUNTIME)
 
-	$(CHANGE_LIB_NAMES)
+# Download and unpack the freely distributable Freedoom IWADs.
+doom-data:
+	@set -eu; \
+	if test -s freedoom1.wad && test -s freedoom2.wad && test -s freedm.wad; then \
+		echo "Freedoom data already exists."; \
+	else \
+		command -v curl >/dev/null || { echo "doom-data requires curl." >&2; exit 1; }; \
+		command -v unzip >/dev/null || { echo "doom-data requires unzip." >&2; exit 1; }; \
+		tmp_freedoom="$(FREEDOOM_ARCHIVE).tmp"; \
+		tmp_freedm="$(FREEDM_ARCHIVE).tmp"; \
+		trap 'rm -f "$$tmp_freedoom" "$$tmp_freedm"' 0; \
+		curl --fail --location --retry 3 --output "$$tmp_freedoom" "$(FREEDOOM_URL)"; \
+		unzip -j -o "$$tmp_freedoom" '*.wad' -d .; \
+		curl --fail --location --retry 3 --output "$$tmp_freedm" "$(FREEDM_URL)"; \
+		unzip -j -o "$$tmp_freedm" '*.wad' -d .; \
+		echo "Freedoom data installed."; \
+	fi
 	
 clean:
-	rm -rf raylib
 	rm -rf libADLMIDI
 	rm -rf $(OUTDIR)
-	rm libraylib.$(LIB_EXT)
-	rm libADLMIDI.$(LIB_EXT)
+	rm -f libADLMIDI.$(LIB_EXT)
 
 
 define COPY_LIB
-$(OUTDIR)/$(1): $(CRYSTAL_LIBRARY_PATH)/$(2)
+$(OUTDIR)/$(1): $(CRYSTAL_LIBRARY_PATH)/$(1)
 	test -d $(OUTDIR) || mkdir $(OUTDIR)
 	cp -f "$(CRYSTAL_LIBRARY_PATH)/$(1)" "$(OUTDIR)/$(1)"
 endef
@@ -80,20 +97,9 @@ $(foreach lib,$(CRYSTAL_LIBS),$(eval $(call COPY_LIB,$(lib))))
 
 
 libcvars.$(LIB_EXT):
-	cc -shared -fPIC -x c \
-		-Wl,-undefined,dynamic_lookup \
+	cc $(LIBCVARS_FLAGS) \
 		-DDOOM_IMPLEMENTATION \
 			./src/cvars.h -o libcvars.$(LIB_EXT)
-
-libraylib.$(LIB_EXT):
-	test -d raylib || git clone --depth 1 --branch 6.0 --recursive https://github.com/raysan5/raylib 
-	sed -i.bak 's/^    #define SUPPORT_SCREEN_CAPTURE          1/\/\/    #define SUPPORT_SCREEN_CAPTURE          1/' raylib/src/config.h
-	cd raylib && \
-	test -d build || mkdir build && \
-	cd build && \
-	cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5" && \
-	$(RLMAKE) && \
-	cp ./raylib/$(RLOUT) ../../libraylib.$(LIB_EXT)
 
 libADLMIDI.$(LIB_EXT):
 	test -d libADLMIDI || git clone https://github.com/Wohlstand/libADLMIDI
@@ -103,5 +109,3 @@ libADLMIDI.$(LIB_EXT):
 	cmake -DCMAKE_BUILD_TYPE=Release -DlibADLMIDI_SHARED=ON .. && \
 	$(AMMAKE) && \
 	cp ./$(AMOUT) ../../libADLMIDI.$(LIB_EXT)
-
-
