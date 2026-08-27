@@ -50,9 +50,6 @@ end
   unless ARGV.includes?("-nosound")
     CDoom.i_error("Error: Cannot run sounds with less than #{@@execsize} cpu cores!\nUse -nosound to run.") if System.cpu_count < (@@execsize += 1)
 
-    # Audio never touches raylib, so it's safe to give it its own
-    # dedicated OS thread. This does NOT touch Fiber::ExecutionContext.default,
-    # so the main fiber below stays pinned to the real OS main thread.
     audio_context = Fiber::ExecutionContext::Isolated.new("doom-audio") do
       LibDoom.update_audio
     end
@@ -61,7 +58,6 @@ end
   if ARGV.includes?("-net")
     CDoom.i_error("Error: cannot run netgame with less than #{@@execsize} cpu cores!") if System.cpu_count < (@@execsize += 1)
 
-    # Same reasoning: networking never touches raylib.
     net_context = Fiber::ExecutionContext::Isolated.new("doom-net") do
       until @@insocket
       end
