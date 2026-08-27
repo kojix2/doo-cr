@@ -214,7 +214,7 @@ module LibDoom
       scale = [scalew, scaleh].min
 
       Raylib.begin_drawing
-     Raylib.clear_background(Raylib::BLACK)
+      Raylib.clear_background(Raylib::BLACK)
       Raylib.draw_texture_pro(st.texture,
         Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.texture.width.to_f, height: -st.texture.height.to_f),
         Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
@@ -226,14 +226,14 @@ module LibDoom
 
   def self.draw_framebuffer
     CDoom::SCREENWIDTH.times do |x|
-        CDoom::SCREENHEIGHT.times do |y|
+      CDoom::SCREENHEIGHT.times do |y|
         Raylib.draw_pixel(x, y, Raylib::Color.new(
           r: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3],
           g: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3 + 1],
           b: CDoom.screen_palette[CDoom.screens[0][(y * CDoom::SCREENWIDTH + x)].to_i32 * 3 + 2],
           a: 255))
       end
-      end
+    end
 
     # Draw crosshair
     if (CDoom.crosshair != 0 &&
@@ -251,8 +251,6 @@ module LibDoom
         Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y + 2 + i), Raylib::RAYWHITE)
       end
     end
-
-      
   end
 
   def self.doom_tick_midi : UInt64
@@ -2252,7 +2250,7 @@ module LibDoom
   def self.get_packets
     while CDoom.h_get_packet != 0
       next if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0 # extra setup packet
-      puts "get_packets: Got packet with checksum #{CDoom.netbuffer.value.checksum}"
+      # puts "get_packets: Got packet with checksum #{CDoom.netbuffer.value.checksum}"
 
       netconsole = CDoom.netbuffer.value.player & ~PL_DRONE
       netnode = CDoom.doomcom.value.remotenode
@@ -2334,7 +2332,7 @@ module LibDoom
       src = CDoom.netbuffer.value.cmds.to_unsafe + start
 
       while CDoom.nettics[netnode] < realend
-        puts "get_packet: Copying tics"
+        # puts "get_packet: Copying tics"
         dest = (CDoom.netcmds.to_unsafe + netconsole).value.to_unsafe + (CDoom.nettics[netnode] % CDoom::BACKUPTICS)
         CDoom.nettics[netnode] = CDoom.nettics[netnode] + 1
         dest.copy_from(src, 1)
@@ -2386,7 +2384,7 @@ module LibDoom
 
       # send the packet to the other nodes
       CDoom.doomcom.value.numnodes.times do |i|
-        puts "net_update : Sending packets to other nodes"
+        # puts "net_update : Sending packets to other nodes"
         if CDoom.nodeingame[i] != 0
           CDoom.netbuffer.value.starttic = CDoom.resendto[i]
           realstart = CDoom.resendto[i]
@@ -2456,7 +2454,7 @@ module LibDoom
     CDoom.autostart = 1
 
     if CDoom.doomcom.value.consoleplayer != 0
-        i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[1]
+      i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[1]
       puts "sending connection info..."
       loop do
         doom_draw
@@ -3921,10 +3919,9 @@ module LibDoom
 
   def self.g_despawn_player(playernum : Int32)
     pmo = CDoom.players[playernum].mo
-    pmo.value.player = Pointer(CDoom::Player).null
-    
-    x = pmo.value.x.to_i32! << FRACBITS
-    y = pmo.value.y.to_i32! << FRACBITS
+
+    x = pmo.value.x.to_i32!
+    y = pmo.value.y.to_i32!
 
     # spawn a teleport fog
     ss = CDoom.r_point_in_subsector(x, y)
@@ -5061,7 +5058,6 @@ module LibDoom
     end
   end
 
-
   def self.bind_to_local_port(socket : UDPSocket, port : Int32)
     begin
       socket.bind("0.0.0.0", port)
@@ -5270,23 +5266,6 @@ module LibDoom
     bind_to_local_port(@@insocket.not_nil!, @@doomport)
 
     @@sendsocket = udp_socket()
-
-    i_error("Error: cannot run netgame with less than 3 cpu cores!") if System.cpu_count < 3
-
-  Fiber::ExecutionContext.default.resize(maximum: 3)
-    spawn do
-      sock = @@insocket.not_nil!
-      loop do
-        sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
-        buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
-        begin
-          c, fromaddress = sock.receive(buf)
-          @@recv_channel.send({sw_ptr.value, c, fromaddress})
-        rescue ex
-          break
-        end
-      end
-    end
   end
 
   def self.i_net_cmd
