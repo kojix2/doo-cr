@@ -24,5 +24,6 @@ jobs:
             mingw-w64-ucrt-x86_64-libyaml
             mingw-w64-ucrt-x86_64-openssl
             make
+            git
       - name: Build project
         run: make
