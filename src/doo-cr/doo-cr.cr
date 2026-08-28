@@ -2372,6 +2372,9 @@ module LibDoom
               ipnums += 6
             end
             @@got_new_ips = true
+            CDoom.doomcom.value.numplayers.times do |i|
+                CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
+              end
           end
 
           break if CDoom.netbuffer.value.checksum & NCMD_PAUSE &&
@@ -2392,7 +2395,9 @@ module LibDoom
 
 
           send_alt_setup(CDoom.doomcom.value.remotenode)
-
+          CDoom.doomcom.value.numplayers.times do |i|
+                CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
+              end
           CDoom.doomcom.value.numnodes.times do |node|
             10.times do |i|
               propogate_ips(node)
@@ -2838,7 +2843,6 @@ module LibDoom
               CDoom.doomcom.value.consoleplayer = CDoom.netbuffer.value.player
               CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
               CDoom.displayplayer = CDoom.consoleplayer if @@altnet
-              CDoom.resendto[CDoom.consoleplayer] = CDoom.maketic - CDoom.doomcom.value.extratics
 
               numips.times do |i|
                 # Load other client's IP addresses
@@ -2848,6 +2852,10 @@ module LibDoom
                   ipnums[0], ipnums[1], ipnums[2], ipnums[3],
                   port: ipnums[4].to_u16 + (ipnums[5].to_u16 << 8))
                 ipnums += 6
+              end
+
+              CDoom.doomcom.value.numplayers.times do |i|
+                CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
               end
               return
             end
