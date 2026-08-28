@@ -27,8 +27,8 @@ require "raylib-cr/audio.cr"
 require "./adlmidi.cr"
 
 module LibDoom
-  VERSION_STR = "1.1" # Used for displaying
-  VERSION = 10 # Used for demo and netgame compatibility
+  VERSION_STR = "1.2" # Used for displaying
+  VERSION = 12 # Used for demo and netgame compatibility
 
   # The resolution of the player's viewport
   # NOTE: the screen wipe is only designed for 320 x 240

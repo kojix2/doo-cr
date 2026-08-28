@@ -2555,6 +2555,12 @@ module LibDoom
           CDoom.startmap = CDoom.netbuffer.value.starttic & 0x3f
           CDoom.startepisode = CDoom.netbuffer.value.starttic >> 6
 
+          packed = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+          CDoom.doomcom.value.ticdup = packed.value
+          packed += 1
+          CDoom.doomcom.value.extratics = packed.value
+          packed += 1
+
           puts "connected! waiting for host to start"
           loop do
             doom_draw
@@ -2609,7 +2615,12 @@ module LibDoom
           end
           CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
           CDoom.netbuffer.value.player = VERSION
-          CDoom.netbuffer.value.numtics = 0
+          CDoom.netbuffer.value.numtics = 1
+          packed = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+          packed.value = CDoom.doomcom.value.ticdup.to_u8!
+          packed += 1
+          packed.value = CDoom.doomcom.value.extratics.to_u8!
+          packed += 1
           CDoom.h_send_packet(i, NCMD_SETUP)
         end
 
