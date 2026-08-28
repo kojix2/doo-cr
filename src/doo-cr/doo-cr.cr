@@ -2536,8 +2536,9 @@ module LibDoom
       i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[1]
       puts "sending connection info..."
       loop do
-        CDoom.screens[0].clear(CDoom::SCREENWIDTH * 8)
-        CDoom.m_write_text(0, 0, "Sending connection data on port #{@@doomport}. Escape to exit")
+        CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
+        CDoom.m_write_text(0, 0, "Escape to exit")
+        CDoom.m_write_text(0, 9, "Sending connection data on port #{@@doomport}")
         doom_draw
         check_abort
         CDoom.netbuffer.value.retransmitfrom = 69
@@ -2565,14 +2566,15 @@ module LibDoom
 
           puts "connected! waiting for host to start"
           loop do
-            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 8)
-            CDoom.m_write_text(0, 0, "Connected to host! Escape to exit")
+            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
+            CDoom.m_write_text(0, 0, "Escape to exit")
+            CDoom.m_write_text(0, 9, "Connected to host!")
             doom_draw
             check_abort
             next if CDoom.h_get_packet == 0
 
             # Host is sending ips
-            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 8)
+            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
             CDoom.m_write_text(0, 0, "Gathering IPs")
             doom_draw
             if CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
