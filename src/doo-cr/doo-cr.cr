@@ -230,31 +230,86 @@ module LibDoom
 
   @@palette_rgba = Array(UInt32).new(256, 0_u32)
 
-  def self.doom_draw
+  def self.update_viewport(vt : Raylib::RenderTexture)
+    # Software render
+    viewport_ptr = @@software_screen.to_unsafe
+    buf_ptr = @@raylibbuffer.to_unsafe.as(UInt32*)
+      palette_ptr = @@palette_rgba.to_unsafe
+      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
+        pix = viewport_ptr[p]
+        if pix == 255
+          buf_ptr[p] = 0_u32
+        else
+          buf_ptr[p] = palette_ptr[pix]
+        end
+      end
+      Raylib.update_texture(vt.texture, @@raylibbuffer.to_unsafe)
+
+    # Raylib.begin_texture_mode(vt) # TODO: Render GL player view
+      # Raylib.end_texture_mode
+  end
+
+  def self.doom_draw()
+    if Thread.current != MAIN_THREAD
+      raise "Error: doom_draw called off main thread: #{Thread.current} (expected #{MAIN_THREAD})"
+      # Hopefully this fixes God's cursed bug
+    end
+
     return unless Raylib.window_ready?
     # Pointers for speed. "Oh! But it's oop!". I don't see you having a source port of Doom.
      screen_ptr = CDoom.screens[0]
       buf_ptr = @@raylibbuffer.to_unsafe.as(UInt32*)
       palette_ptr = @@palette_rgba.to_unsafe
+      p255 = @@palette_rgba[255]
 
     @@screen_texture.try do |st|
+      @@viewport_target.try do |vt|
+      @@render_target.try do |rt|
       next unless Raylib.texture_valid?(st)
       (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
-        buf_ptr[p] = palette_ptr[screen_ptr[p]]
+        pix = screen_ptr[p]
+        if !@@software_rendering && pix == 255
+          buf_ptr[p] = 0_u32
+        else
+          buf_ptr[p] = palette_ptr[pix]
+        end
       end
 
       Raylib.update_texture(st, @@raylibbuffer.to_unsafe)
 
-      scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
-      scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
-      scale = [scalew, scaleh].min
+        scalew = Raylib.get_screen_width.to_f / @@sres_x.to_f
+      scaleh = Raylib.get_screen_height.to_f / @@sres_y.to_f
+      scale = scalew < scaleh ? scalew : scaleh
+
+      unless @@software_rendering
+      update_viewport(vt)
+
+
+      Raylib.begin_texture_mode(rt)
+            Raylib.clear_background(Raylib::Color.new(r: p255 & 0xff, g: (p255 >> 8) & 0xff, b: (p255 >> 16) & 0xff, a: 255))
+
+          Raylib.draw_texture_pro(vt.texture,
+            Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: vt.texture.width.to_f, height: -vt.texture.height.to_f),
+            Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32,
+              width: rt.texture.width.to_f, height: rt.texture.height.to_f),
+            Raylib::Vector2.new, 0, Raylib::WHITE)
+      Raylib.end_texture_mode
+      end
 
       Raylib.begin_drawing
       Raylib.clear_background(Raylib::BLACK)
+      unless @@software_rendering
+      Raylib.draw_texture_pro(rt.texture,
+        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: rt.texture.width.to_f, height: rt.texture.height.to_f),
+        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (rt.texture.width.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (rt.texture.height.to_f * scale)) * 0.5_f32,
+          width: rt.texture.width.to_f * scale, height: rt.texture.height.to_f * scale),
+        Raylib::Vector2.new, 0, Raylib::WHITE)
+      end
+
       Raylib.draw_texture_pro(st,
         Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
-        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
-          width: SRES_X.to_f * scale, height: SRES_Y.to_f * scale),
+        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (rt.texture.width.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (rt.texture.height.to_f * scale)) * 0.5_f32,
+          width: rt.texture.width.to_f * scale, height: rt.texture.height.to_f * scale),
         Raylib::Vector2.new, 0, Raylib::WHITE)
 
       # Draw crosshair
@@ -275,6 +330,8 @@ module LibDoom
       end
       Raylib.end_drawing
     end
+  end
+  end
   end
 
   def self.doom_tick_midi : UInt64
@@ -1236,7 +1293,7 @@ module LibDoom
 
     return if CDoom.nodrawers != 0 # for comparative timing / profiling
 
-    redrawsbar = false
+    redrawsbar = !@@software_rendering # Always redraw for transparency issues
 
     # change the view size if needed
     if CDoom.setsizeneeded != 0
@@ -1251,6 +1308,7 @@ module LibDoom
       wipe = true
       CDoom.wipe_start_screen(0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
     end
+    CDoom.screens[0].fill(CDoom::SCREENHEIGHT * CDoom::SCREENWIDTH, 255) unless @@software_rendering
 
     CDoom.hu_erase if CDoom.gamestate == CDoom::Gamestate::Level && CDoom.gametic != 0
 
@@ -1338,6 +1396,12 @@ module LibDoom
     end
 
     # wipe update
+    unless @@software_rendering
+      @@viewport_target.try do |vt|
+        update_viewport(vt)
+      end
+    end
+
     CDoom.wipe_end_screen(0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
 
     wipestart = i_get_time - 1
@@ -1488,6 +1552,10 @@ module LibDoom
     CDoom.doom_strcpy(newfile.as(UInt8*), file)
 
     CDoom.wadfiles[numwadfiles] = newfile.as(UInt8*)
+  end
+
+  def self.d_merge_file(file : UInt8*)
+    @@merge_files << String.new(file)
   end
 
   #
@@ -1891,6 +1959,16 @@ module LibDoom
       end
     end
 
+    p = CDoom.m_check_parm("-merge")
+    if p != 0
+      # the parms after p are wadfile/lump names,
+      # until end of parms or another - preceded parm
+      CDoom.modifiedgame = 1 # homebrew levels
+      while (p += 1) != CDoom.myargc && CDoom.myargv[p][0].chr != '-'
+        d_merge_file(CDoom.myargv[p])
+      end
+    end
+
     p = CDoom.m_check_parm("-playdemo")
 
     p = CDoom.m_check_parm("-timedemo") if p == 0
@@ -1955,6 +2033,9 @@ module LibDoom
 
     puts "w_init: Init Wadfiles."
     CDoom.w_init_multiple_files(CDoom.wadfiles)
+
+    puts "        Init Mergefiles"
+    w_merge_multiple_files(@@merge_files)
 
     confirm_version()
 
@@ -4126,6 +4207,8 @@ module LibDoom
     CDoom.gameaction = CDoom::Gameaction::Loadgame
   end
 
+  @@saveleveltime = 0
+
   def self.g_do_load_game
     CDoom.gameaction = CDoom::Gameaction::Nothing
 
@@ -4146,9 +4229,9 @@ module LibDoom
       CDoom.g_init_new(CDoom.gameskill, CDoom.gameepisode, CDoom.gamemap)
 
       # get the times
-      a = file.read_bytes(UInt8)
-      b = file.read_bytes(UInt8)
-      c = file.read_bytes(UInt8)
+      a = file.read_bytes(UInt8).to_u32
+      b = file.read_bytes(UInt8).to_u32
+      c = file.read_bytes(UInt8).to_u32
       CDoom.leveltime = (a << 16) + (b << 8) + c
 
       # dearchive all the modifications
@@ -5358,7 +5441,7 @@ module LibDoom
     return (paddedsfx + 8).as(Void*)
   end
 
-  @@sound_mutex = Sync::Mutex.new
+  @@sound_mutex = SpinLock.new
   @@handlenums : UInt16 = 0
 
   #
@@ -5501,17 +5584,6 @@ module LibDoom
   # MUSIC API - dummy. Some code from DOS version.
   def self.i_set_music_volume(volume : Int32)
     CDoom.mus_volume = CDoom.snd_music_volume * 8
-
-    if @@mus_is_midi
-      @@music_stream.try { |m| RAudio.set_audio_stream_volume(m, volume / 15.0) }
-    else
-      @@music_stream.try { |m| RAudio.set_audio_stream_volume(m, 1.0) }
-
-      16.times do |i|
-        CDoom.queued_midi_msgs[CDoom.queue_midi_tail % CDoom::MAX_QUEUED_MIDI_MSGS] = (0x000000B0_u32 | i | 0x0700_u32 | (((CDoom.mus_channel_volumes[i] * CDoom.mus_volume) // 127) << 16))
-        CDoom.queue_midi_tail += 1
-      end
-    end
   end
 
   def self.i_get_sfx_lump_num(sfx : CDoom::Sfxinfo*) : Int32
@@ -5717,7 +5789,7 @@ module LibDoom
   def self.update_audio
     loop do
       next unless Raylib.window_ready? && RAudio.audio_device_ready? &&
-                  !@@audio_stream.nil? && !@@adl_player.nil?
+                  @@audio_stream && @@adl_player
       now = Raylib.get_time
       @@midi_tick_accumulator += now - @@last_time
       @@last_time = now
@@ -5762,6 +5834,7 @@ module LibDoom
       return if @@closing
       unless CDoom.mus_playing == 0
         @@music_stream.try do |m|
+          RAudio.set_audio_stream_volume(m, CDoom.snd_music_volume / 15.0)
           @@adl_player.try do |ap|
             if RAudio.audio_stream_processed?(m)
               if @@mus_is_midi
@@ -5992,8 +6065,7 @@ module LibDoom
         when CDoom::CONTROLLER_MODULATION
           midi_event = (0x000000B0_u32 | channel | 0x0100 | (value << 16))
         when CDoom::CONTROLLER_VOLUME
-          CDoom.mus_channel_volumes[channel] = value
-          midi_event = (0x000000B0_u32 | channel | 0x0700 | (((CDoom.mus_channel_volumes[channel] * CDoom.mus_volume) // 127) << 16))
+          midi_event = (0x000000B0_u32 | channel | 0x0700 | (value << 16))
         when CDoom::CONTROLLER_PAN
           midi_event = (0x000000B0_u32 | channel | 0x0A00 | (value << 16))
         when CDoom::CONTROLLER_EXPRESSION
@@ -6122,8 +6194,8 @@ module LibDoom
     CDoom.g_check_demo_status if CDoom.demorecording != 0
 
     CDoom.d_quit_net_game
-    CDoom.i_shutdown_music
     CDoom.i_shutdown_sound
+    CDoom.i_shutdown_music
     CDoom.i_shutdown_graphics
 
     CDoom.doom_exit.call(-1)
@@ -6131,6 +6203,9 @@ module LibDoom
 
   def self.i_shutdown_graphics
     @@screen_texture.try { |st| Raylib.unload_texture(st) }
+    @@viewport_target.try { |vt| Raylib.unload_render_texture(vt) }
+    @@render_target.try { |rt| Raylib.unload_render_texture(rt) }
+
     Raylib.close_window if Raylib.window_ready?
   end
 
@@ -6247,8 +6322,54 @@ module LibDoom
     doom_draw
   end
 
+
+def self.color_distance(r1 : Int32, g1 : Int32, b1 : Int32, r2 : Int32, g2 : Int32, b2 : Int32) : Int32
+  dr = r1 - r2
+  dg = g1 - g2
+  db = b1 - b2
+  (2 * dr * dr) + (4 * dg * dg) + (3 * db * db)
+end
+
+def self.nearest_palette_index(r : Int32, g : Int32, b : Int32) : UInt8
+  best_idx = 0
+  best_dist = Int32::MAX
+  256.times do |i|
+    pr = CDoom.screen_palette[i * 3].to_i32
+    pg = CDoom.screen_palette[i * 3 + 1].to_i32
+    pb = CDoom.screen_palette[i * 3 + 2].to_i32
+    d = color_distance(r, g, b, pr, pg, pb)
+    if d < best_dist
+      best_dist = d
+      best_idx = i
+    end
+  end
+  best_idx.to_u8
+end
+
   def self.i_read_screen(scr : CDoom::Byte*)
+    if @@software_rendering
     CDoom.doom_memcpy(scr, CDoom.screens[0], CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT)
+    else
+    @@viewport_target.try do |vt|
+      hud_ptr = CDoom.screens[0]
+      
+      vpimage = Raylib.load_image_from_texture(vt.texture)
+      
+      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
+        pix = hud_ptr[p]
+        if pix == 255 # Get viewport color
+          x = p % CDoom::SCREENWIDTH
+          y = p // CDoom::SCREENWIDTH
+          color = Raylib.get_image_color(vpimage, x, y)
+          scr[p] = nearest_palette_index(color.r.to_i32, color.g.to_i32, color.b.to_i32)
+        else
+          scr[p] = pix
+        end
+      end
+
+      Raylib.unload_image(vpimage)
+    end
+  end
   end
 
   def self.i_set_palette(palette : CDoom::Byte*)
@@ -6281,8 +6402,13 @@ module LibDoom
 
     image = Raylib.gen_image_color(CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT, Raylib::BLACK)
     @@screen_texture = Raylib.load_texture_from_image(image)
+    @@viewport_target = Raylib.load_render_texture(CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
+    @@render_target = Raylib.load_render_texture(@@sres_x, @@sres_y)
+
     Raylib.unload_image(image)
     Raylib.set_texture_filter(@@screen_texture.not_nil!, Raylib::TextureFilter::Point)
+    Raylib.set_texture_filter(@@viewport_target.not_nil!.texture, Raylib::TextureFilter::Point)
+    Raylib.set_texture_filter(@@render_target.not_nil!.texture, Raylib::TextureFilter::Point)
   end
 
   #
@@ -6589,12 +6715,7 @@ module LibDoom
   #
   def self.m_draw_readthis1
     CDoom.inhelpscreens = 1
-    case CDoom.gamemode
-    when CDoom::GameMode::Commercial
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP", CDoom::PU_CACHE).as(CDoom::Patch*))
-    when CDoom::GameMode::Shareware, CDoom::GameMode::Registered, CDoom::GameMode::Retail
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP1", CDoom::PU_CACHE).as(CDoom::Patch*))
-    end
+      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP2", CDoom::PU_CACHE).as(CDoom::Patch*))
   end
 
   #
@@ -6602,13 +6723,12 @@ module LibDoom
   #
   def self.m_draw_readthis2
     CDoom.inhelpscreens = 1
-    case CDoom.gamemode
-    when CDoom::GameMode::Retail, CDoom::GameMode::Commercial
-      # This hack keeps us from having to change menus.
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("CREDIT", CDoom::PU_CACHE).as(CDoom::Patch*))
-    when CDoom::GameMode::Shareware, CDoom::GameMode::Registered
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP2", CDoom::PU_CACHE).as(CDoom::Patch*))
-    end
+      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP1", CDoom::PU_CACHE).as(CDoom::Patch*))
+  end
+
+  def self.m_draw_commercial
+    CDoom.inhelpscreens = 1
+      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP", CDoom::PU_CACHE).as(CDoom::Patch*))
   end
 
   #
@@ -7395,11 +7515,7 @@ module LibDoom
       when CDoom::KEY_F1 # Help key
         CDoom.m_start_control_panel
 
-        if CDoom.gamemode == CDoom::GameMode::Retail
-          CDoom.current_menu = pointerof(CDoom.readdef2)
-        else
-          CDoom.current_menu = pointerof(CDoom.readdef1)
-        end
+        CDoom.current_menu = pointerof(CDoom.readdef1)
 
         CDoom.item_on = 0
         CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_swtchn)
@@ -7648,25 +7764,24 @@ module LibDoom
 
     case CDoom.gamemode
     when CDoom::GameMode::Commercial
-      # This is used because DOOM 2 had only one HELP
-      #  page. I use CREDIT as second page now, but
-      #  kept this hack for educational purposes.
+      # Setup read menu for Doom II
       (CDoom.mainmenu.to_unsafe + CDoom::Mainenum::Readthis.value).value = CDoom.mainmenu[CDoom::Mainenum::Quitdoom.value]
       CDoom.maindef.numitems = CDoom.maindef.numitems - 1
       CDoom.maindef.y = CDoom.maindef.y + 8
       CDoom.newdef.prev_menu = pointerof(CDoom.maindef)
-      CDoom.readdef1.routine = ->CDoom.m_draw_readthis1
+      CDoom.readdef1.routine = ->m_draw_commercial
       CDoom.readdef1.x = 330
       CDoom.readdef1.y = 165
       CDoom.readmenu1.to_unsafe.value.routine = ->CDoom.m_finish_readthis(Int32)
+    when CDoom::GameMode::Retail
+      # Skip first menu on Ultimate Doom
+      pointerof(CDoom.readdef1).value = CDoom.readdef2
     when CDoom::GameMode::Shareware, CDoom::GameMode::Registered
       # Episode 2 and 3 are handled,
       #  branching to an ad screen.
       #
       # We need to remove the fourth episode.
       CDoom.epidef.numitems = CDoom.epidef.numitems - 1
-    when CDoom::GameMode::Retail
-      # We are fine.
     end
   end
 
@@ -14564,11 +14679,11 @@ module LibDoom
       block = block >= CDoom.bmapheight ? CDoom.bmapheight - 1 : block
       sector.value.blockbox[CDoom::BOXTOP] = block
 
-      block = (bbox[CDoom::BOXBOTTOM] - CDoom.bmaporgy - CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+      block = (bbox[CDoom::BOXBOTTOM] &- CDoom.bmaporgy - CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
       block = block < 0 ? 0 : block
       sector.value.blockbox[CDoom::BOXBOTTOM] = block
 
-      block = (bbox[CDoom::BOXRIGHT] - CDoom.bmaporgx + CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+      block = (bbox[CDoom::BOXRIGHT] &- CDoom.bmaporgx + CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
       block = block >= CDoom.bmapwidth ? CDoom.bmapwidth - 1 : block
       sector.value.blockbox[CDoom::BOXRIGHT] = block
 
@@ -17183,7 +17298,7 @@ module LibDoom
         patch.value.originy = mpatch.value.originy
         patch.value.patch = patchlookup[mpatch.value.patch]
         if patch.value.patch == -1
-          CDoom.i_error("Error: r_init_textures: Missing patch in texture #{texture.value.name}")
+          CDoom.i_error("Error: r_init_textures: Missing patch in texture #{String.new(texture.value.name.to_unsafe, 8)}")
         end
 
         mpatch += 1
@@ -17687,7 +17802,8 @@ module LibDoom
       CDoom.viewwindowy = (CDoom::SCREENHEIGHT - CDoom::SBARHEIGHT - height) >> 1
     end
     # Preclaculate all row offsets.
-    height.times { |i| CDoom.ylookup[i] = CDoom.screens[0] + (i + CDoom.viewwindowy) * CDoom::SCREENWIDTH }
+    screen = @@software_rendering ? CDoom.screens[0] : @@software_screen.to_unsafe
+    height.times { |i| CDoom.ylookup[i] = screen + (i + CDoom.viewwindowy) * CDoom::SCREENWIDTH }
   end
 
   #
@@ -18319,6 +18435,7 @@ module LibDoom
   end
 
   def self.r_render_player_view(player : CDoom::Player*)
+    @@software_screen.fill(255) unless @@software_rendering
     CDoom.r_setup_frame(player)
 
     # Clear buffers.
@@ -19145,11 +19262,11 @@ module LibDoom
     if rotation == 0
       # the lump should be used for all rotations
       if CDoom.sprtemp[frame].rotate == 0
-        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has multip rot=0 lump")
+        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{String.new(CDoom.spritename)} frame #{'A' + frame} has multip rot=0 lump")
       end
 
       if CDoom.sprtemp[frame].rotate == 1
-        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has rotations")
+        CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{String.new(CDoom.spritename)} frame #{'A' + frame} has rotations")
       end
 
       (CDoom.sprtemp.to_unsafe + frame).value.rotate = 0
@@ -19162,7 +19279,7 @@ module LibDoom
 
     # the lump is only used for one rotation
     if CDoom.sprtemp[frame].rotate == 0
-      CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{CDoom.spritename} frame #{'A' + frame} has rotations")
+      CDoom.i_error("Error: r_install_sprite_lump: Sprite  #{String.new(CDoom.spritename)} frame #{'A' + frame} has rotations")
     end
 
     (CDoom.sprtemp.to_unsafe + frame).value.rotate = 1
@@ -19170,7 +19287,7 @@ module LibDoom
     # make - based
     rotation -= 1
     if CDoom.sprtemp[frame].lump[rotation] != -1
-      CDoom.i_error("Error: r_install_sprite_lump: Sprite #{CDoom.spritename} : #{'A' + frame} : #{'1' + rotation} ")
+      CDoom.i_error("Error: r_install_sprite_lump: Sprite #{String.new(CDoom.spritename)} : #{'A' + frame} : #{'1' + rotation} ")
     end
 
     ((CDoom.sprtemp.to_unsafe + frame).value.lump.to_unsafe + rotation).value = (lump - CDoom.firstspritelump).to_i16!
@@ -21644,6 +21761,117 @@ module LibDoom
     GC.free(allocated.as(Void*)) unless allocated.null?
   end
 
+  def self.w_merge_file(filename : String)
+    allocated = Pointer(CDoom::Filelump).null
+
+    # open the file and add to directory
+
+    # handle reload indicator.
+    if filename[0] == '~'
+      filename == 1
+      CDoom.reloadname = filename
+      CDoom.reloadlump = CDoom.numlumps
+    end
+
+    unless File.exists?(filename)
+      puts " couldn't open #{filename}"
+      return
+    end
+
+    puts " adding #{filename}"
+    startlump = CDoom.numlumps
+    num_merge_lumps = 0
+
+    header = CDoom::Wadinfo.new
+    singleinfo = CDoom::Filelump.new
+    file = File.new(filename, "rb")
+    if filename[-3..-1].downcase.compare("wad") != 0
+      # single lump file
+      fileinfo = pointerof(singleinfo)
+      singleinfo.filepos = 0
+      singleinfo.size = file.size
+      CDoom.extract_file_base(filename, singleinfo.name)
+      num_merge_lumps += 1
+    else
+      # WAD file
+      slice = Slice.new(pointerof(header).as(UInt8*), sizeof(typeof(header)))
+      file.read(slice)
+      if CDoom.doom_strncmp(header.identification, "IWAD", 4) != 0
+        # Homebrew levels?
+        if CDoom.doom_strncmp(header.identification, "PWAD", 4) != 0
+          CDoom.i_error("Error: Wad file #{filename} doesn't have IWAD or PWAD id")
+        end
+
+        # ???CDoom.modifiedgame = 1
+      end
+      length = header.numlumps * sizeof(CDoom::Filelump)
+      fileinfo = GC.malloc(length).as(CDoom::Filelump*)
+      allocated = fileinfo
+      file.seek(header.infotableofs, IO::Seek::Set)
+      slice = Slice.new(fileinfo.as(UInt8*), length)
+      file.read(slice)
+      num_merge_lumps += header.numlumps
+    end
+
+    # Find files in lump and overwrite them
+    # Starts from the beginning instead of the end to truly add as an iwad merging
+    # Adds the lump if it isn't already found (same as -file)
+    mlump = 0
+    while mlump < num_merge_lumps
+      name_str = String.new(fileinfo[mlump].name.to_unsafe, 8).downcase.delete('\0')
+      ismap = (name_str[0]? == 'e' && name_str[2]? == 'm') || name_str.starts_with?("map")
+
+      # Find lump
+      lump_num = 0
+      CDoom.numlumps.times do |j|
+        if String.new(CDoom.lumpinfo[j].name.to_unsafe, 8).downcase.delete('\0') == String.new(fileinfo[mlump].name.to_unsafe, 8).downcase.delete('\0')
+          break
+        end
+        lump_num += 1
+      end
+
+      if lump_num == CDoom.numlumps
+        # Not been loaded. Initialize lump
+        CDoom.numlumps += ismap ? CDoom::ML_BLOCKMAP + 1 : 1
+        new_lumpinfo = Pointer(CDoom::Lumpinfo).malloc(CDoom.numlumps)
+        CDoom.doom_memcpy(new_lumpinfo, CDoom.lumpinfo, @@previous_realloc_size)
+        @@previous_realloc_size = CDoom.numlumps * sizeof(CDoom::Lumpinfo)
+        CDoom.lumpinfo = new_lumpinfo.as(CDoom::Lumpinfo*)
+        CDoom.i_error("Error: Couldn't realloc lumpinfo") if CDoom.lumpinfo.null?
+
+        lump_p = CDoom.lumpinfo + startlump
+
+        startlump += 1
+      else
+        # Lump exists
+        lump_p = CDoom.lumpinfo + lump_num 
+      end
+        # Set the lump
+        if ismap
+          (CDoom::ML_BLOCKMAP + 1).times do |m|
+            lump_p.value.handle = !CDoom.reloadname.null? ? Pointer(Void).null : Box.box(file)
+            lump_p.value.position = fileinfo[mlump].filepos
+            lump_p.value.size = fileinfo[mlump].size
+            CDoom.doom_strncpy(lump_p.value.name, fileinfo[mlump].name, 8)
+            mlump += 1
+            lump_p += 1
+          end
+        else
+          lump_p.value.handle = !CDoom.reloadname.null? ? Pointer(Void).null : Box.box(file)
+          lump_p.value.position = fileinfo[mlump].filepos
+          lump_p.value.size = fileinfo[mlump].size
+          CDoom.doom_strncpy(lump_p.value.name, fileinfo[mlump].name, 8)
+        mlump += 1
+        end
+    end
+
+    
+
+    file.close if !CDoom.reloadname.null?
+
+    GC.free(allocated.as(Void*)) unless allocated.null?
+  end
+
   #
   # Flushes any of the reloadable lumps in memory
   #  and reloads the directory.
@@ -21685,6 +21913,22 @@ module LibDoom
     GC.free(fileinfo.as(Void*))
   end
 
+  def self.w_merge_multiple_files(filenames : Array(String))
+    # will be realloced as lumps are added
+    
+    filenames.each { |fn| w_merge_file(fn) }
+
+    CDoom.i_error("Error: w_merge_multiple_files: no files found") if CDoom.numlumps == 0
+
+    # set up caching
+    size = CDoom.numlumps * sizeof(Void*)
+    CDoom.lumpcache = GC.malloc(size).as(Void**)
+
+    CDoom.i_error("Error: Couldn't allocate lumpcache") if CDoom.lumpcache.null?
+
+    CDoom.doom_memset(CDoom.lumpcache, 0, size)
+  end
+
   #
   # Pass a null terminated list of files to use.
   # All files are optional, but at least one file
@@ -21709,7 +21953,7 @@ module LibDoom
       filenames += 1
     end
 
-    CDoom.i_error("Error: w_init_files: no files found") if CDoom.numlumps == 0
+    CDoom.i_error("Error: w_init_multiple_files: no files found") if CDoom.numlumps == 0
 
     # set up caching
     size = CDoom.numlumps * sizeof(Void*)
