@@ -2873,7 +2873,7 @@ module LibDoom
               if @@altnet
               CDoom.doomcom.value.numplayers.times do |i|
                 CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
-                CDoom.nettics[i] = CDoom.gametic // CDoom.ticdup
+               CDoom.nettics[i] = CDoom.gametic // CDoom.doomcom.value.ticdup
               end
             end
               return
