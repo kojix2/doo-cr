@@ -5,14 +5,15 @@ EXEC := doo-cr
 
 
 CRYSTAL_LIBRARY_PATH := $(shell crystal env CRYSTAL_LIBRARY_PATH)
-CURRENT_DIR := $(CURDIR)
 
 ifeq ($(OS),Windows_NT)
     # Windows-specific settings
     DETECTED_OS := Windows
+		CURRENT_DIR := $(shell cygpath -m "$(CURDIR)")
 else
     # Call uname on Unix-like environments
     UNAME_S := $(shell uname -s)
+		CURRENT_DIR := $(CURDIR)
     ifeq ($(UNAME_S),Linux)
         DETECTED_OS := Linux
     endif
