@@ -2398,7 +2398,7 @@ module LibDoom
           CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
           CDoom.playeringame[CDoom.doomcom.value.remotenode] = 1
           CDoom.nodeingame[CDoom.doomcom.value.remotenode] = 1
-          CDoom.nettics[CDoom.doomcom.value.remotenode] = CDoom.gametic // CDoom.ticdup
+CDoom.nettics[CDoom.doomcom.value.remotenode] = CDoom.gametic
           (CDoom.players.to_unsafe + CDoom.doomcom.value.remotenode).value.playerstate = CDoom::Playerstate::PST_REBORN
           puts "connected client!"
 
@@ -2826,7 +2826,11 @@ module LibDoom
 
             i_do_load_game(tempfile.path)
             CDoom.gametic = data.value.gametic
-                CDoom.maketic = data.value.maketic
+CDoom.maketic = data.value.maketic
+
+CDoom.playeringame[CDoom.consoleplayer] = 1
+CDoom.players[CDoom.consoleplayer].playerstate = CDoom::Playerstate::PST_REBORN
+CDoom.plyr = CDoom.players.to_unsafe + CDoom.consoleplayer
 
             @@pause_socket = false
             tcp.close
@@ -2872,9 +2876,9 @@ module LibDoom
 
               if @@altnet
               CDoom.doomcom.value.numplayers.times do |i|
-                CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
-               CDoom.nettics[i] = CDoom.gametic // CDoom.doomcom.value.ticdup
-              end
+  CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
+  CDoom.nettics[i] = CDoom.gametic
+end
             end
               return
             end
