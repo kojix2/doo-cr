@@ -2574,11 +2574,11 @@ module LibDoom
             next if CDoom.h_get_packet == 0
 
             # Host is sending ips
-            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
-            CDoom.m_write_text(0, 0, "Gathering IPs")
-            doom_draw
             if CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
               puts "retrieving all clients info"
+              CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
+              CDoom.m_write_text(0, 0, "Gathering IPs")
+              doom_draw
               if CDoom.netbuffer.value.retransmitfrom != 19 ||
                  CDoom.netbuffer.value.starttic != 69
                 i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
