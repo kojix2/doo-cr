@@ -4,6 +4,7 @@ CRYSTAL_FLAGS := -DRANGECHECK -DPRECOMPUTED
 EXEC := doo-cr
 
 
+CRYSTAL_LIBRARY_PATH := $(shell crystal env CRYSTAL_LIBRARY_PATH)
 CURRENT_DIR := $(CURDIR)
 
 ifeq ($(OS),Windows_NT)
@@ -27,6 +28,7 @@ ifeq ($(DETECTED_OS),Windows)
 	RLOUT := libraylib.dll
 	AMOUT := libADLMIDI.dll
 	CHANGE_LIB_NAMES := 
+	CRYSTAL_LIBS := libiconv-2 libraylib libwinpthread-1
 else ifeq ($(DETECTED_OS),Linux)
 	LIB_EXT := so
 	RLMAKE := make -Bj4 SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
@@ -34,6 +36,7 @@ else ifeq ($(DETECTED_OS),Linux)
 	RLOUT := libraylib.so.6.0.0
 	AMOUT := libADLMIDI.so.1.6.3
 	CHANGE_LIB_NAMES := patchelf --replace-needed libADLMIDI.$(LIB_EXT).1 ./libADLMIDI.$(LIB_EXT) ./bin/$(EXEC) && patchelf --replace-needed libraylib.$(LIB_EXT).600 ./libraylib.$(LIB_EXT) ./bin/$(EXEC) && patchelf --replace-needed libcvars.$(LIB_EXT) ./libcvars.$(LIB_EXT) ./bin/$(EXEC)
+	CRYSTAL_LIBS :=
 else ifeq ($(DETECTED_OS),macOS)
 	LIB_EXT := dylib
 	RLMAKE := make -Bj4 SHAREDLIBS="-lglfw -framework OpenGL -framework OpenAL -framework Cocoa" SHARED_RAYLIB=YES PLATFORM=PLATFORM_DESKTOP
@@ -41,11 +44,14 @@ else ifeq ($(DETECTED_OS),macOS)
 	RLOUT := libraylib.6.0.0.dylib
 	AMOUT := libADLMIDI.1.6.3.dylib
 	CHANGE_LIB_NAMES := install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" ./bin/$(EXEC) && install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" ./bin/$(EXEC)
+	CRYSTAL_LIBS :=
 endif
+
+LIBS := $(addprefix ./bin/,$(CRYSTAL_LIBS))
 
 
 .PHONY: all clean
-all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
+all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT) $(LIBS)
 	test -d bin || mkdir bin && \
 	shards install
 	shards update
@@ -53,6 +59,8 @@ all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT)
 	mv -f libcvars.$(LIB_EXT) ./bin
 	cp -f libraylib.$(LIB_EXT) ./bin
 	cp -f libADLMIDI.$(LIB_EXT) ./bin
+
+
 	$(CHANGE_LIB_NAMES)
 	
 clean:
@@ -62,6 +70,8 @@ clean:
 	rm libraylib.$(LIB_EXT)
 	rm libADLMIDI.$(LIB_EXT)
 
+./bin/%: $(CRYSTAL_LIBRARY_PATH)/%
+	cp $< $@
 
 libcvars.$(LIB_EXT):
 	cc -shared -fPIC -x c \
