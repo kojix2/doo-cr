@@ -2697,6 +2697,7 @@ module LibDoom
     CDoom.d_arbitrate_net_start if CDoom.netgame != 0
     puts "startskill: #{CDoom.startskill} | deathmatch: #{CDoom.deathmatch}" +
          " | startmap: #{CDoom.startmap} | startepisode: #{CDoom.startepisode}"
+    puts "ticdup: #{CDoom.doomcom.value.ticdup} | extratic: #{CDoom.doomcom.value.extratics}"
 
     # read values out of doomcom
     CDoom.ticdup = CDoom.doomcom.value.ticdup
