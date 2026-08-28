@@ -1,12 +1,12 @@
-name: Windows Build
+name: Windows Artifact
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 jobs:
   build:
-    name: Windows Build
+    name: Windows Artifact
     runs-on: windows-latest
     defaults:
       run:
