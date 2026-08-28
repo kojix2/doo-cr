@@ -5523,17 +5523,6 @@ module LibDoom
   # MUSIC API - dummy. Some code from DOS version.
   def self.i_set_music_volume(volume : Int32)
     CDoom.mus_volume = CDoom.snd_music_volume * 8
-
-    if @@mus_is_midi
-      @@music_stream.try { |m| RAudio.set_audio_stream_volume(m, volume / 15.0) }
-    else
-      @@music_stream.try { |m| RAudio.set_audio_stream_volume(m, 1.0) }
-
-      16.times do |i|
-        CDoom.queued_midi_msgs[CDoom.queue_midi_tail % CDoom::MAX_QUEUED_MIDI_MSGS] = (0x000000B0_u32 | i | 0x0700_u32 | (((CDoom.mus_channel_volumes[i] * CDoom.mus_volume) // 127) << 16))
-        CDoom.queue_midi_tail += 1
-      end
-    end
   end
 
   def self.i_get_sfx_lump_num(sfx : CDoom::Sfxinfo*) : Int32
@@ -5784,6 +5773,7 @@ module LibDoom
       return if @@closing
       unless CDoom.mus_playing == 0
         @@music_stream.try do |m|
+          RAudio.set_audio_stream_volume(m, CDoom.snd_music_volume / 15.0)
           @@adl_player.try do |ap|
             if RAudio.audio_stream_processed?(m)
               if @@mus_is_midi
