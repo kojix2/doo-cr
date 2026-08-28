@@ -2708,7 +2708,7 @@ tempfile.delete
   @@pause_socket = true
 
   dest = @@sendaddress[1].not_nil!
-  server = TCPServer.new(dest.address, dest.port) # bind to the port you're expecting the host to connect to
+  server = TCPServer.new("0.0.0.0", @@doomport) # bind to the port you're expecting the host to connect to
   tcp = server.accept
 
   data = Pointer(CDoom::AltNetData).malloc
