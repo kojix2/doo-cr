@@ -3973,7 +3973,13 @@ lib CDoom
   MAXNETNODES = 8
 
   # Networking and tick handling related.
-  BACKUPTICS = 12
+  BACKUPTICS = 24
+
+  struct AltNetData
+    gametic : Int32
+    maketic : Int32
+    section : UInt8[1024]
+  end
 
   enum Command
     SEND = 1
@@ -6734,7 +6740,7 @@ lib CDoom
 
   $chat_macros : LibC::Char*[10]
 
-  $player_names : LibC::Char*[4]
+  $player_names : LibC::Char*[MAXPLAYERS]
 
   $shiftxform : LibC::Char*
 

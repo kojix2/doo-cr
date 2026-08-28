@@ -26,7 +26,7 @@
 #define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1)        
 #define FINEANGLES 8192
 #define MAXNETNODES                8
-#define BACKUPTICS                12
+#define BACKUPTICS                24
 #define MAXDRAWSEGS 256
 #define HU_MAXLINES 4
 #define HU_MAXLINELENGTH 80

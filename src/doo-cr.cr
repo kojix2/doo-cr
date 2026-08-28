@@ -27,10 +27,12 @@ require "raylib-cr/audio.cr"
 require "./adlmidi.cr"
 
 module LibDoom
-  VERSION_STR = "1.1" # Used for displaying
-  VERSION = 10 # Used for demo and netgame compatibility
+  VERSION_STR = "1.2" # Used for displaying
+  DEMOVERSION = 110
+  SAVEVERSION =  10
+  NETVERSION  =  12
 
-  # The resolution of the player's viewport
+  # The resolution of the player's viewport for hardware rendering
   # NOTE: the screen wipe is only designed for 320 x 240
   #        the game will snap from 320 x 240 to whatever res is set here after wiping
   @@sres_x = 320
@@ -41,7 +43,7 @@ module LibDoom
   MIDI_SAMPLE_RATE = 44100
   MIDI_TICK_TIME   = 1.0 / 140.0
   # TODO: make a setting
-  MIDI_BANK        = 16
+  MIDI_BANK = 16
 
   # -- Macros for quick key polling --
   macro poll_key(doomkey, raylibkey)
@@ -66,7 +68,8 @@ end
   LibDoom.doom_button_down(CDoom::DoomButton::{{doombutton}}) if is_down && !was_down
   LibDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if !is_down && was_down
 end
-# -- Macros for quick key polling --
+
+  # -- Macros for quick key polling --
 
   unless ARGV.includes?("-nosound")
     # Create seperate thread so audio updates seperately from game code
@@ -75,13 +78,15 @@ end
     end
   end
 
-  if ARGV.includes?("-net")
+  @@pause_socket = false
+  if ARGV.includes?("-net") || ARGV.includes?("-altnet")
     # Create a seperate thread for the packets-in buffer during a netgame
     net_context = Fiber::ExecutionContext::Isolated.new("doom-net") do
       until @@insocket
       end
       sock = @@insocket.not_nil!
       loop do
+        next if @@pause_socket
         sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
         buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
         begin
