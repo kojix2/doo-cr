@@ -2342,11 +2342,9 @@ module LibDoom
          CDoom.consoleplayer != 0
         @@got_new_ips = 0
         loop do
-          doom_draw
           next if CDoom.h_get_packet == 0
           if !@@got_new_ips && CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
             puts "retrieving all clients info"
-            doom_draw
             if CDoom.netbuffer.value.retransmitfrom != 19 ||
                CDoom.netbuffer.value.starttic != 69
               i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
@@ -2362,6 +2360,9 @@ module LibDoom
 
             numips.times do |i|
               # Load other client's IP addresses
+              CDoom.playeringame[CDoom.doomcom.value.numnodes] = 1
+              CDoom.nodeingame[CDoom.doomcom.value.numnodes] = 1
+              @@punch_countdown = 70
               CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
               CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
               @@sendaddress[i + 1] = Socket::IPAddress.v4(
@@ -2383,7 +2384,11 @@ module LibDoom
            CDoom.doomcom.value.remotenode == CDoom.doomcom.value.numplayers
           CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
           CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
+          CDoom.playeringame[CDoom.doomcom.value.remotenode] = 1
+          CDoom.nodeingame[CDoom.doomcom.value.remotenode] = 1
+          (CDoom.players.to_unsafe + 1).value.playerstate = CDoom::Playerstate::PST_REBORN
           puts "connected client!"
+
 
           send_alt_setup(CDoom.doomcom.value.remotenode)
 
