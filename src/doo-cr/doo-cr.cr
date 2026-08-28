@@ -2827,7 +2827,7 @@ CDoom.resendto[CDoom.doomcom.value.remotenode] = CDoom.gametic
             end
 
             #i_do_load_game()
-            g_load_game(tempfile.path)
+            g_load_game(tempfile.path.to_unsafe)
             CDoom.gametic = data.value.gametic
 CDoom.maketic = data.value.maketic
 
