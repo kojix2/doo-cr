@@ -2362,6 +2362,7 @@ module LibDoom
               # Load other client's IP addresses
               CDoom.playeringame[CDoom.doomcom.value.numnodes] = 1
               CDoom.nodeingame[CDoom.doomcom.value.numnodes] = 1
+              CDoom.resendto[CDoom.doomcom.value.numnodes] = CDoom.maketic - CDoom.doomcom.value.extratics
               @@punch_countdown = 70
               CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
               CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
@@ -2670,6 +2671,7 @@ module LibDoom
 
     data.value.gametic = CDoom.gametic
     data.value.maketic = CDoom.maketic
+    CDoom.resendto[CDoom.doomcom.value.remotenode] = CDoom.maketic - CDoom.doomcom.value.extratics
     File.open(tempfile.path, "rb") do |file|
       while (bytes_read = file.read(datasection)) > 0
         payload = databuf[0, bytes_read + sizeof(UInt64)]
@@ -2836,6 +2838,7 @@ module LibDoom
               CDoom.doomcom.value.consoleplayer = CDoom.netbuffer.value.player
               CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
               CDoom.displayplayer = CDoom.consoleplayer if @@altnet
+              CDoom.resendto[CDoom.consoleplayer] = CDoom.maketic - CDoom.doomcom.value.extratics
 
               numips.times do |i|
                 # Load other client's IP addresses
