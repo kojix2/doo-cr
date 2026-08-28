@@ -2164,7 +2164,7 @@ module LibDoom
       CDoom.g_load_game(file)
     end
 
-    if !@@altnet_loaded && CDoom.gameaction != CDoom::Gameaction::Loadgame && !demo_deferred
+    if CDoom.gameaction != CDoom::Gameaction::Loadgame && !demo_deferred
       if CDoom.autostart != 0 || CDoom.netgame != 0
         CDoom.g_init_new(CDoom.startskill, CDoom.startepisode, CDoom.startmap)
       else
@@ -2826,8 +2826,8 @@ CDoom.resendto[CDoom.doomcom.value.remotenode] = CDoom.gametic
               end
             end
 
-            i_do_load_game(tempfile.path)
-            @@altnet_loaded = true
+            #i_do_load_game()
+            g_load_game(tempfile.path)
             CDoom.gametic = data.value.gametic
 CDoom.maketic = data.value.maketic
 
@@ -2835,7 +2835,7 @@ CDoom.gametime = CDoom.gametic // CDoom.doomcom.value.ticdup
 @@oldentertics = CDoom.gametime
 
 CDoom.playeringame[CDoom.consoleplayer] = 1
-# CDoom.players[CDoom.consoleplayer].playerstate = CDoom::Playerstate::PST_REBORN
+CDoom.players[CDoom.consoleplayer].playerstate = CDoom::Playerstate::PST_REBORN
 CDoom.plyr = CDoom.players.to_unsafe + CDoom.consoleplayer
 
             @@pause_socket = false
