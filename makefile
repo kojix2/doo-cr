@@ -28,7 +28,7 @@ ifeq ($(DETECTED_OS),Windows)
 	LIB_EXT := dll
 	RLMAKE := cmake --build . --config Release
 	AMMAKE := cmake --build .
-	RLOUT := libraylib.dll
+	RLOUT := raylib.dll
 	AMOUT := libADLMIDI.dll
 	CHANGE_LIB_NAMES := 
 	CRYSTAL_LIBS := libiconv-2.dll libraylib.dll libwinpthread-1.dll
