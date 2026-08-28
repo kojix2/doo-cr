@@ -2328,12 +2328,54 @@ module LibDoom
     return 1
   end
 
+  @@got_new_ips = false
+
   #
   # get_packets
   #
   def self.get_packets
     while CDoom.h_get_packet != 0
       next if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0 # extra setup packet
+
+      if CDoom.netbuffer.value.checksum & NCMD_PAUSE &&
+         CDoom.netbuffer.value.retransmitfrom == 1 &&
+         CDoom.consoleplayer != 0
+        @@got_new_ips = 0
+        loop do
+          doom_draw
+          next if CDoom.h_get_packet == 0
+          if !@@got_new_ips && CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
+            puts "retrieving all clients info"
+            doom_draw
+            if CDoom.netbuffer.value.retransmitfrom != 19 ||
+               CDoom.netbuffer.value.starttic != 69
+              i_error("Error: d_arbitrate_net_start: Host sent bad IP distribution!")
+            end
+
+            numips = CDoom.netbuffer.value.numtics
+            ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+            # CDoom.doomcom.value.consoleplayer = CDoom.netbuffer.value.player
+            # CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
+
+            CDoom.doomcom.value.numnodes = 2
+            CDoom.doomcom.value.numplayers = 2
+
+            numips.times do |i|
+              # Load other client's IP addresses
+              CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
+              CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
+              @@sendaddress[i + 1] = Socket::IPAddress.v4(
+                ipnums[0], ipnums[1], ipnums[2], ipnums[3],
+                port: ipnums[4].to_u16 + (ipnums[5].to_u16 << 8))
+              ipnums += 6
+            end
+            @@got_new_ips = true
+          end
+
+          break if CDoom.netbuffer.value.checksum & NCMD_PAUSE &&
+                   CDoom.netbuffer.value.retransmitfrom == 0
+        end
+      end
 
       # Realtime connection
       if CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0
@@ -2345,7 +2387,11 @@ module LibDoom
 
           send_alt_setup(CDoom.doomcom.value.remotenode)
 
-          propogate_ips(CDoom.doomcom.value.remotenode)
+          CDoom.doomcom.value.numnodes.times do |node|
+            10.times do |i|
+              propogate_ips(node)
+            end
+          end
         end
         next
       end
@@ -2597,30 +2643,46 @@ module LibDoom
       CDoom.h_send_packet(node, NCMD_SETUP)
     end
 
+    CDoom.netbuffer.value.retransmitfrom = 1
+    CDoom.netbuffer.value.numtics = 0
+    CDoom.doomcom.value.numnodes.times do |node|
+      10.times do |i|
+        CDoom.h_send_packet(node, NCMD_PAUSE)
+      end
+    end
+
     dest = @@sendaddress[CDoom.doomcom.value.remotenode]
-return unless dest
+    return unless dest
 
-tcp = TCPSocket.new(dest.address, dest.port)
+    tcp = TCPSocket.new(dest.address, dest.port)
 
-tempfile = File.tempfile("netsave")
-i_do_save_game(tempfile.path)
+    tempfile = File.tempfile("netsave")
+    i_do_save_game(tempfile.path)
 
-data = Pointer(CDoom::AltNetData).malloc
-databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
-datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
+    data = Pointer(CDoom::AltNetData).malloc
+    databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
+    datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
 
-data.value.file_section = 0
-File.open(tempfile.path, "rb") do |file|
-  while (bytes_read = file.read(datasection)) > 0
-    payload = databuf[0, bytes_read + sizeof(UInt64)]
-    tcp.write_bytes(payload.size.to_u32, IO::ByteFormat::LittleEndian)
-    tcp.write(payload)
-    data.value.file_section = data.value.file_section + 1
-  end
-end
+    data.value.file_section = 0
+    File.open(tempfile.path, "rb") do |file|
+      while (bytes_read = file.read(datasection)) > 0
+        payload = databuf[0, bytes_read + sizeof(UInt64)]
+        tcp.write_bytes(payload.size.to_u32, IO::ByteFormat::LittleEndian)
+        tcp.write(payload)
+        data.value.file_section = data.value.file_section + 1
+      end
+    end
 
-tcp.close
-tempfile.delete
+    tcp.close
+    tempfile.delete
+
+    CDoom.netbuffer.value.retransmitfrom = 0
+    CDoom.netbuffer.value.numtics = 0
+    CDoom.doomcom.value.numnodes.times do |node|
+      10.times do |i|
+        CDoom.h_send_packet(node, NCMD_PAUSE)
+      end
+    end
   end
 
   def self.propogate_ips(node : Int32)
@@ -2705,42 +2767,42 @@ tempfile.delete
 
           # Altnet sends save
           if @@altnet
-  @@pause_socket = true
+            @@pause_socket = true
 
-  dest = @@sendaddress[1].not_nil!
-  server = TCPServer.new("0.0.0.0", @@doomport) # bind to the port you're expecting the host to connect to
-  tcp = server.accept
+            dest = @@sendaddress[1].not_nil!
+            server = TCPServer.new("0.0.0.0", @@doomport) # bind to the port you're expecting the host to connect to
+            tcp = server.accept
 
-  data = Pointer(CDoom::AltNetData).malloc
-  databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
-  datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
+            data = Pointer(CDoom::AltNetData).malloc
+            databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
+            datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
 
-  tempfile = File.tempfile("netsave")
+            tempfile = File.tempfile("netsave")
 
-  CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
-  CDoom.m_write_text(0, 0, "Loading game")
-  File.open(tempfile.path, "wb") do |file|
-    loop do
-      doom_draw
-      check_abort
+            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
+            CDoom.m_write_text(0, 0, "Loading game")
+            File.open(tempfile.path, "wb") do |file|
+              loop do
+                doom_draw
+                check_abort
 
-      len = tcp.read_bytes(UInt32, IO::ByteFormat::LittleEndian)
-      next if len == 0
+                len = tcp.read_bytes(UInt32, IO::ByteFormat::LittleEndian)
+                next if len == 0
 
-      tcp.read_fully(databuf[0, len])
-      size = len - sizeof(UInt64)
+                tcp.read_fully(databuf[0, len])
+                size = len - sizeof(UInt64)
 
-      file.write(datasection[0, size])
-      break if datasection[size - 1] == 0x1d
-    end
-  end
+                file.write(datasection[0, size])
+                break if datasection[size - 1] == 0x1d
+              end
+            end
 
-  i_do_load_game(tempfile.path)
-  @@pause_socket = false
-  tcp.close
-  server.close
-  tempfile.delete
-end
+            i_do_load_game(tempfile.path)
+            @@pause_socket = false
+            tcp.close
+            server.close
+            tempfile.delete
+          end
 
           puts "connected! waiting for host to start"
           loop do
@@ -2766,6 +2828,7 @@ end
               ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
               CDoom.doomcom.value.consoleplayer = CDoom.netbuffer.value.player
               CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
+              CDoom.displayplayer = CDoom.consoleplayer if @@altnet
 
               numips.times do |i|
                 # Load other client's IP addresses
