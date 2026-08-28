@@ -193,18 +193,37 @@ module LibDoom
   CDoom.followplayer = 1
 
 
-  @@death_strings = [
+  @@death_kill_strings = [
+    "You killed player 2",
+    "You got player 2",
+    "You showed player 2",
+  ]
+  @@death_dead_strings = [
+    "Player 1 killed you",
+    "You have been taken by player 1",
+    "You got smoked by player 1"
+  ]
+  @@death_nut_strings = [
     "Player 1 killed player 2",
-    "Player 2 just got pwned by player 1",
-    "Player 1 claims player 2's soul",
-    "Player 1 has defeated player 2"
+    "Player 1 has claimed player 2's soul",
+    "Player 2 just got pwned by player 1"
   ]
 
-  @@net_strings = [
-    "Player 1 needs better trigger discipline!",
-    "Player 2 will remember that..",
+  @@net_kill_strings = [
+    "You killed player 2",
+    "Player 2 will remember that...",
+    "Player 2 hopes that was an accident",
+  ]
+  @@net_dead_strings = [
+  "You were killed by player 1",
+  "I bet player 1 did that on purpose",
+  "Player 1 thought this was deathmatch"
+  ]
+  @@net_nut_strings = [
     "Player 1 killed player 2",
-    "Player 2 hopes that was on accident",
+    "player 1 showed player 2 what for",
+    "Player 2 has been slain by player 1",
+    "Player 1 and player 2 have a new rivalry"
   ]
 
 

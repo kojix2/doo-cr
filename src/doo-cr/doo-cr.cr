@@ -10684,7 +10684,16 @@ end
         source.value.player.value.frags[trgtplr] =
           source.value.player.value.frags[trgtplr] + 1 
 
-          strings = CDoom.deathmatch != 0 ? @@death_strings : @@net_strings
+          strings = CDoom.deathmatch != 0 ? (
+            # Deathmatch strings
+            CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
+              CDoom.consoleplayer == trgtplr ? @@death_dead_strings : @@death_nut_strings
+            )
+          ) : CDoom.consoleplayer == srcplr ? @@net_kill_strings : (
+              CDoom.consoleplayer == trgtplr ? @@net_dead_strings : @@net_nut_strings
+            )
+
+
           (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message =
             strings.sample(Random.new(CDoom.m_random)).gsub('1', srcplr + 1).gsub('2', trgtplr + 1)
       end
