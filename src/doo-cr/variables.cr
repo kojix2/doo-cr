@@ -197,16 +197,19 @@ module LibDoom
     "You killed 2",
     "You got 2",
     "You showed 2",
+    "You fragged 2"
   ]
   @@death_dead_strings = [
     "1 killed you",
     "You have been taken by 1",
-    "You got smoked by 1"
+    "You got smoked by 1",
+    "1 fragged you"
   ]
   @@death_nut_strings = [
     "1 killed 2",
     "1 has claimed 2's soul",
-    "2 just got pwned by 1"
+    "2 just got pwned by 1",
+    "2 has been fragged by 1"
   ]
 
   @@net_kill_strings = [
