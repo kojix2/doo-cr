@@ -2835,7 +2835,7 @@ CDoom.gametime = CDoom.gametic // CDoom.doomcom.value.ticdup
 @@oldentertics = CDoom.gametime
 
 CDoom.playeringame[CDoom.consoleplayer] = 1
-CDoom.players[CDoom.consoleplayer].playerstate = CDoom::Playerstate::PST_REBORN
+# CDoom.players[CDoom.consoleplayer].playerstate = CDoom::Playerstate::PST_REBORN
 CDoom.plyr = CDoom.players.to_unsafe + CDoom.consoleplayer
 
             @@pause_socket = false
