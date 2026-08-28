@@ -2698,7 +2698,7 @@ tempfile.delete
           packed = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
           CDoom.doomcom.value.ticdup = packed.value
           packed += 1
-          CDoom.doomcom.value.extratics = packed.value
+          CDoom.doomcom.value.extratics = packed.value & 0b01111111
           @@altnet = packed.value & 0b10000000 != 0
 
           packed += 1
