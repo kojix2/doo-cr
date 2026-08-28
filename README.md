@@ -34,6 +34,8 @@ Common command line arguments are:
   Connects to a netgame
 - -port \<port> \
   Sets the port to use for all I/O in a net game. Host must port forward this
+- -extratic \<1-4> \
+  Sends num extra packets for data redundancy during a netgame
 - -iwad \<file> \
   Specify iwad to load
 - -fwad \<file> \
@@ -60,8 +62,8 @@ Common command line arguments are:
   Used with warp to set the skill level
 - -respawn \
   Used with warp to enable monster respawning
-- -nosound \
-  Disables audio
+- -mem \<MB> \
+  Sets the default zone memory size in MB. The default is 12MB
 
 - -record \<name> \
   Record a demo with name to a .lmp file. Use Q to end demo

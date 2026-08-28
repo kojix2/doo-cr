@@ -5314,10 +5314,12 @@ module LibDoom
       CDoom.doomcom.value.ticdup = 1
     end
 
-    if CDoom.m_check_parm("-extratic") != 0
-      CDoom.doomcom.value.extratics = 1
-    else
-      CDoom.doomcom.value.extratics = 0
+    ARGV.index("-extratic").try do |p|
+      if p = ARGV[p + 1]?
+        CDoom.doomcom.value.extratics = p.to_i.to_u8!
+        CDoom.doomcom.value.extratics = 4 if 
+        CDoom.doomcom.value.extratics > 4
+      end
     end
 
     p = CDoom.m_check_parm("-port")

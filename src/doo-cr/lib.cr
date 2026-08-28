@@ -3973,7 +3973,7 @@ lib CDoom
   MAXNETNODES = 8
 
   # Networking and tick handling related.
-  BACKUPTICS = 12
+  BACKUPTICS = 24
 
   enum Command
     SEND = 1
