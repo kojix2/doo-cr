@@ -10678,8 +10678,15 @@ end
       # count for intermission
       source.value.player.value.killcount = source.value.player.value.killcount + 1 if target.value.flags & CDoom::Mobjflag::MF_COUNTKILL.value != 0
 
-      source.value.player.value.frags[target.value.player - CDoom.players.to_unsafe] =
-        source.value.player.value.frags[target.value.player - CDoom.players.to_unsafe] + 1 if !target.value.player.null?
+      if !target.value.player.null?
+        srcplr = source.value.player. - CDoom.players.to_unsafe
+        trgtplr = target.value.player - CDoom.players.to_unsafe
+        source.value.player.value.frags[trgtplr] =
+          source.value.player.value.frags[trgtplr] + 1 
+
+          CDoom.players[CDoom.consoleplayer].message =
+            @@pvp_strings.sample(Random.new(CDoom.m_random))
+      end
     elsif CDoom.netgame == 0 && target.value.flags & CDoom::Mobjflag::MF_COUNTKILL.value != 0
       # count all monster deaths,
       # even those caused by other monsters

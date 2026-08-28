@@ -192,6 +192,14 @@ module LibDoom
 
   CDoom.followplayer = 1
 
+
+  @@pvp_strings = [
+    "Player 1 killed player 2!",
+    
+  ]
+
+
+
   c_array(CDoom.cheat_amap_seq,
     0xb2, 0x26, 0x26, 0x2e, 0xff
   )
