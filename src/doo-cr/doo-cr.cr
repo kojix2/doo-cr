@@ -230,7 +230,26 @@ module LibDoom
 
   @@palette_rgba = Array(UInt32).new(256, 0_u32)
 
-  def self.doom_draw
+  def self.update_viewport(vt : Raylib::RenderTexture)
+    # Software render
+    viewport_ptr = @@software_screen.to_unsafe
+    buf_ptr = @@raylibbuffer.to_unsafe.as(UInt32*)
+      palette_ptr = @@palette_rgba.to_unsafe
+      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
+        pix = viewport_ptr[p]
+        if pix == 255
+          buf_ptr[p] = 0_u32
+        else
+          buf_ptr[p] = palette_ptr[pix]
+        end
+      end
+      Raylib.update_texture(vt.texture, @@raylibbuffer.to_unsafe)
+
+    # Raylib.begin_texture_mode(vt) # TODO: Render GL player view
+      # Raylib.end_texture_mode
+  end
+
+  def self.doom_draw()
     if Thread.current != MAIN_THREAD
       raise "Error: doom_draw called off main thread: #{Thread.current} (expected #{MAIN_THREAD})"
       # Hopefully this fixes God's cursed bug
@@ -241,25 +260,56 @@ module LibDoom
      screen_ptr = CDoom.screens[0]
       buf_ptr = @@raylibbuffer.to_unsafe.as(UInt32*)
       palette_ptr = @@palette_rgba.to_unsafe
+      p255 = @@palette_rgba[255]
 
     @@screen_texture.try do |st|
+      @@viewport_target.try do |vt|
+      @@render_target.try do |rt|
       next unless Raylib.texture_valid?(st)
       (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
-        buf_ptr[p] = palette_ptr[screen_ptr[p]]
+        pix = screen_ptr[p]
+        if !@@software_rendering && pix == 255
+          buf_ptr[p] = 0_u32
+        else
+          buf_ptr[p] = palette_ptr[pix]
+        end
       end
 
       Raylib.update_texture(st, @@raylibbuffer.to_unsafe)
 
-      scalew = Raylib.get_screen_width.to_f / SRES_X.to_f
-      scaleh = Raylib.get_screen_height.to_f / SRES_Y.to_f
-      scale = [scalew, scaleh].min
+        scalew = Raylib.get_screen_width.to_f / @@sres_x.to_f
+      scaleh = Raylib.get_screen_height.to_f / @@sres_y.to_f
+      scale = scalew < scaleh ? scalew : scaleh
+
+      unless @@software_rendering
+      update_viewport(vt)
+
+
+      Raylib.begin_texture_mode(rt)
+            Raylib.clear_background(Raylib::Color.new(r: p255 & 0xff, g: (p255 >> 8) & 0xff, b: (p255 >> 16) & 0xff, a: 255))
+
+          Raylib.draw_texture_pro(vt.texture,
+            Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: vt.texture.width.to_f, height: -vt.texture.height.to_f),
+            Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32,
+              width: rt.texture.width.to_f, height: rt.texture.height.to_f),
+            Raylib::Vector2.new, 0, Raylib::WHITE)
+      Raylib.end_texture_mode
+      end
 
       Raylib.begin_drawing
       Raylib.clear_background(Raylib::BLACK)
+      unless @@software_rendering
+      Raylib.draw_texture_pro(rt.texture,
+        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: rt.texture.width.to_f, height: rt.texture.height.to_f),
+        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (rt.texture.width.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (rt.texture.height.to_f * scale)) * 0.5_f32,
+          width: rt.texture.width.to_f * scale, height: rt.texture.height.to_f * scale),
+        Raylib::Vector2.new, 0, Raylib::WHITE)
+      end
+
       Raylib.draw_texture_pro(st,
         Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
-        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (SRES_X.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (SRES_Y.to_f * scale)) * 0.5_f32,
-          width: SRES_X.to_f * scale, height: SRES_Y.to_f * scale),
+        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (rt.texture.width.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (rt.texture.height.to_f * scale)) * 0.5_f32,
+          width: rt.texture.width.to_f * scale, height: rt.texture.height.to_f * scale),
         Raylib::Vector2.new, 0, Raylib::WHITE)
 
       # Draw crosshair
@@ -280,6 +330,8 @@ module LibDoom
       end
       Raylib.end_drawing
     end
+  end
+  end
   end
 
   def self.doom_tick_midi : UInt64
@@ -1241,7 +1293,7 @@ module LibDoom
 
     return if CDoom.nodrawers != 0 # for comparative timing / profiling
 
-    redrawsbar = false
+    redrawsbar = !@@software_rendering # Always redraw for transparency issues
 
     # change the view size if needed
     if CDoom.setsizeneeded != 0
@@ -1256,6 +1308,7 @@ module LibDoom
       wipe = true
       CDoom.wipe_start_screen(0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
     end
+    CDoom.screens[0].fill(CDoom::SCREENHEIGHT * CDoom::SCREENWIDTH, 255) unless @@software_rendering
 
     CDoom.hu_erase if CDoom.gamestate == CDoom::Gamestate::Level && CDoom.gametic != 0
 
@@ -1343,6 +1396,12 @@ module LibDoom
     end
 
     # wipe update
+    unless @@software_rendering
+      @@viewport_target.try do |vt|
+        update_viewport(vt)
+      end
+    end
+
     CDoom.wipe_end_screen(0, 0, CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
 
     wipestart = i_get_time - 1
@@ -4148,6 +4207,8 @@ module LibDoom
     CDoom.gameaction = CDoom::Gameaction::Loadgame
   end
 
+  @@saveleveltime = 0
+
   def self.g_do_load_game
     CDoom.gameaction = CDoom::Gameaction::Nothing
 
@@ -4168,9 +4229,9 @@ module LibDoom
       CDoom.g_init_new(CDoom.gameskill, CDoom.gameepisode, CDoom.gamemap)
 
       # get the times
-      a = file.read_bytes(UInt8)
-      b = file.read_bytes(UInt8)
-      c = file.read_bytes(UInt8)
+      a = file.read_bytes(UInt8).to_u32
+      b = file.read_bytes(UInt8).to_u32
+      c = file.read_bytes(UInt8).to_u32
       CDoom.leveltime = (a << 16) + (b << 8) + c
 
       # dearchive all the modifications
@@ -5380,7 +5441,7 @@ module LibDoom
     return (paddedsfx + 8).as(Void*)
   end
 
-  @@sound_mutex = Sync::Mutex.new
+  @@sound_mutex = SpinLock.new
   @@handlenums : UInt16 = 0
 
   #
@@ -6133,8 +6194,8 @@ module LibDoom
     CDoom.g_check_demo_status if CDoom.demorecording != 0
 
     CDoom.d_quit_net_game
-    CDoom.i_shutdown_music
     CDoom.i_shutdown_sound
+    CDoom.i_shutdown_music
     CDoom.i_shutdown_graphics
 
     CDoom.doom_exit.call(-1)
@@ -6142,6 +6203,9 @@ module LibDoom
 
   def self.i_shutdown_graphics
     @@screen_texture.try { |st| Raylib.unload_texture(st) }
+    @@viewport_target.try { |vt| Raylib.unload_render_texture(vt) }
+    @@render_target.try { |rt| Raylib.unload_render_texture(rt) }
+
     Raylib.close_window if Raylib.window_ready?
   end
 
@@ -6258,8 +6322,54 @@ module LibDoom
     doom_draw
   end
 
+
+def self.color_distance(r1 : Int32, g1 : Int32, b1 : Int32, r2 : Int32, g2 : Int32, b2 : Int32) : Int32
+  dr = r1 - r2
+  dg = g1 - g2
+  db = b1 - b2
+  (2 * dr * dr) + (4 * dg * dg) + (3 * db * db)
+end
+
+def self.nearest_palette_index(r : Int32, g : Int32, b : Int32) : UInt8
+  best_idx = 0
+  best_dist = Int32::MAX
+  256.times do |i|
+    pr = CDoom.screen_palette[i * 3].to_i32
+    pg = CDoom.screen_palette[i * 3 + 1].to_i32
+    pb = CDoom.screen_palette[i * 3 + 2].to_i32
+    d = color_distance(r, g, b, pr, pg, pb)
+    if d < best_dist
+      best_dist = d
+      best_idx = i
+    end
+  end
+  best_idx.to_u8
+end
+
   def self.i_read_screen(scr : CDoom::Byte*)
+    if @@software_rendering
     CDoom.doom_memcpy(scr, CDoom.screens[0], CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT)
+    else
+    @@viewport_target.try do |vt|
+      hud_ptr = CDoom.screens[0]
+      
+      vpimage = Raylib.load_image_from_texture(vt.texture)
+      
+      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
+        pix = hud_ptr[p]
+        if pix == 255 # Get viewport color
+          x = p % CDoom::SCREENWIDTH
+          y = p // CDoom::SCREENWIDTH
+          color = Raylib.get_image_color(vpimage, x, y)
+          scr[p] = nearest_palette_index(color.r.to_i32, color.g.to_i32, color.b.to_i32)
+        else
+          scr[p] = pix
+        end
+      end
+
+      Raylib.unload_image(vpimage)
+    end
+  end
   end
 
   def self.i_set_palette(palette : CDoom::Byte*)
@@ -6292,8 +6402,13 @@ module LibDoom
 
     image = Raylib.gen_image_color(CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT, Raylib::BLACK)
     @@screen_texture = Raylib.load_texture_from_image(image)
+    @@viewport_target = Raylib.load_render_texture(CDoom::SCREENWIDTH, CDoom::SCREENHEIGHT)
+    @@render_target = Raylib.load_render_texture(@@sres_x, @@sres_y)
+
     Raylib.unload_image(image)
     Raylib.set_texture_filter(@@screen_texture.not_nil!, Raylib::TextureFilter::Point)
+    Raylib.set_texture_filter(@@viewport_target.not_nil!.texture, Raylib::TextureFilter::Point)
+    Raylib.set_texture_filter(@@render_target.not_nil!.texture, Raylib::TextureFilter::Point)
   end
 
   #
@@ -17687,7 +17802,8 @@ module LibDoom
       CDoom.viewwindowy = (CDoom::SCREENHEIGHT - CDoom::SBARHEIGHT - height) >> 1
     end
     # Preclaculate all row offsets.
-    height.times { |i| CDoom.ylookup[i] = CDoom.screens[0] + (i + CDoom.viewwindowy) * CDoom::SCREENWIDTH }
+    screen = @@software_rendering ? CDoom.screens[0] : @@software_screen.to_unsafe
+    height.times { |i| CDoom.ylookup[i] = screen + (i + CDoom.viewwindowy) * CDoom::SCREENWIDTH }
   end
 
   #
@@ -18319,6 +18435,7 @@ module LibDoom
   end
 
   def self.r_render_player_view(player : CDoom::Player*)
+    @@software_screen.fill(255) unless @@software_rendering
     CDoom.r_setup_frame(player)
 
     # Clear buffers.

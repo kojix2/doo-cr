@@ -27,15 +27,17 @@ require "raylib-cr/audio.cr"
 require "./adlmidi.cr"
 
 module LibDoom
-  VERSION_STR = "1.0"
-  VERSION = 10
+  VERSION_STR = "1.1" # Used for displaying
+  VERSION = 10 # Used for demo and netgame compatibility
 
-  # The resolutions of the render target the screen puts on the screen
-  SRES_X = 320
-  SRES_Y = 240
+  # The resolution of the player's viewport
+  # NOTE: the screen wipe is only designed for 320 x 240
+  #        the game will snap from 320 x 240 to whatever res is set here after wiping
+  @@sres_x = 320
+  @@sres_y = 240
 
   # Midi info
-  MIDI_BUFFER_SIZE =  2048
+  MIDI_BUFFER_SIZE =  1024
   MIDI_SAMPLE_RATE = 44100
   MIDI_TICK_TIME   = 1.0 / 140.0
   # TODO: make a setting
@@ -90,6 +92,27 @@ end
       end
     end
   end
+end
+
+struct SpinLock
+  def initialize
+    @flag = Atomic(Bool).new(false)
+  end
+
+  def synchronize(&)
+    until @flag.compare_and_set(false, true)[1]
+      LibC.sched_yield # let another OS thread run; does NOT touch Crystal's fiber scheduler
+    end
+    begin
+      yield
+    ensure
+      @flag.set(false)
+    end
+  end
+end
+
+lib LibC
+  fun sched_yield : Int32
 end
 
 MAIN_THREAD = Thread.current

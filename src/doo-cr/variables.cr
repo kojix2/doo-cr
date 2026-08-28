@@ -83,7 +83,14 @@ module LibDoom
 
   @@closing = false
 
+  @@software_rendering : Bool = true
+
   @@screen_texture : Raylib::Texture?
+  @@viewport_target : Raylib::RenderTexture?
+  @@render_target : Raylib::RenderTexture?
+
+  @@software_screen = Bytes.new(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT)
+
   @@audio_stream : RAudio::AudioStream?
   @@adl_player : ADLMIDI::Player*?
   @@music_stream : RAudio::AudioStream?
