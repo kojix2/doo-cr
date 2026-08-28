@@ -2841,7 +2841,6 @@ CDoom.plyr = CDoom.players.to_unsafe + CDoom.consoleplayer
             @@pause_socket = false
             tcp.close
             server.close
-            tempfile.delete
           end
 
           puts "connected! waiting for host to start"
