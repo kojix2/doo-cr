@@ -1480,7 +1480,7 @@ fun a_scream = A_Scream(actor : CDoom::Mobj*)
 end
 
 fun a_xscream = A_XScream(actor : CDoom::Mobj*)
-  LibDoom.a_scream(actor)
+  LibDoom.a_xscream(actor)
 end
 
 fun a_pain = A_Pain(actor : CDoom::Mobj*)
