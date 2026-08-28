@@ -5463,7 +5463,8 @@ module LibDoom
 
     # parse network game options,
     #  -net <host>
-    if !ARGV.includes?("-net") && !ARGV.includes?("-altnet")
+    i = CDoom.m_check_parm("-net")
+    if i == 0 && !ARGV.includes?("-altnet")
       # single player game
       CDoom.netgame = 0
       CDoom.doomcom.value.id = CDoom::DOOMCOM_ID
@@ -5486,7 +5487,7 @@ module LibDoom
     CDoom.doomcom.value.numnodes = 1 # this node for sure
 
     # Host ip is given, else is host
-    if (i += 1) < CDoom.myargc && CDoom.myargv[i][0] != '-'.ord
+    if !@@altnet && (i += 1) < CDoom.myargc && CDoom.myargv[i][0] != '-'.ord
       arg = String.new(CDoom.myargv[i])
 
       @@sendaddress[1] =
