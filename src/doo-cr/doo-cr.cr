@@ -2817,8 +2817,6 @@ module LibDoom
                 next if len == 0
 
                 tcp.read_fully(databuf[0, len])
-                CDoom.gametic = data.value.gametic
-                CDoom.maketic = data.value.maketic
                 size = len - sizeof(Int32)*2
 
                 file.write(datasection[0, size])
@@ -2827,6 +2825,9 @@ module LibDoom
             end
 
             i_do_load_game(tempfile.path)
+            CDoom.gametic = data.value.gametic
+                CDoom.maketic = data.value.maketic
+
             @@pause_socket = false
             tcp.close
             server.close
@@ -2869,10 +2870,12 @@ module LibDoom
                 ipnums += 6
               end
 
+              if @@altnet
               CDoom.doomcom.value.numplayers.times do |i|
                 CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
-                CDoom.nettics[i] = CDoom.gametic // CDoom.ticdup if CDoom.nodeingame[i] != 0
+                CDoom.nettics[i] = CDoom.gametic // CDoom.ticdup
               end
+            end
               return
             end
           end
