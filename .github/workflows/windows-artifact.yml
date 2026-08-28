@@ -25,6 +25,7 @@ jobs:
             mingw-w64-ucrt-x86_64-pcre2
             mingw-w64-ucrt-x86_64-libyaml
             mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-cmake
             make
             git
       - name: Build project
