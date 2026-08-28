@@ -2066,6 +2066,7 @@ module LibDoom
 
 
     puts " DOO-CR V#{VERSION_STR} ".center(77, '=')
+    puts " DEMO V#{DEMOVERSION} | SAVE V#{SAVEVERSION} | NET V#{NETVERSION} ".center(77, '=')
     puts @@title.center(77)
     puts "".ljust(77, '=')
     puts "Doo-cr is licensed under the GNU General Public License v3.0 license".center(77)
@@ -2548,7 +2549,7 @@ module LibDoom
 
         next if CDoom.h_get_packet == 0
         if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0
-          if CDoom.netbuffer.value.player != VERSION
+          if CDoom.netbuffer.value.player != NETVERSION
             CDoom.i_error("Error: Different DOOM versions cannot play a net game!")
           end
           CDoom.startskill = CDoom::Skill.new(CDoom.netbuffer.value.retransmitfrom & 15)
@@ -2622,7 +2623,7 @@ module LibDoom
             CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
           end
           CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
-          CDoom.netbuffer.value.player = VERSION
+          CDoom.netbuffer.value.player = NETVERSION
           CDoom.netbuffer.value.numtics = 1
           packed = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
           packed.value = CDoom.doomcom.value.ticdup.to_u8!
@@ -4242,7 +4243,7 @@ module LibDoom
     File.open(String.new(CDoom.savename.to_unsafe), "rb") do |file|
       file.pos += CDoom::SAVESTRINGSIZE
       # skip the description field
-      vcheck = "version #{VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
+      vcheck = "version #{SAVEVERSION}".ljust(CDoom::VERSIONSIZE, '\0')
       return if CDoom.doom_strcmp(file.read_string(CDoom::VERSIONSIZE).to_unsafe, vcheck.to_unsafe) != 0 # bad version
 
       CDoom.gameskill = CDoom::Skill.new(file.read_bytes(UInt8))
@@ -4293,7 +4294,7 @@ module LibDoom
     File.open(name, "wb") do |file|
       file.write_string(description[0...CDoom::SAVESTRINGSIZE])
 
-      name2 = "version #{VERSION}".ljust(CDoom::VERSIONSIZE, '\0')
+      name2 = "version #{SAVEVERSION}".ljust(CDoom::VERSIONSIZE, '\0')
       file.write_string(name2.to_slice)
 
       file.write_byte(CDoom.gameskill.value.to_u8!)
@@ -4506,7 +4507,7 @@ module LibDoom
 
     CDoom.demo_p = CDoom.demobuffer
 
-    CDoom.demo_p.value = VERSION.to_u8
+    CDoom.demo_p.value = DEMOVERSION.to_u8
     CDoom.demo_p += 1
     CDoom.demo_p.value = CDoom.gameskill.value.to_u8
     CDoom.demo_p += 1
@@ -4546,8 +4547,8 @@ module LibDoom
     CDoom.demo_p = CDoom.demobuffer
     demo_version = CDoom.demo_p.value
     CDoom.demo_p += 1
-    if demo_version != VERSION && demo_version != 109 # Demos seem to run fine with version 109
-      puts "Demo is from a different game version! Demo Verson = #{demo_version}, this version = #{VERSION}"
+    if demo_version != DEMOVERSION && demo_version != 109 # Demos seem to run fine with version 109
+      puts "Demo is from a different game version! Demo Verson = #{demo_version}, this version = #{DEMOVERSION}"
       CDoom.gameaction = CDoom::Gameaction::Nothing
       return
     end

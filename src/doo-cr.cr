@@ -28,9 +28,11 @@ require "./adlmidi.cr"
 
 module LibDoom
   VERSION_STR = "1.2" # Used for displaying
-  VERSION = 12 # Used for demo and netgame compatibility
+  DEMOVERSION = 110
+  SAVEVERSION = 10
+  NETVERSION = 12
 
-  # The resolution of the player's viewport
+  # The resolution of the player's viewport for hardware rendering
   # NOTE: the screen wipe is only designed for 320 x 240
   #        the game will snap from 320 x 240 to whatever res is set here after wiping
   @@sres_x = 320
