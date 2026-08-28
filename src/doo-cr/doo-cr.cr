@@ -2363,6 +2363,7 @@ module LibDoom
         next if CDoom.nodeingame[netnode] == 0
         CDoom.nodeingame[netnode] = 0
         CDoom.playeringame[netconsole] = 0
+        @@sendaddress[netnode] = nil
         CDoom.doom_strcpy(CDoom.exitmsg, "Player 1 left the game")
         CDoom.exitmsg[7] = CDoom.exitmsg[7] + netconsole
         (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message = CDoom.exitmsg
@@ -2722,8 +2723,8 @@ module LibDoom
 
                 # From the host
                 if fromaddress.address == @@sendaddress[1].not_nil!.address
-                  next if data.value.file_section < current_file_section
-
+                  next if c == 0 || data.value.file_section < current_file_section
+                  puts data.value.file_section
                   size = c - sizeof(UInt64)
                   file.write(datasection[0, size])
                   break if datasection[size - 1] == 0x1d
@@ -2789,7 +2790,9 @@ module LibDoom
             send_setup(i)
           end
 
-          check_new_connection
+          CDoom::MAXPLAYERS.times do |i|
+            check_new_connection
+          end
 
           # NEED BREAK
 

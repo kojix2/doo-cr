@@ -79,7 +79,7 @@ end
   end
 
   @@pause_socket = false
-  if ARGV.includes?("-net")
+  if ARGV.includes?("-net") || ARGV.includes?("-altnet")
     # Create a seperate thread for the packets-in buffer during a netgame
     net_context = Fiber::ExecutionContext::Isolated.new("doom-net") do
       until @@insocket
