@@ -21709,8 +21709,6 @@ module LibDoom
       lump_num = 0
       CDoom.numlumps.times do |j|
         if String.new(CDoom.lumpinfo[j].name.to_unsafe, 8).downcase.delete('\0') == String.new(fileinfo[mlump].name.to_unsafe, 8).downcase.delete('\0')
-          # puts String.new(CDoom.lumpinfo[j].name.to_unsafe, 8)
-          # puts String.new(fileinfo[mlump].name.to_unsafe, 8)
           break
         end
         lump_num += 1
