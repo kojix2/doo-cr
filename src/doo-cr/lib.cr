@@ -3976,7 +3976,8 @@ lib CDoom
   BACKUPTICS = 24
 
   struct AltNetData
-    file_section : UInt64
+    gametic : Int32
+    maketic : Int32
     section : UInt8[1024]
   end
 
