@@ -1425,6 +1425,8 @@ module LibDoom
     end
   end
 
+  @@spawned = false
+
   def self.d_doom_loop
     until Raylib.close_window?
       # frame syncronous IO operations
@@ -1447,6 +1449,12 @@ module LibDoom
       CDoom.s_update_sounds(CDoom.players[CDoom.consoleplayer].mo) # move positional sounds
       # Update display, next frame, with current state.
       CDoom.d_display
+      if @@altnet && !@@spawned
+        @@spawned = true
+        CDoom.netbuffer.value.retransmitfrom = 0
+              CDoom.netbuffer.value.numtics = 0
+                  CDoom.h_send_packet(1, NCMD_PAUSE)
+      end
     end
 
     i_quit
@@ -2373,8 +2381,8 @@ module LibDoom
             end
             @@got_new_ips = true
             CDoom.doomcom.value.numplayers.times do |i|
-                CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
-              end
+              CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
+            end
           end
 
           break if CDoom.netbuffer.value.checksum & NCMD_PAUSE &&
@@ -2390,17 +2398,32 @@ module LibDoom
           CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
           CDoom.playeringame[CDoom.doomcom.value.remotenode] = 1
           CDoom.nodeingame[CDoom.doomcom.value.remotenode] = 1
+          CDoom.nettics[CDoom.doomcom.value.remotenode] = CDoom.gametic // CDoom.ticdup
           (CDoom.players.to_unsafe + CDoom.doomcom.value.remotenode).value.playerstate = CDoom::Playerstate::PST_REBORN
           puts "connected client!"
 
-
           send_alt_setup(CDoom.doomcom.value.remotenode)
           CDoom.doomcom.value.numplayers.times do |i|
-                CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
-              end
+            CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
+          end
           CDoom.doomcom.value.numnodes.times do |node|
             10.times do |i|
               propogate_ips(node)
+            end
+          end
+
+          loop do
+            next if h_get_packet == 0
+            if CDoom.netbuffer.value.checksum & NCMD_PAUSE &&
+               CDoom.netbuffer.value.retransmitfrom == 0
+              CDoom.netbuffer.value.retransmitfrom = 0
+              CDoom.netbuffer.value.numtics = 0
+              CDoom.doomcom.value.numnodes.times do |node|
+                10.times do |i|
+                  CDoom.h_send_packet(node, NCMD_PAUSE)
+                end
+              end
+              break
             end
           end
         end
@@ -2687,14 +2710,6 @@ module LibDoom
 
     tcp.close
     tempfile.delete
-
-    CDoom.netbuffer.value.retransmitfrom = 0
-    CDoom.netbuffer.value.numtics = 0
-    CDoom.doomcom.value.numnodes.times do |node|
-      10.times do |i|
-        CDoom.h_send_packet(node, NCMD_PAUSE)
-      end
-    end
   end
 
   def self.propogate_ips(node : Int32)
@@ -2856,6 +2871,7 @@ module LibDoom
 
               CDoom.doomcom.value.numplayers.times do |i|
                 CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
+                CDoom.nettics[i] = CDoom.gametic // CDoom.ticdup if CDoom.nodeingame[i] != 0
               end
               return
             end
