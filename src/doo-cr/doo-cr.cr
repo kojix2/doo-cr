@@ -2693,13 +2693,15 @@ CDoom.nettics[CDoom.doomcom.value.remotenode] = CDoom.gametic
     tempfile = File.tempfile("netsave")
     i_do_save_game(tempfile.path)
 
+    
+
     data = Pointer(CDoom::AltNetData).malloc
     databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
     datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
 
     data.value.gametic = CDoom.gametic
     data.value.maketic = CDoom.maketic
-    CDoom.resendto[CDoom.doomcom.value.remotenode] = CDoom.maketic - CDoom.doomcom.value.extratics
+CDoom.resendto[CDoom.doomcom.value.remotenode] = CDoom.gametic
     File.open(tempfile.path, "rb") do |file|
       while (bytes_read = file.read(datasection)) > 0
         payload = databuf[0, bytes_read + sizeof(UInt64)]
@@ -2827,6 +2829,9 @@ CDoom.nettics[CDoom.doomcom.value.remotenode] = CDoom.gametic
             i_do_load_game(tempfile.path)
             CDoom.gametic = data.value.gametic
 CDoom.maketic = data.value.maketic
+
+CDoom.gametime = CDoom.gametic // CDoom.doomcom.value.ticdup
+@@oldentertics = CDoom.gametime
 
 CDoom.playeringame[CDoom.consoleplayer] = 1
 CDoom.players[CDoom.consoleplayer].playerstate = CDoom::Playerstate::PST_REBORN
