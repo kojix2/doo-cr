@@ -1,5 +1,8 @@
 ![logo](https://raw.githubusercontent.com/D-Shwagginz/doo-cr/master/logo/doo-cr.png)
 
+[![Windows Artifact](https://github.com/D-Shwagginz/doo-cr/actions/workflows/windows-artifact.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/windows-artifact.yml) - Download Here!
+
+[![Windows Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/windows-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/windows-build.yml)
 [![Ubuntu Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/ubuntu-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/ubuntu-build.yml)<br>
 [![Macos Build](https://github.com/D-Shwagginz/doo-cr/actions/workflows/macos-build.yml/badge.svg)](https://github.com/D-Shwagginz/doo-cr/actions/workflows/macos-build.yml)
 
@@ -37,6 +40,10 @@ Common command line arguments are:
   Forces loading of a wad as an iwad
 - -file \<file> \
   Loads in a wad or lump on top of iwad and other -file's
+- -merge \<file> \
+  Will overwrite lumps already loaded with same name<br>
+  If a lump doesn't exist yet, it will add it in like -file<br>
+  Used to load a wad file as a pwad, but treat it with higher priority than an iwad
 - -deathmatch \
   Used with -net to specify a deathmatch game
 - -altdeath \
