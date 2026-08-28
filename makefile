@@ -2,18 +2,20 @@
 
 CRYSTAL_FLAGS := -DRANGECHECK -DPRECOMPUTED
 EXEC := doo-cr
+OUTDIR := ./bin
 
 
-CRYSTAL_LIBRARY_PATH := $(shell crystal env CRYSTAL_LIBRARY_PATH)
 
 ifeq ($(OS),Windows_NT)
     # Windows-specific settings
     DETECTED_OS := Windows
 		CURRENT_DIR := $(shell cygpath -m "$(CURDIR)")
+		CRYSTAL_LIBRARY_PATH := $(shell crystal env CRYSTAL_EXEC_PATH)
 else
     # Call uname on Unix-like environments
     UNAME_S := $(shell uname -s)
 		CURRENT_DIR := $(CURDIR)
+		CRYSTAL_LIBRARY_PATH := $(shell crystal env CRYSTAL_LIBRARY_PATH)
     ifeq ($(UNAME_S),Linux)
         DETECTED_OS := Linux
     endif
@@ -36,7 +38,7 @@ else ifeq ($(DETECTED_OS),Linux)
 	AMMAKE := make
 	RLOUT := libraylib.so.6.0.0
 	AMOUT := libADLMIDI.so.1.6.3
-	CHANGE_LIB_NAMES := patchelf --replace-needed libADLMIDI.$(LIB_EXT).1 ./libADLMIDI.$(LIB_EXT) ./bin/$(EXEC) && patchelf --replace-needed libraylib.$(LIB_EXT).600 ./libraylib.$(LIB_EXT) ./bin/$(EXEC) && patchelf --replace-needed libcvars.$(LIB_EXT) ./libcvars.$(LIB_EXT) ./bin/$(EXEC)
+	CHANGE_LIB_NAMES := patchelf --replace-needed libADLMIDI.$(LIB_EXT).1 ./libADLMIDI.$(LIB_EXT) $(OUTDIR)/$(EXEC) && patchelf --replace-needed libraylib.$(LIB_EXT).600 ./libraylib.$(LIB_EXT) $(OUTDIR)/$(EXEC) && patchelf --replace-needed libcvars.$(LIB_EXT) ./libcvars.$(LIB_EXT) $(OUTDIR)/$(EXEC)
 	CRYSTAL_LIBS :=
 else ifeq ($(DETECTED_OS),macOS)
 	LIB_EXT := dylib
@@ -44,35 +46,37 @@ else ifeq ($(DETECTED_OS),macOS)
 	AMMAKE := make
 	RLOUT := libraylib.6.0.0.dylib
 	AMOUT := libADLMIDI.1.6.3.dylib
-	CHANGE_LIB_NAMES := install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" ./bin/$(EXEC) && install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" ./bin/$(EXEC)
+	CHANGE_LIB_NAMES := install_name_tool -change "@rpath/libADLMIDI.1.$(LIB_EXT)" "./libADLMIDI.$(LIB_EXT)" $(OUTDIR)/$(EXEC) && install_name_tool -change "@rpath/libraylib.600.$(LIB_EXT)" "./libraylib.$(LIB_EXT)" $(OUTDIR)/$(EXEC)
 	CRYSTAL_LIBS :=
 endif
 
-LIBS := $(addprefix ./bin/,$(CRYSTAL_LIBS))
-
-
 .PHONY: all clean
-all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT) $(LIBS)
-	test -d bin || mkdir bin && \
+all: libcvars.$(LIB_EXT) libraylib.$(LIB_EXT) libADLMIDI.$(LIB_EXT) $(addprefix $(OUTDIR)/,$(CRYSTAL_LIBS))
+	test -d $(OUTDIR) || mkdir $(OUTDIR) && \
 	shards install
 	shards update
-	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o bin/$(EXEC) --link-flags="-L$(CURRENT_DIR) -LC:/msys64/clangarm64/lib"
-	mv -f libcvars.$(LIB_EXT) ./bin
-	cp -f libraylib.$(LIB_EXT) ./bin
-	cp -f libADLMIDI.$(LIB_EXT) ./bin
-
+	crystal build src/doo-cr.cr $(CRYSTAL_FLAGS) -o $(OUTDIR)/$(EXEC) --link-flags="-L$(CURRENT_DIR) -LC:/msys64/clangarm64/lib"
+	mv -f libcvars.$(LIB_EXT) $(OUTDIR)
+	cp -f libraylib.$(LIB_EXT) $(OUTDIR)
+	cp -f libADLMIDI.$(LIB_EXT) $(OUTDIR)
 
 	$(CHANGE_LIB_NAMES)
 	
 clean:
 	rm -rf raylib
 	rm -rf libADLMIDI
-	rm -rf bin
+	rm -rf $(OUTDIR)
 	rm libraylib.$(LIB_EXT)
 	rm libADLMIDI.$(LIB_EXT)
 
-./bin/%: $(CRYSTAL_LIBRARY_PATH)/%
-	cp $< $@
+
+define COPY_LIB
+$(OUTDIR)/$(1): $(CRYSTAL_LIBRARY_PATH)/$(2)
+	cp -f "$(CRYSTAL_LIBRARY_PATH)/$(1)" "$(OUTDIR)/$(1)"
+endef
+
+$(foreach lib,$(CRYSTAL_LIBS),$(eval $(call COPY_LIB,$(lib)))) 
+
 
 libcvars.$(LIB_EXT):
 	cc -shared -fPIC -x c \
