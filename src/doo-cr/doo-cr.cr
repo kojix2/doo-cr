@@ -5314,11 +5314,15 @@ module LibDoom
       CDoom.doomcom.value.ticdup = 1
     end
 
+    CDoom.doomcom.value.extratics = 0
     ARGV.index("-extratic").try do |p|
       if p = ARGV[p + 1]?
         CDoom.doomcom.value.extratics = p.to_i.to_u8!
         CDoom.doomcom.value.extratics = 4 if 
         CDoom.doomcom.value.extratics > 4
+      else
+        # Set to one if no number is provided
+        CDoom.doomcom.value.extratics = 1
       end
     end
 
@@ -5326,12 +5330,6 @@ module LibDoom
     if p != 0 && p < CDoom.myargc - 1
       @@doomport = CDoom.doom_atoi(CDoom.myargv[p + 1])
       puts "using alternate port #{@@doomport}"
-    end
-
-    p = CDoom.m_check_parm("-sendport")
-    if p != 0 && p < CDoom.myargc - 1
-      @@doomport_send = CDoom.doom_atoi(CDoom.myargv[p + 1])
-      puts "using alternate send port #{@@doomport_send}"
     end
 
     # parse network game options,
@@ -5790,29 +5788,29 @@ module LibDoom
   end
 
   def self.i_shutdown_sound
-    # Wait till all pending sounds are finished.
-    hopetill = i_get_time + 1*70 # Give a second to finish
+    # # Wait till all pending sounds are finished.
+    # hopetill = i_get_time + 1*70 # Give a second to finish
 
-    print "i_shutdown_sound: Finishing pending sounds..."
+    # print "i_shutdown_sound: Finishing pending sounds..."
 
-    loop do
-      done = true
+    # loop do
+    #   done = true
 
-      CDoom.num_channels.times do |i|
-        next if CDoom.channels[i].null?
-        done = false
-      end
+    #   CDoom.num_channels.times do |i|
+    #     next if CDoom.channels[i].null?
+    #     done = false
+    #   end
 
-      if done
-        puts " finished!"
-        break
-      end
+    #   if done
+    #     puts " finished!"
+    #     break
+    #   end
 
-      if i_get_time > hopetill
-        puts " couldn't finish."
-        break
-      end
-    end
+    #   if i_get_time > hopetill
+    #     puts " couldn't finish."
+    #     break
+    #   end
+    # end
 
     @@audio_stream.try { |a| RAudio.unload_audio_stream(a) }
 

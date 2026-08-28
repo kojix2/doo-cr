@@ -71,7 +71,6 @@ module LibDoom
   RESENDCOUNT =   10
   PL_DRONE    = 0x80             # bit flag in doomdata->player
   @@doomport : Int32 = 5029      # CDoom::IPPORT_USERRESERVED + 0x1d
-  @@doomport_send : Int32 = 5030 # CDoom::IPPORT_USERRESERVED + 0x1e
 
   @@insocket : UDPSocket? = nil
   @@sendsocket : UDPSocket? = nil
