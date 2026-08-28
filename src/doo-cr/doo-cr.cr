@@ -232,8 +232,8 @@ module LibDoom
 
   def self.doom_draw
     if Thread.current != MAIN_THREAD
-      # raise "#{name} called off main thread: #{Thread.current} (expected #{MAIN_THREAD})"
-      return # Hopefully this fixes God's cursed bug
+      raise "Error: doom_draw called off main thread: #{Thread.current} (expected #{MAIN_THREAD})"
+      # Hopefully this fixes God's cursed bug
     end
 
     return unless Raylib.window_ready?
@@ -5728,7 +5728,7 @@ module LibDoom
   def self.update_audio
     loop do
       next unless Raylib.window_ready? && RAudio.audio_device_ready? &&
-                  !@@audio_stream.nil? && !@@adl_player.nil?
+                  @@audio_stream && @@adl_player
       now = Raylib.get_time
       @@midi_tick_accumulator += now - @@last_time
       @@last_time = now
@@ -6004,8 +6004,7 @@ module LibDoom
         when CDoom::CONTROLLER_MODULATION
           midi_event = (0x000000B0_u32 | channel | 0x0100 | (value << 16))
         when CDoom::CONTROLLER_VOLUME
-          CDoom.mus_channel_volumes[channel] = value
-          midi_event = (0x000000B0_u32 | channel | 0x0700 | (((CDoom.mus_channel_volumes[channel] * CDoom.mus_volume) // 127) << 16))
+          midi_event = (0x000000B0_u32 | channel | 0x0700 | (value << 16))
         when CDoom::CONTROLLER_PAN
           midi_event = (0x000000B0_u32 | channel | 0x0A00 | (value << 16))
         when CDoom::CONTROLLER_EXPRESSION
