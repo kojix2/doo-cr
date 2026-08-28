@@ -2088,14 +2088,14 @@ module LibDoom
     puts "i_init: Setting up machine state."
     CDoom.i_init
 
-    puts "d_check_net_game: Checking network game status."
-    CDoom.d_check_net_game
-
     puts "s_init: Setting up sound."
     CDoom.s_init(CDoom.snd_sfx_volume, CDoom.snd_music_volume)
 
     puts "hu_init: Setting up heads up display."
     CDoom.hu_init
+
+    puts "d_check_net_game: Checking network game status."
+    CDoom.d_check_net_game
 
     puts "st_init: Init status bar."
     CDoom.st_init
@@ -2536,6 +2536,8 @@ module LibDoom
       i_error("Error: d_arbitrate_net_start: Host IP is not valid!") unless @@sendaddress[1]
       puts "sending connection info..."
       loop do
+        CDoom.screens[0].clear(CDoom::SCREENWIDTH * 8)
+        CDoom.m_write_text(0, 0, "Sending connection data on port #{@@doomport}. Escape to exit")
         doom_draw
         check_abort
         CDoom.netbuffer.value.retransmitfrom = 69
@@ -2563,11 +2565,16 @@ module LibDoom
 
           puts "connected! waiting for host to start"
           loop do
+            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 8)
+            CDoom.m_write_text(0, 0, "Connected to host! Escape to exit")
             doom_draw
             check_abort
             next if CDoom.h_get_packet == 0
 
             # Host is sending ips
+            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 8)
+            CDoom.m_write_text(0, 0, "Gathering IPs")
+            doom_draw
             if CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
               puts "retrieving all clients info"
               if CDoom.netbuffer.value.retransmitfrom != 19 ||
@@ -2598,7 +2605,6 @@ module LibDoom
       # key player, send the setup info
       puts "waiting for client info..."
       loop do
-        doom_draw
         CDoom.check_abort
 
         CDoom.doomcom.value.numnodes.times do |i|
@@ -2637,6 +2643,13 @@ module LibDoom
         # NEED BREAK
 
         # Space to start game and end waiting for connections
+        CDoom.screens[0].clear(CDoom::SCREENWIDTH * (18 + 8))
+        CDoom.m_write_text(0, 0, "Press space to start. Escape to exit")
+        CDoom.m_write_text(0, 9, "Listening for clients on port #{@@doomport}")
+        CDoom.m_write_text(0, 18, "#{CDoom.doomcom.value.numnodes - 1} player#{
+          CDoom.doomcom.value.numnodes != 2 ? "s" : ""
+        } connected")
+        doom_draw
         if CDoom.doomcom.value.numnodes >= CDoom::MAXPLAYERS ||
            Raylib::KeyboardKey::Space.down?
           puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
@@ -6421,6 +6434,8 @@ end
     Raylib.set_texture_filter(@@screen_texture.not_nil!, Raylib::TextureFilter::Point)
     Raylib.set_texture_filter(@@viewport_target.not_nil!.texture, Raylib::TextureFilter::Point)
     Raylib.set_texture_filter(@@render_target.not_nil!.texture, Raylib::TextureFilter::Point)
+
+    CDoom.i_set_palette(CDoom.w_cache_lump_name("PLAYPAL", CDoom::PU_CACHE).as(UInt8*))
   end
 
   #
