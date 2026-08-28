@@ -12105,13 +12105,13 @@ end
   # and addlines traversers.
   #
   def self.p_intercept_vector(v2 : CDoom::Divline*, v1 : CDoom::Divline*) : CDoom::Fixed
-    den = CDoom.fixed_mul(v1.value.dy >> 8, v2.value.dx) - CDoom.fixed_mul(v1.value.dx >> 8, v2.value.dy)
+    den = CDoom.fixed_mul(v1.value.dy >> 8, v2.value.dx) &- CDoom.fixed_mul(v1.value.dx >> 8, v2.value.dy)
 
     return 0 if den == 0
 
     num =
-      CDoom.fixed_mul((v1.value.x - v2.value.x) >> 8, v1.value.dy) +
-        CDoom.fixed_mul((v2.value.y - v1.value.y) >> 8, v1.value.dx)
+      CDoom.fixed_mul((v1.value.x &- v2.value.x) >> 8, v1.value.dy) +
+        CDoom.fixed_mul((v2.value.y &- v1.value.y) >> 8, v1.value.dx)
     frac = CDoom.fixed_div(num, den)
 
     return frac
