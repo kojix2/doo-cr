@@ -5314,7 +5314,7 @@ module LibDoom
       CDoom.doomcom.value.ticdup = 1
     end
 
-    if CDoom.m_check_parm("-extratic")
+    if CDoom.m_check_parm("-extratic") != 0
       CDoom.doomcom.value.extratics = 1
     else
       CDoom.doomcom.value.extratics = 0
