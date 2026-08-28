@@ -75,6 +75,7 @@ module LibDoom
   PL_DRONE    = 0x80        # bit flag in doomdata->player
   @@doomport : Int32 = 5029 # CDoom::IPPORT_USERRESERVED + 0x1d
 
+  @@altnet_loaded : Bool = false
   @@altnet : Bool = false
   @@insocket : UDPSocket? = nil
   @@sendsocket : UDPSocket? = nil
