@@ -2613,7 +2613,7 @@ module LibDoom
     File.open(tempfile.path, "rb") do |file|
       while (bytes_read = file.read(datasection)) > 0
         # Send only the slice portion that was actually read
-        10.times do |i|
+        50.times do |i|
           sock.send(databuf[0, bytes_read + sizeof(UInt64)], to: dest)
         end
         data.value.file_section = data.value.file_section + 1
@@ -2724,7 +2724,6 @@ module LibDoom
                 # From the host
                 if fromaddress.address == @@sendaddress[1].not_nil!.address
                   next if c == 0 || data.value.file_section < current_file_section
-                  puts data.value.file_section
                   size = c - sizeof(UInt64)
                   file.write(datasection[0, size])
                   break if datasection[size - 1] == 0x1d
