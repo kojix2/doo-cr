@@ -72,6 +72,7 @@ clean:
 
 define COPY_LIB
 $(OUTDIR)/$(1): $(CRYSTAL_LIBRARY_PATH)/$(2)
+	test -d $(OUTDIR) || mkdir $(OUTDIR) && \
 	cp -f "$(CRYSTAL_LIBRARY_PATH)/$(1)" "$(OUTDIR)/$(1)"
 endef
 
