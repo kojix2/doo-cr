@@ -193,9 +193,18 @@ module LibDoom
   CDoom.followplayer = 1
 
 
-  @@pvp_strings = [
-    "Player 1 killed player 2!",
-    
+  @@death_strings = [
+    "Player 1 killed player 2",
+    "Player 2 just got pwned by player 1",
+    "Player 1 claims player 2's soul",
+    "Player 1 has defeated player 2"
+  ]
+
+  @@net_strings = [
+    "Player 1 needs better trigger discipline!",
+    "Player 2 will remember that..",
+    "Player 1 killed player 2",
+    "Player 2 hopes that was on accident",
   ]
 
 

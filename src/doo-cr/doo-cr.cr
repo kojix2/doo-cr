@@ -10684,8 +10684,9 @@ end
         source.value.player.value.frags[trgtplr] =
           source.value.player.value.frags[trgtplr] + 1 
 
-          CDoom.players[CDoom.consoleplayer].message =
-            @@pvp_strings.sample(Random.new(CDoom.m_random))
+          strings = CDoom.deathmatch != 0 ? @@death_strings : @@net_strings
+          (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message =
+            strings.sample(Random.new(CDoom.m_random)).gsub('1', srcplr + 1).gsub('2', trgtplr + 1)
       end
     elsif CDoom.netgame == 0 && target.value.flags & CDoom::Mobjflag::MF_COUNTKILL.value != 0
       # count all monster deaths,
