@@ -6734,7 +6734,7 @@ lib CDoom
 
   $chat_macros : LibC::Char*[10]
 
-  $player_names : LibC::Char*[4]
+  $player_names : LibC::Char*[MAXPLAYERS]
 
   $shiftxform : LibC::Char*
 

@@ -10695,7 +10695,9 @@ end
 
 
           (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message =
-            strings.sample(Random.new(CDoom.m_random)).gsub('1', srcplr + 1).gsub('2', trgtplr + 1)
+            strings.sample(Random.new(CDoom.m_random)).gsub(
+              '1', String.new(CDoom.player_names[srcplr])[...-2]).gsub(
+                '2', String.new(CDoom.player_names[trgtplr])[...-2])
       end
     elsif CDoom.netgame == 0 && target.value.flags & CDoom::Mobjflag::MF_COUNTKILL.value != 0
       # count all monster deaths,

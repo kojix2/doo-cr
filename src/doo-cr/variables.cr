@@ -194,38 +194,37 @@ module LibDoom
 
 
   @@death_kill_strings = [
-    "You killed player 2",
-    "You got player 2",
-    "You showed player 2",
+    "You killed 2",
+    "You got 2",
+    "You showed 2",
   ]
   @@death_dead_strings = [
-    "Player 1 killed you",
-    "You have been taken by player 1",
-    "You got smoked by player 1"
+    "1 killed you",
+    "You have been taken by 1",
+    "You got smoked by 1"
   ]
   @@death_nut_strings = [
-    "Player 1 killed player 2",
-    "Player 1 has claimed player 2's soul",
-    "Player 2 just got pwned by player 1"
+    "1 killed 2",
+    "1 has claimed 2's soul",
+    "2 just got pwned by 1"
   ]
 
   @@net_kill_strings = [
-    "You killed player 2",
-    "Player 2 will remember that...",
-    "Player 2 hopes that was an accident",
+    "You killed 2",
+    "2 will remember that...",
+    "2 hopes that was an accident",
   ]
   @@net_dead_strings = [
-  "You were killed by player 1",
-  "I bet player 1 did that on purpose",
-  "Player 1 thought this was deathmatch"
+  "You were killed by 1",
+  "I bet 1 did that on purpose",
+  "1 thought this was deathmatch"
   ]
   @@net_nut_strings = [
-    "Player 1 killed player 2",
-    "player 1 showed player 2 what for",
-    "Player 2 has been slain by player 1",
-    "Player 1 and player 2 have a new rivalry"
+    "1 killed 2",
+    "1 showed 2 what for",
+    "2 has been slain by 1",
+    "1 and 2 have a new rivalry"
   ]
-
 
 
   c_array(CDoom.cheat_amap_seq,
@@ -456,6 +455,12 @@ module LibDoom
   CDoom.chat_macros[7] = CDoom::HUSTR_CHATMACRO7.to_unsafe
   CDoom.chat_macros[8] = CDoom::HUSTR_CHATMACRO8.to_unsafe
   CDoom.chat_macros[9] = CDoom::HUSTR_CHATMACRO9.to_unsafe
+
+  c_array(CDoom.player_names,
+  CDoom::HUSTR_PLRGREEN.to_unsafe,
+  CDoom::HUSTR_PLRINDIGO.to_unsafe,
+  CDoom::HUSTR_PLRBROWN.to_unsafe,
+  CDoom::HUSTR_PLRRED.to_unsafe)
 
   CDoom.french_shiftxform[0] = 0_u8
   CDoom.french_shiftxform[1] = 1
