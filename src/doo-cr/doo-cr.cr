@@ -2616,6 +2616,7 @@ module LibDoom
         50.times do |i|
           sock.send(databuf[0, bytes_read + sizeof(UInt64)], to: dest)
         end
+          puts datasection[bytes_read - 1]
         data.value.file_section = data.value.file_section + 1
       end
     end
@@ -2714,6 +2715,9 @@ module LibDoom
             current_file_section = 0
 
             tempfile = File.tempfile("netsave")
+
+            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
+            CDoom.m_write_text(0, 0, "Loading game")
             File.open(tempfile.path, "wb") do |file|
               loop do
                 doom_draw
@@ -2727,6 +2731,7 @@ module LibDoom
                   size = c - sizeof(UInt64)
                   file.write(datasection[0, size])
                   break if datasection[size - 1] == 0x1d
+                  puts datasection[size - 1]
                 end
               end
             end
