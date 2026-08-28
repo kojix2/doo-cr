@@ -78,6 +78,7 @@ end
     end
   end
 
+  @@pause_socket = false
   if ARGV.includes?("-net")
     # Create a seperate thread for the packets-in buffer during a netgame
     net_context = Fiber::ExecutionContext::Isolated.new("doom-net") do
@@ -85,6 +86,7 @@ end
       end
       sock = @@insocket.not_nil!
       loop do
+        next if @@pause_socket
         sw_ptr = GC.malloc(sizeof(CDoom::Doomdata)).as(CDoom::Doomdata*)
         buf = Bytes.new(sw_ptr.as(UInt8*), sizeof(CDoom::Doomdata))
         begin

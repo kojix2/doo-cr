@@ -3975,6 +3975,11 @@ lib CDoom
   # Networking and tick handling related.
   BACKUPTICS = 24
 
+  struct AltNetData
+    file_section : UInt64
+    section : UInt8[1024]
+  end
+
   enum Command
     SEND = 1
     GET  = 2

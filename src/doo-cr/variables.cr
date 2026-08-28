@@ -44,6 +44,8 @@ module LibDoom
 
   MENU_SCROLL_DEADZONE = 80
 
+  MAX_EXTRATICS = 4
+
   CDoom.precache = 1
 
   class_getter keystates = Array(Bool).new(CDoom::NUMKEYS, false)
@@ -69,9 +71,10 @@ module LibDoom
   NCMD_CHECKSUM   = 0x03ffffff
 
   RESENDCOUNT =   10
-  PL_DRONE    = 0x80             # bit flag in doomdata->player
-  @@doomport : Int32 = 5029      # CDoom::IPPORT_USERRESERVED + 0x1d
+  PL_DRONE    = 0x80        # bit flag in doomdata->player
+  @@doomport : Int32 = 5029 # CDoom::IPPORT_USERRESERVED + 0x1d
 
+  @@altnet : Bool = false
   @@insocket : UDPSocket? = nil
   @@sendsocket : UDPSocket? = nil
   @@sendaddress = Array(Socket::IPAddress?).new(CDoom::MAXNETNODES, nil)
