@@ -3652,8 +3652,8 @@ module LibDoom
       side = -maxplmove
     end
 
-    cmd.value.forwardmove = cmd.value.forwardmove + forward
-    cmd.value.sidemove = cmd.value.sidemove + side
+    cmd.value.forwardmove = cmd.value.forwardmove &+ forward
+    cmd.value.sidemove = cmd.value.sidemove &+ side
 
     # special buttons
     if CDoom.sendpause != 0
