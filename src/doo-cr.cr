@@ -29,8 +29,8 @@ require "./adlmidi.cr"
 module LibDoom
   VERSION_STR = "1.2" # Used for displaying
   DEMOVERSION = 110
-  SAVEVERSION = 10
-  NETVERSION = 12
+  SAVEVERSION =  10
+  NETVERSION  =  12
 
   # The resolution of the player's viewport for hardware rendering
   # NOTE: the screen wipe is only designed for 320 x 240
@@ -43,7 +43,7 @@ module LibDoom
   MIDI_SAMPLE_RATE = 44100
   MIDI_TICK_TIME   = 1.0 / 140.0
   # TODO: make a setting
-  MIDI_BANK        = 16
+  MIDI_BANK = 16
 
   # -- Macros for quick key polling --
   macro poll_key(doomkey, raylibkey)
@@ -68,7 +68,8 @@ end
   LibDoom.doom_button_down(CDoom::DoomButton::{{doombutton}}) if is_down && !was_down
   LibDoom.doom_button_up(CDoom::DoomButton::{{doombutton}}) if !is_down && was_down
 end
-# -- Macros for quick key polling --
+
+  # -- Macros for quick key polling --
 
   unless ARGV.includes?("-nosound")
     # Create seperate thread so audio updates seperately from game code

@@ -192,24 +192,23 @@ module LibDoom
 
   CDoom.followplayer = 1
 
-
   @@death_kill_strings = [
     "You killed 2",
     "You got 2",
     "You showed 2",
-    "You fragged 2"
+    "You fragged 2",
   ]
   @@death_dead_strings = [
     "1 killed you",
     "You have been taken by 1",
     "You got smoked by 1",
-    "1 fragged you"
+    "1 fragged you",
   ]
   @@death_nut_strings = [
     "1 killed 2",
     "1 has claimed 2's soul",
     "2 just got pwned by 1",
-    "2 has been fragged by 1"
+    "2 has been fragged by 1",
   ]
 
   @@net_kill_strings = [
@@ -218,17 +217,16 @@ module LibDoom
     "2 hopes that was an accident",
   ]
   @@net_dead_strings = [
-  "You were killed by 1",
-  "I bet 1 did that on purpose",
-  "1 thought this was deathmatch"
+    "You were killed by 1",
+    "I bet 1 did that on purpose",
+    "1 thought this was deathmatch",
   ]
   @@net_nut_strings = [
     "1 killed 2",
     "1 showed 2 what for",
     "2 has been slain by 1",
-    "1 and 2 have a new rivalry"
+    "1 and 2 have a new rivalry",
   ]
-
 
   c_array(CDoom.cheat_amap_seq,
     0xb2, 0x26, 0x26, 0x2e, 0xff
@@ -460,10 +458,10 @@ module LibDoom
   CDoom.chat_macros[9] = CDoom::HUSTR_CHATMACRO9.to_unsafe
 
   c_array(CDoom.player_names,
-  CDoom::HUSTR_PLRGREEN.to_unsafe,
-  CDoom::HUSTR_PLRINDIGO.to_unsafe,
-  CDoom::HUSTR_PLRBROWN.to_unsafe,
-  CDoom::HUSTR_PLRRED.to_unsafe)
+    CDoom::HUSTR_PLRGREEN.to_unsafe,
+    CDoom::HUSTR_PLRINDIGO.to_unsafe,
+    CDoom::HUSTR_PLRBROWN.to_unsafe,
+    CDoom::HUSTR_PLRRED.to_unsafe)
 
   CDoom.french_shiftxform[0] = 0_u8
   CDoom.french_shiftxform[1] = 1
@@ -1033,7 +1031,7 @@ module LibDoom
   CDoom.queue_midi_head = 0
   CDoom.queue_midi_tail = 0
 
-  CDoom.mb_used = 6 * (sizeof(Void*) // 4)
+  CDoom.mb_used = 12
 
   @@sprnames = ["TROO".to_unsafe, "SHTG".to_unsafe, "PUNG".to_unsafe, "PISG".to_unsafe, "PISF".to_unsafe, "SHTF".to_unsafe, "SHT2".to_unsafe, "CHGG".to_unsafe, "CHGF".to_unsafe, "MISG".to_unsafe,
                 "MISF".to_unsafe, "SAWG".to_unsafe, "PLSG".to_unsafe, "PLSF".to_unsafe, "BFGG".to_unsafe, "BFGF".to_unsafe, "BLUD".to_unsafe, "PUFF".to_unsafe, "BAL1".to_unsafe, "BAL2".to_unsafe,

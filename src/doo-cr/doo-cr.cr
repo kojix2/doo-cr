@@ -234,22 +234,22 @@ module LibDoom
     # Software render
     viewport_ptr = @@software_screen.to_unsafe
     buf_ptr = @@raylibbuffer.to_unsafe.as(UInt32*)
-      palette_ptr = @@palette_rgba.to_unsafe
-      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
-        pix = viewport_ptr[p]
-        if pix == 255
-          buf_ptr[p] = 0_u32
-        else
-          buf_ptr[p] = palette_ptr[pix]
-        end
+    palette_ptr = @@palette_rgba.to_unsafe
+    (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
+      pix = viewport_ptr[p]
+      if pix == 255
+        buf_ptr[p] = 0_u32
+      else
+        buf_ptr[p] = palette_ptr[pix]
       end
-      Raylib.update_texture(vt.texture, @@raylibbuffer.to_unsafe)
+    end
+    Raylib.update_texture(vt.texture, @@raylibbuffer.to_unsafe)
 
     # Raylib.begin_texture_mode(vt) # TODO: Render GL player view
-      # Raylib.end_texture_mode
+    # Raylib.end_texture_mode
   end
 
-  def self.doom_draw()
+  def self.doom_draw
     if Thread.current != MAIN_THREAD
       raise "Error: doom_draw called off main thread: #{Thread.current} (expected #{MAIN_THREAD})"
       # Hopefully this fixes God's cursed bug
@@ -257,81 +257,80 @@ module LibDoom
 
     return unless Raylib.window_ready?
     # Pointers for speed. "Oh! But it's oop!". I don't see you having a source port of Doom.
-     screen_ptr = CDoom.screens[0]
-      buf_ptr = @@raylibbuffer.to_unsafe.as(UInt32*)
-      palette_ptr = @@palette_rgba.to_unsafe
-      p255 = @@palette_rgba[255]
+    screen_ptr = CDoom.screens[0]
+    buf_ptr = @@raylibbuffer.to_unsafe.as(UInt32*)
+    palette_ptr = @@palette_rgba.to_unsafe
+    p255 = @@palette_rgba[255]
 
     @@screen_texture.try do |st|
       @@viewport_target.try do |vt|
-      @@render_target.try do |rt|
-      next unless Raylib.texture_valid?(st)
-      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
-        pix = screen_ptr[p]
-        if !@@software_rendering && pix == 255
-          buf_ptr[p] = 0_u32
-        else
-          buf_ptr[p] = palette_ptr[pix]
-        end
-      end
+        @@render_target.try do |rt|
+          next unless Raylib.texture_valid?(st)
+          (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
+            pix = screen_ptr[p]
+            if !@@software_rendering && pix == 255
+              buf_ptr[p] = 0_u32
+            else
+              buf_ptr[p] = palette_ptr[pix]
+            end
+          end
 
-      Raylib.update_texture(st, @@raylibbuffer.to_unsafe)
+          Raylib.update_texture(st, @@raylibbuffer.to_unsafe)
 
-        scalew = Raylib.get_screen_width.to_f / @@sres_x.to_f
-      scaleh = Raylib.get_screen_height.to_f / @@sres_y.to_f
-      scale = scalew < scaleh ? scalew : scaleh
+          scalew = Raylib.get_screen_width.to_f / @@sres_x.to_f
+          scaleh = Raylib.get_screen_height.to_f / @@sres_y.to_f
+          scale = scalew < scaleh ? scalew : scaleh
 
-      unless @@software_rendering
-      update_viewport(vt)
+          unless @@software_rendering
+            update_viewport(vt)
 
-
-      Raylib.begin_texture_mode(rt)
+            Raylib.begin_texture_mode(rt)
             Raylib.clear_background(Raylib::Color.new(r: p255 & 0xff, g: (p255 >> 8) & 0xff, b: (p255 >> 16) & 0xff, a: 255))
 
-          Raylib.draw_texture_pro(vt.texture,
-            Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: vt.texture.width.to_f, height: -vt.texture.height.to_f),
-            Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32,
-              width: rt.texture.width.to_f, height: rt.texture.height.to_f),
+            Raylib.draw_texture_pro(vt.texture,
+              Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: vt.texture.width.to_f, height: -vt.texture.height.to_f),
+              Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32,
+                width: rt.texture.width.to_f, height: rt.texture.height.to_f),
+              Raylib::Vector2.new, 0, Raylib::WHITE)
+            Raylib.end_texture_mode
+          end
+
+          Raylib.begin_drawing
+          Raylib.clear_background(Raylib::BLACK)
+          unless @@software_rendering
+            Raylib.draw_texture_pro(rt.texture,
+              Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: rt.texture.width.to_f, height: rt.texture.height.to_f),
+              Raylib::Rectangle.new(x: (Raylib.get_screen_width - (rt.texture.width.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (rt.texture.height.to_f * scale)) * 0.5_f32,
+                width: rt.texture.width.to_f * scale, height: rt.texture.height.to_f * scale),
+              Raylib::Vector2.new, 0, Raylib::WHITE)
+          end
+
+          Raylib.draw_texture_pro(st,
+            Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
+            Raylib::Rectangle.new(x: (Raylib.get_screen_width - (rt.texture.width.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (rt.texture.height.to_f * scale)) * 0.5_f32,
+              width: rt.texture.width.to_f * scale, height: rt.texture.height.to_f * scale),
             Raylib::Vector2.new, 0, Raylib::WHITE)
-      Raylib.end_texture_mode
-      end
 
-      Raylib.begin_drawing
-      Raylib.clear_background(Raylib::BLACK)
-      unless @@software_rendering
-      Raylib.draw_texture_pro(rt.texture,
-        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: rt.texture.width.to_f, height: rt.texture.height.to_f),
-        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (rt.texture.width.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (rt.texture.height.to_f * scale)) * 0.5_f32,
-          width: rt.texture.width.to_f * scale, height: rt.texture.height.to_f * scale),
-        Raylib::Vector2.new, 0, Raylib::WHITE)
-      end
-
-      Raylib.draw_texture_pro(st,
-        Raylib::Rectangle.new(x: 0.0_f32, y: 0.0_f32, width: st.width.to_f, height: st.height.to_f),
-        Raylib::Rectangle.new(x: (Raylib.get_screen_width - (rt.texture.width.to_f * scale)) * 0.5_f32, y: (Raylib.get_screen_height - (rt.texture.height.to_f * scale)) * 0.5_f32,
-          width: rt.texture.width.to_f * scale, height: rt.texture.height.to_f * scale),
-        Raylib::Vector2.new, 0, Raylib::WHITE)
-
-      # Draw crosshair
-      if (CDoom.crosshair != 0 &&
-         CDoom.menuactive == 0 &&
-         CDoom.gamestate == CDoom::Gamestate::Level &&
-         CDoom.automapactive == 0)
-        y = CDoom::SCREENHEIGHT // 2
-        y += CDoom.setblocks == 11 ? 8 : -8
-        2.times do |i|
-          Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 - 2 - i, y, Raylib::RAYWHITE)
-          Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 + 2 + i, y, Raylib::RAYWHITE)
-        end
-        2.times do |i|
-          Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y - 2 - i), Raylib::RAYWHITE)
-          Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y + 2 + i), Raylib::RAYWHITE)
+          # Draw crosshair
+          if (CDoom.crosshair != 0 &&
+             CDoom.menuactive == 0 &&
+             CDoom.gamestate == CDoom::Gamestate::Level &&
+             CDoom.automapactive == 0)
+            y = CDoom::SCREENHEIGHT // 2
+            y += CDoom.setblocks == 11 ? 8 : -8
+            2.times do |i|
+              Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 - 2 - i, y, Raylib::RAYWHITE)
+              Raylib.draw_pixel(CDoom::SCREENWIDTH // 2 + 2 + i, y, Raylib::RAYWHITE)
+            end
+            2.times do |i|
+              Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y - 2 - i), Raylib::RAYWHITE)
+              Raylib.draw_pixel(CDoom::SCREENWIDTH // 2, (y + 2 + i), Raylib::RAYWHITE)
+            end
+          end
+          Raylib.end_drawing
         end
       end
-      Raylib.end_drawing
     end
-  end
-  end
   end
 
   def self.doom_tick_midi : UInt64
@@ -2021,6 +2020,13 @@ module LibDoom
       CDoom.autostart = 1
     end
 
+    # Set mbs of memory to allocate
+    ARGV.index("-mem").try do |p|
+      if p = ARGV[p + 1]?
+        CDoom.mb_used = p.to_u32
+      end
+    end
+
     # init subsystems
     puts "v_init: Allocate screens."
     CDoom.v_init
@@ -2028,13 +2034,13 @@ module LibDoom
     puts "m_load_defaults: Load system defaults."
     CDoom.m_load_defaults # load before initing other systems
 
-    puts "z_init: Init zone memory allocation daemon. "
+    print "z_init: Init zone memory - "
     CDoom.z_init
 
     puts "w_init: Init Wadfiles."
     CDoom.w_init_multiple_files(CDoom.wadfiles)
 
-    puts "        Init Mergefiles"
+    puts "        Init Mergefiles" if ARGV.includes?("-merge")
     w_merge_multiple_files(@@merge_files)
 
     confirm_version()
@@ -2064,7 +2070,6 @@ module LibDoom
       end
     end
 
-
     puts " DOO-CR V#{VERSION_STR} ".center(77, '=')
     puts " DEMO V#{DEMOVERSION} | SAVE V#{SAVEVERSION} | NET V#{NETVERSION} ".center(77, '=')
     puts @@title.center(77)
@@ -2074,13 +2079,12 @@ module LibDoom
     puts "Doo-cr is free software, and you are welcome to redistribute it".center(77)
     puts "".ljust(77, '=')
 
-
     Raylib.set_trace_log_level(Raylib::TraceLogLevel::Warning)
 
     puts "m_init: Init miscellaneous info."
     CDoom.m_init
 
-    print "r_init: Init DOOM refresh daemon"
+    print "r_init: Init DOOM refresh daemon."
     CDoom.r_init
 
     puts "\np_init: Init Playloop state."
@@ -2650,8 +2654,8 @@ module LibDoom
         CDoom.m_write_text(0, 0, "Press space to start. Escape to exit")
         CDoom.m_write_text(0, 9, "Listening for clients on port #{@@doomport}")
         CDoom.m_write_text(0, 18, "#{CDoom.doomcom.value.numnodes - 1} player#{
-          CDoom.doomcom.value.numnodes != 2 ? "s" : ""
-        } connected")
+  CDoom.doomcom.value.numnodes != 2 ? "s" : ""
+} connected")
         doom_draw
         if CDoom.doomcom.value.numnodes >= CDoom::MAXPLAYERS ||
            Raylib::KeyboardKey::Space.down?
@@ -4465,8 +4469,8 @@ module LibDoom
   def self.g_write_demo_ticcmd(cmd : CDoom::Ticcmd*)
     pstate = CDoom.players[CDoom.consoleplayer].playerstate
     CDoom.g_check_demo_status if CDoom.gamekeydown['q'.ord] != 0 # ||                                                         # press q to end demo recording
-                                # (@@prevstate == CDoom::Playerstate::PST_DEAD && pstate == CDoom::Playerstate::PST_LIVE) || # or if player is respawning
-                                # CDoom.gamestate != CDoom::Gamestate::Level                                                 # or if we are no longer on a level
+    # (@@prevstate == CDoom::Playerstate::PST_DEAD && pstate == CDoom::Playerstate::PST_LIVE) || # or if player is respawning
+    # CDoom.gamestate != CDoom::Gamestate::Level                                                 # or if we are no longer on a level
     @@prevstate = pstate
     CDoom.demo_p.value = cmd.value.forwardmove.to_u8!
     CDoom.demo_p += 1
@@ -5904,7 +5908,7 @@ module LibDoom
       i += 1
     end
 
-    puts "Pre-cached all sound data"
+    print "pre-cached all sound data - "
 
     # Now initialize mixbuffer with zero.
     CDoom::MIXBUFFERSIZE.times { |i| CDoom.mixbuffer[i] = 0 }
@@ -5917,14 +5921,14 @@ module LibDoom
     RAudio.play_audio_stream(@@audio_stream.not_nil!)
 
     # Finished initialization.
-    puts "i_init_sound: sound module ready"
+    puts "sound module ready"
   end
 
   #
   # MUSIC API.
   #
   def self.i_init_music
-    @@adl_player = ADLMIDI.adl_init(44100)
+    @@adl_player = ADLMIDI.adl_init(MIDI_SAMPLE_RATE)
     ADLMIDI.adl_setNumChips(@@adl_player.not_nil!, 4)
     ADLMIDI.adl_setBank(@@adl_player.not_nil!, MIDI_BANK)
 
@@ -5934,7 +5938,7 @@ module LibDoom
     @@music_stream = RAudio.load_audio_stream(MIDI_SAMPLE_RATE, 16, 2)
     RAudio.set_audio_stream_volume(@@music_stream.not_nil!, 1.0)
     RAudio.play_audio_stream(@@music_stream.not_nil!)
-    @@music_buffer = Pointer(Int16).malloc(2048)
+    @@music_buffer = Pointer(Int16).malloc(MIDI_BUFFER_SIZE)
     @@midi_tick_accumulator = 0.0
 
     @@last_time = Raylib.get_time
@@ -6188,6 +6192,7 @@ module LibDoom
   def self.i_quit
     @@closing = true
     CDoom.d_quit_net_game
+    CDoom.s_stop_music
     CDoom.i_shutdown_sound
     CDoom.i_shutdown_music
     RAudio.close_audio_device
@@ -6350,54 +6355,53 @@ module LibDoom
     doom_draw
   end
 
-
-def self.color_distance(r1 : Int32, g1 : Int32, b1 : Int32, r2 : Int32, g2 : Int32, b2 : Int32) : Int32
-  dr = r1 - r2
-  dg = g1 - g2
-  db = b1 - b2
-  (2 * dr * dr) + (4 * dg * dg) + (3 * db * db)
-end
-
-def self.nearest_palette_index(r : Int32, g : Int32, b : Int32) : UInt8
-  best_idx = 0
-  best_dist = Int32::MAX
-  256.times do |i|
-    pr = CDoom.screen_palette[i * 3].to_i32
-    pg = CDoom.screen_palette[i * 3 + 1].to_i32
-    pb = CDoom.screen_palette[i * 3 + 2].to_i32
-    d = color_distance(r, g, b, pr, pg, pb)
-    if d < best_dist
-      best_dist = d
-      best_idx = i
-    end
+  def self.color_distance(r1 : Int32, g1 : Int32, b1 : Int32, r2 : Int32, g2 : Int32, b2 : Int32) : Int32
+    dr = r1 - r2
+    dg = g1 - g2
+    db = b1 - b2
+    (2 * dr * dr) + (4 * dg * dg) + (3 * db * db)
   end
-  best_idx.to_u8
-end
+
+  def self.nearest_palette_index(r : Int32, g : Int32, b : Int32) : UInt8
+    best_idx = 0
+    best_dist = Int32::MAX
+    256.times do |i|
+      pr = CDoom.screen_palette[i * 3].to_i32
+      pg = CDoom.screen_palette[i * 3 + 1].to_i32
+      pb = CDoom.screen_palette[i * 3 + 2].to_i32
+      d = color_distance(r, g, b, pr, pg, pb)
+      if d < best_dist
+        best_dist = d
+        best_idx = i
+      end
+    end
+    best_idx.to_u8
+  end
 
   def self.i_read_screen(scr : CDoom::Byte*)
     if @@software_rendering
-    CDoom.doom_memcpy(scr, CDoom.screens[0], CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT)
+      CDoom.doom_memcpy(scr, CDoom.screens[0], CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT)
     else
-    @@viewport_target.try do |vt|
-      hud_ptr = CDoom.screens[0]
-      
-      vpimage = Raylib.load_image_from_texture(vt.texture)
-      
-      (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
-        pix = hud_ptr[p]
-        if pix == 255 # Get viewport color
-          x = p % CDoom::SCREENWIDTH
-          y = p // CDoom::SCREENWIDTH
-          color = Raylib.get_image_color(vpimage, x, y)
-          scr[p] = nearest_palette_index(color.r.to_i32, color.g.to_i32, color.b.to_i32)
-        else
-          scr[p] = pix
-        end
-      end
+      @@viewport_target.try do |vt|
+        hud_ptr = CDoom.screens[0]
 
-      Raylib.unload_image(vpimage)
+        vpimage = Raylib.load_image_from_texture(vt.texture)
+
+        (CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).times do |p|
+          pix = hud_ptr[p]
+          if pix == 255 # Get viewport color
+            x = p % CDoom::SCREENWIDTH
+            y = p // CDoom::SCREENWIDTH
+            color = Raylib.get_image_color(vpimage, x, y)
+            scr[p] = nearest_palette_index(color.r.to_i32, color.g.to_i32, color.b.to_i32)
+          else
+            scr[p] = pix
+          end
+        end
+
+        Raylib.unload_image(vpimage)
+      end
     end
-  end
   end
 
   def self.i_set_palette(palette : CDoom::Byte*)
@@ -6745,7 +6749,7 @@ end
   #
   def self.m_draw_readthis1
     CDoom.inhelpscreens = 1
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP2", CDoom::PU_CACHE).as(CDoom::Patch*))
+    CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP2", CDoom::PU_CACHE).as(CDoom::Patch*))
   end
 
   #
@@ -6753,12 +6757,12 @@ end
   #
   def self.m_draw_readthis2
     CDoom.inhelpscreens = 1
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP1", CDoom::PU_CACHE).as(CDoom::Patch*))
+    CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP1", CDoom::PU_CACHE).as(CDoom::Patch*))
   end
 
   def self.m_draw_commercial
     CDoom.inhelpscreens = 1
-      CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP", CDoom::PU_CACHE).as(CDoom::Patch*))
+    CDoom.v_draw_patch_direct(0, 0, 0, CDoom.w_cache_lump_name("HELP", CDoom::PU_CACHE).as(CDoom::Patch*))
   end
 
   #
@@ -10709,25 +10713,24 @@ end
       source.value.player.value.killcount = source.value.player.value.killcount + 1 if target.value.flags & CDoom::Mobjflag::MF_COUNTKILL.value != 0
 
       if !target.value.player.null?
-        srcplr = source.value.player. - CDoom.players.to_unsafe
+        srcplr = source.value.player.- CDoom.players.to_unsafe
         trgtplr = target.value.player - CDoom.players.to_unsafe
         source.value.player.value.frags[trgtplr] =
-          source.value.player.value.frags[trgtplr] + 1 
+          source.value.player.value.frags[trgtplr] + 1
 
-          strings = CDoom.deathmatch != 0 ? (
-            # Deathmatch strings
-            CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
-              CDoom.consoleplayer == trgtplr ? @@death_dead_strings : @@death_nut_strings
-            )
+        strings = CDoom.deathmatch != 0 ? ( # Deathmatch strings
+
+CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
+          CDoom.consoleplayer == trgtplr ? @@death_dead_strings : @@death_nut_strings
+        )
           ) : CDoom.consoleplayer == srcplr ? @@net_kill_strings : (
-              CDoom.consoleplayer == trgtplr ? @@net_dead_strings : @@net_nut_strings
-            )
+          CDoom.consoleplayer == trgtplr ? @@net_dead_strings : @@net_nut_strings
+        )
 
-
-          (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message =
-            strings.sample(Random.new(CDoom.m_random)).gsub(
-              '1', String.new(CDoom.player_names[srcplr])[...-2]).gsub(
-                '2', String.new(CDoom.player_names[trgtplr])[...-2])
+        (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message =
+          strings.sample(Random.new(CDoom.m_random)).gsub(
+            '1', String.new(CDoom.player_names[srcplr])[...-2]).gsub(
+            '2', String.new(CDoom.player_names[trgtplr])[...-2])
       end
     elsif CDoom.netgame == 0 && target.value.flags & CDoom::Mobjflag::MF_COUNTKILL.value != 0
       # count all monster deaths,
@@ -12688,7 +12691,7 @@ end
     if (mo.value.flags & CDoom::Mobjflag::MF_CORPSE.value != 0) &&
        (mo.value.momx > FRACUNIT.tdiv(4) ||
        mo.value.momx < -FRACUNIT.tdiv(4) ||
-       mo.value.momy > FRACUNIT.tdiv(4)||
+       mo.value.momy > FRACUNIT.tdiv(4) ||
        mo.value.momy < -FRACUNIT.tdiv(4)) &&
        (mo.value.floorz != mo.value.subsector.value.sector.value.floorheight)
       # do not stop sliding
@@ -16416,7 +16419,7 @@ end
     if CDoom.netgame == 0 &&
        CDoom.menuactive != 0 &&
        CDoom.demoplayback == 0 &&
-      CDoom.players[CDoom.consoleplayer].viewz != 1
+       CDoom.players[CDoom.consoleplayer].viewz != 1
       return
     end
     CDoom::MAXPLAYERS.times { |i| CDoom.p_player_think(CDoom.players.to_unsafe + i) if CDoom.playeringame[i] != 0 }
@@ -18419,7 +18422,7 @@ end
   end
 
   def self.r_init
-    print "\nr_init_data"
+    # print "\nr_init_data"
     CDoom.r_init_data
 
     # viewwidth / viewheight / detailLevel are set by the defaults
@@ -19952,8 +19955,6 @@ end
   #  allocates channel buffer, sets S_sfx lookup.
   #
   def self.s_init(sfx_volume : LibC::Int, music_volume : LibC::Int)
-    puts "s_init: Default sfx volume #{sfx_volume}"
-
     # Whatever these did with DMX, these are rather dummies now. [ds] or are they...
     CDoom.i_set_channels
 
@@ -21893,28 +21894,26 @@ end
         startlump += 1
       else
         # Lump exists
-        lump_p = CDoom.lumpinfo + lump_num 
+        lump_p = CDoom.lumpinfo + lump_num
       end
-        # Set the lump
-        if ismap
-          (CDoom::ML_BLOCKMAP + 1).times do |m|
-            lump_p.value.handle = !CDoom.reloadname.null? ? Pointer(Void).null : Box.box(file)
-            lump_p.value.position = fileinfo[mlump].filepos
-            lump_p.value.size = fileinfo[mlump].size
-            CDoom.doom_strncpy(lump_p.value.name, fileinfo[mlump].name, 8)
-            mlump += 1
-            lump_p += 1
-          end
-        else
+      # Set the lump
+      if ismap
+        (CDoom::ML_BLOCKMAP + 1).times do |m|
           lump_p.value.handle = !CDoom.reloadname.null? ? Pointer(Void).null : Box.box(file)
           lump_p.value.position = fileinfo[mlump].filepos
           lump_p.value.size = fileinfo[mlump].size
           CDoom.doom_strncpy(lump_p.value.name, fileinfo[mlump].name, 8)
-        mlump += 1
+          mlump += 1
+          lump_p += 1
         end
+      else
+        lump_p.value.handle = !CDoom.reloadname.null? ? Pointer(Void).null : Box.box(file)
+        lump_p.value.position = fileinfo[mlump].filepos
+        lump_p.value.size = fileinfo[mlump].size
+        CDoom.doom_strncpy(lump_p.value.name, fileinfo[mlump].name, 8)
+        mlump += 1
+      end
     end
-
-    
 
     file.close if !CDoom.reloadname.null?
 
@@ -21964,7 +21963,7 @@ end
 
   def self.w_merge_multiple_files(filenames : Array(String))
     # will be realloced as lumps are added
-    
+
     filenames.each { |fn| w_merge_file(fn) }
 
     CDoom.i_error("Error: w_merge_multiple_files: no files found") if CDoom.numlumps == 0
@@ -23262,6 +23261,7 @@ end
     block.value.user = Pointer(Void*).null
 
     block.value.size = CDoom.mainzone.value.size - sizeof(CDoom::Memzone)
+    puts "#{CDoom.mb_used}MBs of memory allocated."
   end
 
   def self.z_free(ptr : Void*)
