@@ -2164,7 +2164,7 @@ module LibDoom
       CDoom.g_load_game(file)
     end
 
-    if CDoom.gameaction != CDoom::Gameaction::Loadgame && !demo_deferred
+    if !@@altnet && CDoom.gameaction != CDoom::Gameaction::Loadgame && !demo_deferred
       if CDoom.autostart != 0 || CDoom.netgame != 0
         CDoom.g_init_new(CDoom.startskill, CDoom.startepisode, CDoom.startmap)
       else
