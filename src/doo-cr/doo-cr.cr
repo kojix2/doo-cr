@@ -1425,8 +1425,6 @@ module LibDoom
     end
   end
 
-  @@spawned = false
-
   def self.d_doom_loop
     until Raylib.close_window?
       # frame syncronous IO operations
@@ -1449,12 +1447,6 @@ module LibDoom
       CDoom.s_update_sounds(CDoom.players[CDoom.consoleplayer].mo) # move positional sounds
       # Update display, next frame, with current state.
       CDoom.d_display
-      if @@altnet && !@@spawned
-        @@spawned = true
-        CDoom.netbuffer.value.retransmitfrom = 0
-              CDoom.netbuffer.value.numtics = 0
-                  CDoom.h_send_packet(1, NCMD_PAUSE)
-      end
     end
 
     i_quit
@@ -2336,99 +2328,13 @@ module LibDoom
     return 1
   end
 
-  @@got_new_ips = false
-
   #
   # get_packets
   #
   def self.get_packets
     while CDoom.h_get_packet != 0
       next if CDoom.netbuffer.value.checksum & NCMD_SETUP != 0 # extra setup packet
-
-      if CDoom.netbuffer.value.checksum & NCMD_PAUSE &&
-         CDoom.netbuffer.value.retransmitfrom == 1 &&
-         CDoom.consoleplayer != 0
-        @@got_new_ips = 0
-        loop do
-          next if CDoom.h_get_packet == 0
-          if !@@got_new_ips && CDoom.netbuffer.value.checksum & NCMD_DISTRIBUTE != 0
-            puts "retrieving all clients info"
-            if CDoom.netbuffer.value.retransmitfrom != 19 ||
-               CDoom.netbuffer.value.starttic != 69
-              i_error("Error: get_packets: Host sent bad IP distribution!")
-            end
-
-            numips = CDoom.netbuffer.value.numtics
-            ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
-            # CDoom.doomcom.value.consoleplayer = CDoom.netbuffer.value.player
-            # CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
-
-            CDoom.doomcom.value.numnodes = 2
-            CDoom.doomcom.value.numplayers = 2
-
-            numips.times do |i|
-              # Load other client's IP addresses
-              CDoom.playeringame[CDoom.doomcom.value.numnodes] = 1
-              CDoom.nodeingame[CDoom.doomcom.value.numnodes] = 1
-              CDoom.resendto[CDoom.doomcom.value.numnodes] = CDoom.maketic - CDoom.doomcom.value.extratics
-              @@punch_countdown = 70
-              CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
-              CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
-              @@sendaddress[i + 1] = Socket::IPAddress.v4(
-                ipnums[0], ipnums[1], ipnums[2], ipnums[3],
-                port: ipnums[4].to_u16 + (ipnums[5].to_u16 << 8))
-              ipnums += 6
-            end
-            @@got_new_ips = true
-            CDoom.doomcom.value.numplayers.times do |i|
-              CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
-            end
-          end
-
-          break if CDoom.netbuffer.value.checksum & NCMD_PAUSE &&
-                   CDoom.netbuffer.value.retransmitfrom == 0
-        end
-      end
-
-      # Realtime connection
-      if CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0
-        if @@altnet && CDoom.consoleplayer == 0 && CDoom.doomcom.value.numplayers < CDoom::MAXPLAYERS &&
-           CDoom.doomcom.value.remotenode == CDoom.doomcom.value.numplayers
-          CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
-          CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
-          CDoom.playeringame[CDoom.doomcom.value.remotenode] = 1
-          CDoom.nodeingame[CDoom.doomcom.value.remotenode] = 1
-CDoom.nettics[CDoom.doomcom.value.remotenode] = CDoom.gametic
-          (CDoom.players.to_unsafe + CDoom.doomcom.value.remotenode).value.playerstate = CDoom::Playerstate::PST_REBORN
-          puts "connected client!"
-
-          send_alt_setup(CDoom.doomcom.value.remotenode)
-          CDoom.doomcom.value.numplayers.times do |i|
-            CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
-          end
-          CDoom.doomcom.value.numnodes.times do |node|
-            10.times do |i|
-              propogate_ips(node)
-            end
-          end
-
-          loop do
-            next if h_get_packet == 0
-            if CDoom.netbuffer.value.checksum & NCMD_PAUSE &&
-               CDoom.netbuffer.value.retransmitfrom == 0
-              CDoom.netbuffer.value.retransmitfrom = 0
-              CDoom.netbuffer.value.numtics = 0
-              CDoom.doomcom.value.numnodes.times do |node|
-                10.times do |i|
-                  CDoom.h_send_packet(node, NCMD_PAUSE)
-                end
-              end
-              break
-            end
-          end
-        end
-        next
-      end
+      # puts "get_packets: Got packet with checksum #{CDoom.netbuffer.value.checksum}"
 
       netconsole = CDoom.netbuffer.value.player & ~PL_DRONE
       netnode = CDoom.doomcom.value.remotenode
@@ -2443,7 +2349,6 @@ CDoom.nettics[CDoom.doomcom.value.remotenode] = CDoom.gametic
         next if CDoom.nodeingame[netnode] == 0
         CDoom.nodeingame[netnode] = 0
         CDoom.playeringame[netconsole] = 0
-        @@sendaddress[netnode] = nil
         CDoom.doom_strcpy(CDoom.exitmsg, "Player 1 left the game")
         CDoom.exitmsg[7] = CDoom.exitmsg[7] + netconsole
         (CDoom.players.to_unsafe + CDoom.consoleplayer).value.message = CDoom.exitmsg
@@ -2626,134 +2531,6 @@ CDoom.nettics[CDoom.doomcom.value.remotenode] = CDoom.gametic
     end
   end
 
-  def self.send_setup(node : Int32)
-    return if CDoom.consoleplayer != 0
-
-    CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
-    if CDoom.deathmatch != 0
-      CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
-    end
-    if CDoom.nomonsters != 0
-      CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
-    end
-    if CDoom.respawnparm != 0
-      CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
-    end
-    CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
-    CDoom.netbuffer.value.player = NETVERSION
-    CDoom.netbuffer.value.numtics = 1
-    packed = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
-    packed.value = CDoom.doomcom.value.ticdup.to_u8!
-    packed += 1
-    packed.value = CDoom.doomcom.value.extratics.to_u8! & MAX_EXTRATICS
-    packed.value = packed.value | (@@altnet.to_unsafe << 7)
-
-    CDoom.h_send_packet(node, NCMD_SETUP)
-  end
-
-  def self.send_alt_setup(node : Int32)
-    return if CDoom.consoleplayer != 0
-
-    CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
-    if CDoom.deathmatch != 0
-      CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
-    end
-    if CDoom.nomonsters != 0
-      CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
-    end
-    if CDoom.respawnparm != 0
-      CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
-    end
-    CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
-    CDoom.netbuffer.value.player = NETVERSION
-    CDoom.netbuffer.value.numtics = 1
-    packed = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
-    packed.value = CDoom.doomcom.value.ticdup.to_u8!
-    packed += 1
-    packed.value = CDoom.doomcom.value.extratics.to_u8! & MAX_EXTRATICS
-    packed.value = packed.value | (@@altnet.to_unsafe << 7)
-
-    10.times do |i| # Hope 10 times is enough
-      CDoom.h_send_packet(node, NCMD_SETUP)
-    end
-
-    CDoom.netbuffer.value.retransmitfrom = 1
-    CDoom.netbuffer.value.numtics = 0
-    CDoom.doomcom.value.numnodes.times do |node|
-      10.times do |i|
-        CDoom.h_send_packet(node, NCMD_PAUSE)
-      end
-    end
-
-    dest = @@sendaddress[CDoom.doomcom.value.remotenode]
-    return unless dest
-
-    tcp = TCPSocket.new(dest.address, dest.port)
-
-    tempfile = File.tempfile("netsave")
-    i_do_save_game(tempfile.path)
-
-    
-
-    data = Pointer(CDoom::AltNetData).malloc
-    databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
-    datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
-
-    data.value.gametic = CDoom.gametic
-    data.value.maketic = CDoom.maketic
-CDoom.resendto[CDoom.doomcom.value.remotenode] = CDoom.gametic
-    File.open(tempfile.path, "rb") do |file|
-      while (bytes_read = file.read(datasection)) > 0
-        payload = databuf[0, bytes_read + sizeof(UInt64)]
-        tcp.write_bytes(payload.size.to_u32, IO::ByteFormat::LittleEndian)
-        tcp.write(payload)
-      end
-    end
-
-    tcp.close
-    tempfile.delete
-  end
-
-  def self.propogate_ips(node : Int32)
-    return if CDoom.consoleplayer != 0
-
-    CDoom.netbuffer.value.retransmitfrom = 19
-    CDoom.netbuffer.value.starttic = 69
-
-    CDoom.netbuffer.value.player = node
-    CDoom.netbuffer.value.numtics = 0
-    ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
-
-    @@sendaddress.each do |add|
-      next if !add || add == @@sendaddress[node]
-      add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
-        ipnums.value = ipnum
-        ipnums += 1
-      end
-      ipnums.value = (add.port & 0xff).to_u8
-      ipnums += 1
-      ipnums.value = (add.port >> 8).to_u8
-      ipnums += 1
-      CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1 # A bit lazy, no?
-    end
-
-    50.times do
-      h_send_packet(node, NCMD_DISTRIBUTE)
-    end
-  end
-
-  def self.check_new_connection
-    return if CDoom.consoleplayer != 0
-
-    if CDoom.h_get_packet != 0 &&
-       CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
-       CDoom.doomcom.value.remotenode == CDoom.doomcom.value.numplayers
-      CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
-      CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
-      puts "connected client!"
-    end
-  end
-
   #
   # d_arbitrate_net_start
   #
@@ -2789,59 +2566,8 @@ CDoom.resendto[CDoom.doomcom.value.remotenode] = CDoom.gametic
           packed = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
           CDoom.doomcom.value.ticdup = packed.value
           packed += 1
-          CDoom.doomcom.value.extratics = packed.value & 0b01111111
-          @@altnet = packed.value & 0b10000000 != 0
-
+          CDoom.doomcom.value.extratics = packed.value
           packed += 1
-
-          # Altnet sends save
-          if @@altnet
-            @@pause_socket = true
-
-            dest = @@sendaddress[1].not_nil!
-            server = TCPServer.new("0.0.0.0", @@doomport) # bind to the port you're expecting the host to connect to
-            tcp = server.accept
-
-            data = Pointer(CDoom::AltNetData).malloc
-            databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
-            datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
-
-            tempfile = File.tempfile("netsave")
-
-            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
-            CDoom.m_write_text(0, 0, "Loading game")
-            File.open(tempfile.path, "wb") do |file|
-              loop do
-                doom_draw
-                check_abort
-
-                len = tcp.read_bytes(UInt32, IO::ByteFormat::LittleEndian)
-                next if len == 0
-
-                tcp.read_fully(databuf[0, len])
-                size = len - sizeof(Int32)*2
-
-                file.write(datasection[0, size])
-                break if datasection[size - 1] == 0x1d
-              end
-            end
-
-            #i_do_load_game()
-            g_load_game(tempfile.path.to_unsafe)
-            CDoom.gametic = data.value.gametic
-CDoom.maketic = data.value.maketic
-
-CDoom.gametime = CDoom.gametic // CDoom.doomcom.value.ticdup
-@@oldentertics = CDoom.gametime
-
-CDoom.playeringame[CDoom.consoleplayer] = 1
-CDoom.players[CDoom.consoleplayer].playerstate = CDoom::Playerstate::PST_REBORN
-CDoom.plyr = CDoom.players.to_unsafe + CDoom.consoleplayer
-
-            @@pause_socket = false
-            tcp.close
-            server.close
-          end
 
           puts "connected! waiting for host to start"
           loop do
@@ -2867,7 +2593,6 @@ CDoom.plyr = CDoom.players.to_unsafe + CDoom.consoleplayer
               ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
               CDoom.doomcom.value.consoleplayer = CDoom.netbuffer.value.player
               CDoom.consoleplayer = CDoom.doomcom.value.consoleplayer
-              CDoom.displayplayer = CDoom.consoleplayer if @@altnet
 
               numips.times do |i|
                 # Load other client's IP addresses
@@ -2878,13 +2603,6 @@ CDoom.plyr = CDoom.players.to_unsafe + CDoom.consoleplayer
                   port: ipnums[4].to_u16 + (ipnums[5].to_u16 << 8))
                 ipnums += 6
               end
-
-              if @@altnet
-              CDoom.doomcom.value.numplayers.times do |i|
-  CDoom.resendto[i] = CDoom.maketic - CDoom.doomcom.value.extratics
-  CDoom.nettics[i] = CDoom.gametic
-end
-            end
               return
             end
           end
@@ -2892,44 +2610,86 @@ end
       end
     else
       # key player, send the setup info
-      if @@altnet
-        return # Alt net doesn't wait for a setup
-      else
-        puts "waiting for client info..."
-        loop do
-          CDoom.check_abort
+      puts "waiting for client info..."
+      loop do
+        CDoom.check_abort
 
-          CDoom.doomcom.value.numnodes.times do |i|
-            # Send out setup until everyones loaded
-            send_setup(i)
+        CDoom.doomcom.value.numnodes.times do |i|
+          # Send out setup until everyones loaded
+          CDoom.netbuffer.value.retransmitfrom = CDoom.startskill
+          if CDoom.deathmatch != 0
+            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | (CDoom.deathmatch << 6)
           end
-
-          CDoom::MAXPLAYERS.times do |i|
-            check_new_connection
+          if CDoom.nomonsters != 0
+            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x20
           end
+          if CDoom.respawnparm != 0
+            CDoom.netbuffer.value.retransmitfrom = CDoom.netbuffer.value.retransmitfrom | 0x10
+          end
+          CDoom.netbuffer.value.starttic = CDoom.startepisode * 64 + CDoom.startmap
+          CDoom.netbuffer.value.player = NETVERSION
+          CDoom.netbuffer.value.numtics = 1
+          packed = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+          packed.value = CDoom.doomcom.value.ticdup.to_u8!
+          packed += 1
+          packed.value = CDoom.doomcom.value.extratics.to_u8!
+          packed += 1
+          CDoom.h_send_packet(i, NCMD_SETUP)
+        end
 
-          # NEED BREAK
+        CDoom::MAXPLAYERS.times do |i|
+          if CDoom.h_get_packet != 0 &&
+             CDoom.netbuffer.value.checksum & NCMD_CONNECT != 0 &&
+             CDoom.doomcom.value.remotenode == CDoom.doomcom.value.numplayers
+            CDoom.doomcom.value.numnodes = CDoom.doomcom.value.numnodes + 1
+            CDoom.doomcom.value.numplayers = CDoom.doomcom.value.numplayers + 1
+            puts "connected client!"
+          end
+        end
 
-          # Space to start game and end waiting for connections
-          CDoom.screens[0].clear(CDoom::SCREENWIDTH * (18 + 8))
-          CDoom.m_write_text(0, 0, "Press space to start. Escape to exit")
-          CDoom.m_write_text(0, 9, "Listening for clients on port #{@@doomport}")
-          CDoom.m_write_text(0, 18, "#{CDoom.doomcom.value.numnodes - 1} player#{
+        # NEED BREAK
+
+        # Space to start game and end waiting for connections
+        CDoom.screens[0].clear(CDoom::SCREENWIDTH * (18 + 8))
+        CDoom.m_write_text(0, 0, "Press space to start. Escape to exit")
+        CDoom.m_write_text(0, 9, "Listening for clients on port #{@@doomport}")
+        CDoom.m_write_text(0, 18, "#{CDoom.doomcom.value.numnodes - 1} player#{
   CDoom.doomcom.value.numnodes != 2 ? "s" : ""
 } connected")
-          doom_draw
-          if CDoom.doomcom.value.numnodes >= CDoom::MAXPLAYERS ||
-             Raylib::KeyboardKey::Space.down?
-            puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
-            # Distribute ips
+        doom_draw
+        if CDoom.doomcom.value.numnodes >= CDoom::MAXPLAYERS ||
+           Raylib::KeyboardKey::Space.down?
+          puts "distributing client info for #{CDoom.doomcom.value.numnodes - 1} clients"
+          # Distribute ips
+          CDoom.netbuffer.value.retransmitfrom = 19
+          CDoom.netbuffer.value.starttic = 69
 
-            # Build ips into ticcmds
-            # Send out
-            CDoom.doomcom.value.numnodes.times do |i|
-              propogate_ips(i)
+          # Build ips into ticcmds
+
+          # Send out
+          CDoom.doomcom.value.numnodes.times do |i|
+            CDoom.netbuffer.value.player = i
+            CDoom.netbuffer.value.numtics = 0
+            ipnums = CDoom.netbuffer.value.cmds.to_unsafe.as(UInt8*)
+
+            @@sendaddress.each do |add|
+              next if !add || add == @@sendaddress[i]
+              add.address.split('.').map(&.to_i.to_u8!).each do |ipnum|
+                ipnums.value = ipnum
+                ipnums += 1
+              end
+              ipnums.value = (add.port & 0xff).to_u8
+              ipnums += 1
+              ipnums.value = (add.port >> 8).to_u8
+              ipnums += 1
+              CDoom.netbuffer.value.numtics = CDoom.netbuffer.value.numtics + 1 # A bit lazy, no?
             end
-            return
+
+            50.times do
+              h_send_packet(i, NCMD_DISTRIBUTE)
+            end
           end
+          return
         end
       end
     end
@@ -4299,8 +4059,7 @@ end
       # respawn at the start
 
       # first dissasociate the corpse
-      mo = CDoom.players[playernum].mo
-      mo.value.player = Pointer(CDoom::Player).null unless mo.null?
+      CDoom.players[playernum].mo.value.player = Pointer(CDoom::Player).null
 
       # spawn at random spot if in death match
       if CDoom.deathmatch != 0
@@ -4480,8 +4239,12 @@ end
     CDoom.gameaction = CDoom::Gameaction::Loadgame
   end
 
-  def self.i_do_load_game(path : String | Path)
-    File.open(path, "rb") do |file|
+  @@saveleveltime = 0
+
+  def self.g_do_load_game
+    CDoom.gameaction = CDoom::Gameaction::Nothing
+
+    File.open(String.new(CDoom.savename.to_unsafe), "rb") do |file|
       file.pos += CDoom::SAVESTRINGSIZE
       # skip the description field
       vcheck = "version #{SAVEVERSION}".ljust(CDoom::VERSIONSIZE, '\0')
@@ -4511,12 +4274,6 @@ end
 
       CDoom.i_error("Error: Bad savegame") if file.read_bytes(UInt8) != 0x1d
     end
-  end
-
-  def self.g_do_load_game
-    CDoom.gameaction = CDoom::Gameaction::Nothing
-
-    i_do_load_game(String.new(CDoom.savename.to_unsafe))
 
     CDoom.r_execute_set_view_size if CDoom.setsizeneeded != 0
 
@@ -4535,10 +4292,10 @@ end
     CDoom.sendsave = 1
   end
 
-  def self.i_do_save_game(path : String | Path)
+  def self.g_do_save_game
+    name = "#{CDoom::SAVEGAMENAME}#{CDoom.savegameslot}.dsg"
     description = CDoom.savedescription.to_slice
-
-    File.open(path, "wb") do |file|
+    File.open(name, "wb") do |file|
       file.write_string(description[0...CDoom::SAVESTRINGSIZE])
 
       name2 = "version #{SAVEVERSION}".ljust(CDoom::VERSIONSIZE, '\0')
@@ -4562,11 +4319,6 @@ end
 
       file.write_byte(0x1d) # consistancy marker
     end
-  end
-
-  def self.g_do_save_game
-    name = "#{CDoom::SAVEGAMENAME}#{CDoom.savegameslot}.dsg"
-    i_do_save_game(name)
     CDoom.gameaction = CDoom::Gameaction::Nothing
     CDoom.savedescription[0] = 0
 
@@ -5566,7 +5318,8 @@ end
     ARGV.index("-extratic").try do |p|
       if p = ARGV[p + 1]?
         CDoom.doomcom.value.extratics = p.to_i.to_u8!
-        CDoom.doomcom.value.extratics = MAX_EXTRATICS if CDoom.doomcom.value.extratics > MAX_EXTRATICS
+        CDoom.doomcom.value.extratics = 4 if 
+        CDoom.doomcom.value.extratics > 4
       else
         # Set to one if no number is provided
         CDoom.doomcom.value.extratics = 1
@@ -5582,7 +5335,7 @@ end
     # parse network game options,
     #  -net <host>
     i = CDoom.m_check_parm("-net")
-    if i == 0 && !ARGV.includes?("-altnet")
+    if i == 0
       # single player game
       CDoom.netgame = 0
       CDoom.doomcom.value.id = CDoom::DOOMCOM_ID
@@ -5594,10 +5347,6 @@ end
       return
     end
 
-    if ARGV.includes?("-altnet")
-      @@altnet = true
-    end
-
     @@netsend = ->packet_send
     @@netget = ->packet_get
     CDoom.netgame = 1
@@ -5605,7 +5354,7 @@ end
     CDoom.doomcom.value.numnodes = 1 # this node for sure
 
     # Host ip is given, else is host
-    if !@@altnet && (i += 1) < CDoom.myargc && CDoom.myargv[i][0] != '-'.ord
+    if (i += 1) < CDoom.myargc && CDoom.myargv[i][0] != '-'.ord
       arg = String.new(CDoom.myargv[i])
 
       @@sendaddress[1] =
