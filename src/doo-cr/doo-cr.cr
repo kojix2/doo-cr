@@ -2597,31 +2597,30 @@ module LibDoom
       CDoom.h_send_packet(node, NCMD_SETUP)
     end
 
-    sock = @@insocket
-    return unless sock
     dest = @@sendaddress[CDoom.doomcom.value.remotenode]
-    return unless dest
+return unless dest
 
-    tempfile = File.tempfile("netsave")
-    i_do_save_game(tempfile.path)
+tcp = TCPSocket.new(dest.address, dest.port)
 
-    data = Pointer(CDoom::AltNetData).malloc
-    databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
-    datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
+tempfile = File.tempfile("netsave")
+i_do_save_game(tempfile.path)
 
-    data.value.file_section = 0
-    File.open(tempfile.path, "rb") do |file|
-      while (bytes_read = file.read(datasection)) > 0
-        # Send only the slice portion that was actually read
-        50.times do |i|
-          sock.send(databuf[0, bytes_read + sizeof(UInt64)], to: dest)
-        end
-          puts datasection[bytes_read - 1]
-        data.value.file_section = data.value.file_section + 1
-      end
-    end
+data = Pointer(CDoom::AltNetData).malloc
+databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
+datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
 
-    tempfile.delete
+data.value.file_section = 0
+File.open(tempfile.path, "rb") do |file|
+  while (bytes_read = file.read(datasection)) > 0
+    payload = databuf[0, bytes_read + sizeof(UInt64)]
+    tcp.write_bytes(payload.size.to_u32, IO::ByteFormat::LittleEndian)
+    tcp.write(payload)
+    data.value.file_section = data.value.file_section + 1
+  end
+end
+
+tcp.close
+tempfile.delete
   end
 
   def self.propogate_ips(node : Int32)
@@ -2706,40 +2705,42 @@ module LibDoom
 
           # Altnet sends save
           if @@altnet
-            @@pause_socket = true
-            sock = @@insocket.not_nil!
-            data = Pointer(CDoom::AltNetData).malloc
-            databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
-            datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
+  @@pause_socket = true
 
-            current_file_section = 0
+  dest = @@sendaddress[1].not_nil!
+  server = TCPServer.new(dest.address, dest.port) # bind to the port you're expecting the host to connect to
+  tcp = server.accept
 
-            tempfile = File.tempfile("netsave")
+  data = Pointer(CDoom::AltNetData).malloc
+  databuf = Bytes.new(data.as(UInt8*), sizeof(CDoom::AltNetData))
+  datasection = Bytes.new(data.value.section.to_unsafe, sizeof(typeof(data.value.section)))
 
-            CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
-            CDoom.m_write_text(0, 0, "Loading game")
-            File.open(tempfile.path, "wb") do |file|
-              loop do
-                doom_draw
-                check_abort
+  tempfile = File.tempfile("netsave")
 
-                c, fromaddress = sock.receive(databuf)
+  CDoom.screens[0].clear(CDoom::SCREENWIDTH * 17)
+  CDoom.m_write_text(0, 0, "Loading game")
+  File.open(tempfile.path, "wb") do |file|
+    loop do
+      doom_draw
+      check_abort
 
-                # From the host
-                if fromaddress.address == @@sendaddress[1].not_nil!.address
-                  next if c == 0 || data.value.file_section < current_file_section
-                  size = c - sizeof(UInt64)
-                  file.write(datasection[0, size])
-                  break if datasection[size - 1] == 0x1d
-                  puts datasection[size - 1]
-                end
-              end
-            end
-            i_do_load_game(tempfile.path)
-            @@pause_socket = false
-            tempfile.delete
-            
-          end
+      len = tcp.read_bytes(UInt32, IO::ByteFormat::LittleEndian)
+      next if len == 0
+
+      tcp.read_fully(databuf[0, len])
+      size = len - sizeof(UInt64)
+
+      file.write(datasection[0, size])
+      break if datasection[size - 1] == 0x1d
+    end
+  end
+
+  i_do_load_game(tempfile.path)
+  @@pause_socket = false
+  tcp.close
+  server.close
+  tempfile.delete
+end
 
           puts "connected! waiting for host to start"
           loop do
