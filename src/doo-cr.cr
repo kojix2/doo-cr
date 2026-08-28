@@ -92,5 +92,7 @@ end
   end
 end
 
+MAIN_THREAD = Thread.current
+
 # Make it happen!
 LibDoom.doom_init(ARGC_UNSAFE, ARGV_UNSAFE, 0)

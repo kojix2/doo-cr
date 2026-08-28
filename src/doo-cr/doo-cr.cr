@@ -231,6 +231,11 @@ module LibDoom
   @@palette_rgba = Array(UInt32).new(256, 0_u32)
 
   def self.doom_draw
+    if Thread.current != MAIN_THREAD
+      # raise "#{name} called off main thread: #{Thread.current} (expected #{MAIN_THREAD})"
+      return # Hopefully this fixes God's cursed bug
+    end
+
     return unless Raylib.window_ready?
     # Pointers for speed. "Oh! But it's oop!". I don't see you having a source port of Doom.
      screen_ptr = CDoom.screens[0]
