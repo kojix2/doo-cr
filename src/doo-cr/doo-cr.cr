@@ -2460,9 +2460,11 @@ module LibDoom
       newtics.times do |i|
         remaining = newtics - i
         mouse_step = Raylib::Vector2.new(
-          x: @@mouse_queued.x // 2,
-          y: @@mouse_queued.y // 2)
-        @@mouse_queued = mouse_step
+          x: @@mouse_queued.x // remaining,
+          y: @@mouse_queued.y // remaining)
+        @@mouse_queued = Raylib::Vector2.new(
+          x: @@mouse_queued.x - mouse_step.x,
+          y: @@mouse_queued.y - mouse_step.y)
 
         i_start_tic(mouse_step)
         CDoom.d_process_events
@@ -6252,7 +6254,11 @@ module LibDoom
   @@mouse_queued = Raylib::Vector2.new
 
   def self.i_start_frame
-    @@mouse_queued = Raylib.get_mouse_delta * 2
+    delta = Raylib.get_mouse_delta * 2 # Rough sensitivity increase
+    @@mouse_queued = Raylib::Vector2.new(
+      x: @@mouse_queued.x + delta.x,
+      y: @@mouse_queued.y + delta.y
+    )
   end
 
   def self.i_start_tic(in_delta : Raylib::Vector2? = nil)
