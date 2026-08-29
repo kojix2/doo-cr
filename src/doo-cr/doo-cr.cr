@@ -2028,7 +2028,7 @@ module LibDoom
     puts "Doo-cr is free software, and you are welcome to redistribute it".center(77)
     puts "".ljust(77, '=')
 
-    Raylib.set_trace_log_level(Raylib::TraceLogLevel::Warning)
+    Raylib.set_trace_log_level(Raylib::TraceLogLevel::Error)
 
     puts "m_init: Init miscellaneous info."
     CDoom.m_init
