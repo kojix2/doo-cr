@@ -1434,7 +1434,7 @@ module LibDoom
 
       # process one or more tics
       if CDoom.singletics != 0
-        CDoom.i_start_tic
+        i_start_tic
         CDoom.d_process_events
         CDoom.g_build_ticcmd((CDoom.netcmds.to_unsafe + CDoom.consoleplayer).value.to_unsafe + CDoom.maketic % CDoom::BACKUPTICS)
         CDoom.d_do_advance_demo if CDoom.advancedemo != 0
@@ -2458,7 +2458,13 @@ module LibDoom
       # build new ticcmds for console player
       gameticdiv = CDoom.gametic // CDoom.ticdup
       newtics.times do |i|
-        CDoom.i_start_tic
+        remaining = newtics - i
+        mouse_step = Raylib::Vector2.new(
+          x: @@mouse_queued.x // 2,
+          y: @@mouse_queued.y // 2)
+        @@mouse_queued = mouse_step
+
+        i_start_tic(mouse_step)
         CDoom.d_process_events
         break if CDoom.maketic - gameticdiv >= CDoom::BACKUPTICS // 2 - 1 # can't hold any more
 
@@ -2506,10 +2512,10 @@ module LibDoom
   def self.check_abort
     stoptic = CDoom.i_get_time + 2
     while CDoom.i_get_time < stoptic
-      CDoom.i_start_tic
+      i_start_tic
     end
 
-    CDoom.i_start_tic
+    i_start_tic
     while CDoom.eventtail != CDoom.eventhead
       ev = CDoom.events.to_unsafe + CDoom.eventtail
       if ev.value.type == CDoom::Evtype::Keydown && ev.value.data1 == CDoom::KEY_ESCAPE
@@ -6243,13 +6249,18 @@ module LibDoom
     Raylib.close_window if Raylib.window_ready?
   end
 
+  @@mouse_queued = Raylib::Vector2.new
+
   def self.i_start_frame
-    @@mousedelta = Raylib.get_mouse_delta * 2
+    @@mouse_queued = Raylib.get_mouse_delta * 2
   end
 
-  def self.i_start_tic
-    LibDoom.doom_mouse_move(@@mousedelta.x.to_i32, @@mousedelta.y.to_i32)
-    @@mousedelta = Raylib::Vector2.new
+  def self.i_start_tic(in_delta : Raylib::Vector2? = nil)
+    mousedelta = in_delta || @@mouse_queued
+    LibDoom.doom_mouse_move(mousedelta.x.to_i32!, mousedelta.y.to_i32)
+    if in_delta.nil?
+      @@mouse_queued = Raylib::Vector2.new
+    end
 
     poll_key(TAB, Tab)
     poll_key(ENTER, Enter)

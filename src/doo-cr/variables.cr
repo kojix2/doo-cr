@@ -48,8 +48,6 @@ module LibDoom
 
   class_getter keystates = Array(Bool).new(CDoom::NUMKEYS, false)
 
-  @@mousedelta = Raylib::Vector2.new
-
   @@st_notify : CDoom::Event = CDoom::Event.new
   @@lastlevel = -1
   @@lastepisode = -1
