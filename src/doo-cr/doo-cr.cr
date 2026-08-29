@@ -3739,6 +3739,9 @@ module LibDoom
     CDoom.doom_memset(CDoom.joybuttons, 0, sizeof(typeof(CDoom.joybuttons.value)) * 3)
   end
 
+  @@mouse_scale_remx = 0
+@@mouse_scale_remy = 0
+
   def self.g_responder(ev : CDoom::Event*) : CDoom::DoomBool
     # allow spy mode changes even during the demo
     if CDoom.gamestate == CDoom::Gamestate::Level && ev.value.type == CDoom::Evtype::Keydown &&
@@ -3796,8 +3799,12 @@ module LibDoom
       CDoom.mousebuttons[0] = ev.value.data1 & 1
       CDoom.mousebuttons[1] = ev.value.data1 & 2
       CDoom.mousebuttons[2] = ev.value.data1 & 4
-      @@mousex = ev.value.data2 * (CDoom.mouse_sensitivity + 5) // 10
-      @@mousey = ev.value.data3 * (CDoom.mouse_sensitivity + 5) // 10
+      scaled_x = ev.value.data2 * (CDoom.mouse_sensitivity + 5) + @@mouse_scale_remx
+  scaled_y = ev.value.data3 * (CDoom.mouse_sensitivity + 5) + @@mouse_scale_remy
+  @@mousex = scaled_x // 10
+  @@mousey = scaled_y // 10
+  @@mouse_scale_remx = scaled_x % 10
+  @@mouse_scale_remy = scaled_y % 10  
       return 1 # eat events
     when CDoom::Evtype::Joystick
       CDoom.joybuttons[0] = ev.value.data1 & 1
