@@ -27,10 +27,10 @@ require "raylib-cr/audio.cr"
 require "./adlmidi.cr"
 
 module LibDoom
-  VERSION_STR = "1.2" # Used for displaying
+  VERSION_STR = "1.3" # Used for displaying
   DEMOVERSION = 110
   SAVEVERSION =  10
-  NETVERSION  =  12
+  NETVERSION  =  13
 
   # The resolution of the player's viewport for hardware rendering
   # NOTE: the screen wipe is only designed for 320 x 240
@@ -42,8 +42,6 @@ module LibDoom
   MIDI_BUFFER_SIZE =  1024
   MIDI_SAMPLE_RATE = 44100
   MIDI_TICK_TIME   = 1.0 / 140.0
-  # TODO: make a setting
-  MIDI_BANK = 16
 
   # -- Macros for quick key polling --
   macro poll_key(doomkey, raylibkey)

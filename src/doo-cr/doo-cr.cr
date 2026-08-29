@@ -27,7 +27,7 @@ module LibDoom
   NULL_PROC   = Proc(Nil).new(Pointer(Void).null, Pointer(Void).null)
   NULL_PROCP1 = Proc(Int32, Nil).new(Pointer(Void).null, Pointer(Void).null)
 
-  def self.doom_open_impl(filename : UInt8*, mode : UInt8*) : Void*
+  def self.doom_open(filename : UInt8*, mode : UInt8*) : Void*
     begin
       file = File.new(String.new(filename), String.new(mode))
       return Box.box(file)
@@ -36,22 +36,22 @@ module LibDoom
     return Pointer(Void).null
   end
 
-  def self.doom_close_impl(handle : Void*)
+  def self.doom_close(handle : Void*)
     Box(File).unbox(handle).close
   end
 
-  def self.doom_read_impl(handle : Void*, buf : Void*, count : Int32) : Int32
+  def self.doom_read(handle : Void*, buf : Void*, count : Int32) : Int32
     slice = Slice.new(buf.as(UInt8*), count)
     return Box(File).unbox(handle).read(slice)
   end
 
-  def self.doom_write_impl(handle : Void*, buf : Void*, count : Int32) : Int32
+  def self.doom_write(handle : Void*, buf : Void*, count : Int32) : Int32
     slice = Slice.new(buf.as(UInt8*), count)
     Box(File).unbox(handle).write(slice)
     return count
   end
 
-  def self.doom_seek_impl(handle : Void*, offset : Int32, origin : CDoom::DoomSeek) : Int32
+  def self.doom_seek(handle : Void*, offset : Int32, origin : CDoom::DoomSeek) : Int32
     begin
       Box(File).unbox(handle).seek(offset, IO::Seek.from_value(origin.value))
     rescue
@@ -60,28 +60,13 @@ module LibDoom
     return 0
   end
 
-  def self.doom_tell_impl(handle : Void*) : Int32
+  def self.doom_tell(handle : Void*) : Int32
     return Box(File).unbox(handle).pos.to_i32
   end
 
-  def self.doom_eof_impl(handle : Void*) : Int32
+  def self.doom_eof(handle : Void*) : Int32
     file = Box(File).unbox(handle)
     return file.pos >= file.size ? 1 : 0
-  end
-
-  def self.doom_gettime_impl(sec : Int32*, usec : Int32*)
-    now = Time.local
-    sec.value = now.to_unix.to_i32
-    usec.value = (now.nanosecond // 1_000).to_i32
-  end
-
-  def self.doom_exit_impl(code : Int32)
-    exit(code)
-  end
-
-  def self.doom_getenv_impl(var : UInt8*) : UInt8*
-    ENV[String.new(var)]?.try { |env| return env.to_unsafe }
-    return Pointer(UInt8).null
   end
 
   def self.doom_memset(ptr : Void*, value : Int32, num : Int32)
@@ -173,49 +158,10 @@ module LibDoom
   end
 
   def self.doom_fprint(handle : Void*, str : UInt8*) : Int32
-    return CDoom.doom_write.call(handle, str.as(Void*), doom_strlen(str))
-  end
-
-  def self.doom_set_file_io(open_fn : CDoom::DoomOpenFn,
-                            close_fn : CDoom::DoomCloseFn,
-                            read_fn : CDoom::DoomReadFn,
-                            write_fn : CDoom::DoomWriteFn,
-                            seek_fn : CDoom::DoomSeekFn,
-                            tell_fn : CDoom::DoomTellFn,
-                            eof_fn : CDoom::DoomEofFn)
-    CDoom.doom_open = open_fn
-    CDoom.doom_close = close_fn
-    CDoom.doom_read = read_fn
-    CDoom.doom_write = write_fn
-    CDoom.doom_seek = seek_fn
-    CDoom.doom_tell = tell_fn
-    CDoom.doom_eof = eof_fn
-  end
-
-  def self.doom_set_gettime(gettime_fn : CDoom::DoomGettimeFn)
-    CDoom.doom_gettime = gettime_fn
-  end
-
-  def self.doom_set_exit(exit_fn : CDoom::DoomExitFn)
-    CDoom.doom_exit = exit_fn
-  end
-
-  def self.doom_set_getenv(getenv_fn : CDoom::DoomGetenvFn)
-    CDoom.doom_getenv = getenv_fn
+    return doom_write(handle, str.as(Void*), doom_strlen(str))
   end
 
   def self.doom_init(argc : Int32, argv : UInt8**, flags : Int32)
-    CDoom.doom_open = ->doom_open_impl(UInt8*, UInt8*) if CDoom.doom_open.pointer.null?
-    CDoom.doom_close = ->doom_close_impl(Void*) if CDoom.doom_close.pointer.null?
-    CDoom.doom_read = ->doom_read_impl(Void*, Void*, Int32) if CDoom.doom_read.pointer.null?
-    CDoom.doom_write = ->doom_write_impl(Void*, Void*, Int32) if CDoom.doom_write.pointer.null?
-    CDoom.doom_seek = ->doom_seek_impl(Void*, Int32, CDoom::DoomSeek) if CDoom.doom_seek.pointer.null?
-    CDoom.doom_tell = ->doom_tell_impl(Void*) if CDoom.doom_tell.pointer.null?
-    CDoom.doom_eof = ->doom_eof_impl(Void*) if CDoom.doom_eof.pointer.null?
-    CDoom.doom_gettime = ->doom_gettime_impl(Int32*, Int32*) if CDoom.doom_gettime.pointer.null?
-    CDoom.doom_exit = ->doom_exit_impl(Int32) if CDoom.doom_exit.pointer.null?
-    CDoom.doom_getenv = ->doom_getenv_impl(UInt8*) if CDoom.doom_getenv.pointer.null?
-
     CDoom.screen_buffer = GC.malloc(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT).as(UInt8*)
     CDoom.final_screen_buffer = GC.malloc(CDoom::SCREENWIDTH * CDoom::SCREENHEIGHT * 4).as(UInt8*)
     CDoom.last_update_time = CDoom.i_get_time
@@ -245,8 +191,9 @@ module LibDoom
     end
     Raylib.update_texture(vt.texture, @@raylibbuffer.to_unsafe)
 
-    # Raylib.begin_texture_mode(vt) # TODO: Render GL player view
-    # Raylib.end_texture_mode
+    Raylib.begin_texture_mode(vt) # TODO: Render GL player view
+    #  Raylib.draw_text("Hello World!", 100, 100, 4, Raylib::BLUE)
+    Raylib.end_texture_mode
   end
 
   def self.doom_draw
@@ -1359,6 +1306,7 @@ module LibDoom
 
     # see if the border needs to be updated to the screen
     if CDoom.gamestate == CDoom::Gamestate::Level && CDoom.automapactive == 0 && CDoom.scaledviewwidth != 320
+      CDoom.r_draw_view_border unless @@software_rendering
       @@borderdrawcount = 3 if CDoom.menuactive != 0 || @@menuactivestate || !@@viewactivestate
       if @@borderdrawcount != 0
         CDoom.r_draw_view_border # erase old menu stuff
@@ -1432,7 +1380,7 @@ module LibDoom
 
       # process one or more tics
       if CDoom.singletics != 0
-        CDoom.i_start_tic
+        i_start_tic
         CDoom.d_process_events
         CDoom.g_build_ticcmd((CDoom.netcmds.to_unsafe + CDoom.consoleplayer).value.to_unsafe + CDoom.maketic % CDoom::BACKUPTICS)
         CDoom.d_do_advance_demo if CDoom.advancedemo != 0
@@ -1600,7 +1548,8 @@ module LibDoom
   # should be executed (notably loading PWAD's).
   #
   def self.identify_version
-    doomwaddir = CDoom.doom_getenv.call("DOOMWADDIR".to_unsafe)
+    doomwaddir = Pointer(UInt8).null
+    ENV["DOOMWADDIR"]?.try { |env| doomwaddir = env.to_unsafe }
     doomwaddir = ".".to_unsafe if doomwaddir.null?
 
     # Commercial.
@@ -1641,18 +1590,18 @@ module LibDoom
     if p != 0 && p < CDoom.myargc - 1
       CDoom.modifiedgame = 1 # I hope so?
       customwad = String.new(doomwaddir) + "/" + String.new(CDoom.myargv[p + 1])
-      if (handle = CDoom.doom_open.call(customwad.to_unsafe, "rb".to_unsafe)).null?
+      if (handle = doom_open(customwad.to_unsafe, "rb".to_unsafe)).null?
         # Wad not found, give them a chance
         CDoom.doom_concat(customwad, ".wad".to_unsafe)
-        if (handle = CDoom.doom_open.call(customwad.to_unsafe, "rb".to_unsafe)).null?
+        if (handle = doom_open(customwad.to_unsafe, "rb".to_unsafe)).null?
           CDoom.i_error("Error: identify_version: '-iwad #{customwad}' could not find file specified")
         end
       end
       # Wad is real. Check for IWAD unless forced
       unless forced
         header = CDoom::Wadinfo.new
-        CDoom.doom_read.call(handle, pointerof(header).as(Void*), sizeof(typeof(header)))
-        CDoom.doom_close.call(handle)
+        doom_read(handle, pointerof(header).as(Void*), sizeof(typeof(header)))
+        doom_close(handle)
         if CDoom.doom_strncmp(header.identification, "IWAD", 4) != 0
           CDoom.i_error("Error: identify_version: '-iwad #{customwad}' found, but is not an IWAD")
         end
@@ -1699,8 +1648,8 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(doom2fwad.to_unsafe, "rb".to_unsafe)).null?
-      CDoom.doom_close.call(f)
+    if !(f = doom_open(doom2fwad.to_unsafe, "rb".to_unsafe)).null?
+      doom_close(f)
       CDoom.gamemode = CDoom::GameMode::Commercial
       CDoom.gamemission = CDoom::GameMission::Doom2
       # C'est ridicule!
@@ -1711,48 +1660,48 @@ module LibDoom
       return
     end
 
-    if !(f = CDoom.doom_open.call(doom2wad.to_unsafe, "rb".to_unsafe)).null?
-      CDoom.doom_close.call(f)
+    if !(f = doom_open(doom2wad.to_unsafe, "rb".to_unsafe)).null?
+      doom_close(f)
       CDoom.gamemode = CDoom::GameMode::Commercial
       CDoom.gamemission = CDoom::GameMission::Doom2
       CDoom.d_add_file(doom2wad)
       return
     end
 
-    if !(f = CDoom.doom_open.call(plutoniawad.to_unsafe, "rb".to_unsafe)).null?
-      CDoom.doom_close.call(f)
+    if !(f = doom_open(plutoniawad.to_unsafe, "rb".to_unsafe)).null?
+      doom_close(f)
       CDoom.gamemode = CDoom::GameMode::Commercial
       CDoom.gamemission = CDoom::GameMission::PackPlut
       CDoom.d_add_file(plutoniawad)
       return
     end
 
-    if !(f = CDoom.doom_open.call(tntwad.to_unsafe, "rb".to_unsafe)).null?
-      CDoom.doom_close.call(f)
+    if !(f = doom_open(tntwad.to_unsafe, "rb".to_unsafe)).null?
+      doom_close(f)
       CDoom.gamemode = CDoom::GameMode::Commercial
       CDoom.gamemission = CDoom::GameMission::PackTnt
       CDoom.d_add_file(tntwad)
       return
     end
 
-    if !(f = CDoom.doom_open.call(doomuwad.to_unsafe, "rb".to_unsafe)).null?
-      CDoom.doom_close.call(f)
+    if !(f = doom_open(doomuwad.to_unsafe, "rb".to_unsafe)).null?
+      doom_close(f)
       CDoom.gamemode = CDoom::GameMode::Retail
       CDoom.gamemission = CDoom::GameMission::Doom
       CDoom.d_add_file(doomuwad)
       return
     end
 
-    if !(f = CDoom.doom_open.call(doomwad.to_unsafe, "rb".to_unsafe)).null?
-      CDoom.doom_close.call(f)
+    if !(f = doom_open(doomwad.to_unsafe, "rb".to_unsafe)).null?
+      doom_close(f)
       CDoom.gamemode = CDoom::GameMode::Registered
       CDoom.gamemission = CDoom::GameMission::Doom
       CDoom.d_add_file(doomwad)
       return
     end
 
-    if !(f = CDoom.doom_open.call(doom1wad.to_unsafe, "rb".to_unsafe)).null?
-      CDoom.doom_close.call(f)
+    if !(f = doom_open(doom1wad.to_unsafe, "rb".to_unsafe)).null?
+      doom_close(f)
       CDoom.gamemode = CDoom::GameMode::Shareware
       CDoom.gamemission = CDoom::GameMission::Doom
       CDoom.d_add_file(doom1wad)
@@ -1774,18 +1723,18 @@ module LibDoom
         moreargs = uninitialized StaticArray(UInt8*, 20)
 
         # READ THE RESPONSE FILE INTO MEMORY
-        handle = CDoom.doom_open.call(CDoom.myargv[i] + 1, "rb".to_unsafe)
+        handle = doom_open(CDoom.myargv[i] + 1, "rb".to_unsafe)
         if handle.null?
           print "\nNo such response file!"
-          CDoom.doom_exit.call(1)
+          exit(1)
         end
         puts "Found response file #{String.new(CDoom.myargv[i] + 1)}!"
-        CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
-        size = CDoom.doom_tell.call(handle)
-        CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_SET)
+        doom_seek(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
+        size = doom_tell(handle)
+        doom_seek(handle, 0, CDoom::DoomSeek::DOOM_SEEK_SET)
         file = GC.malloc(size)
-        CDoom.doom_read.call(handle, file, size * 1)
-        CDoom.doom_close.call(handle)
+        doom_read(handle, file, size * 1)
+        doom_close(handle)
 
         # KEEP ALL CMDLINE ARGS FOLLOWING @RESPONSEFILE ARG
         index = 0
@@ -1902,7 +1851,7 @@ module LibDoom
       scale = 200
 
       if p < CDoom.myargc - 1
-        scale = CDoom.doom_atoi(CDoom.myargv[p + 1])
+        scale = ARGV[p + 1].to_i
       end
       scale = 10 if scale < 10
       scale = 400 if scale > 400
@@ -1934,7 +1883,7 @@ module LibDoom
              ", Map #{String.new(CDoom.myargv[p + 2])}."
         # when CDoom::GameMode::Commercial
       else
-        p = CDoom.doom_atoi(CDoom.myargv[p + 1])
+        p = ARGV[p + 1].to_i
         if p < 10
           CDoom.doom_strcpy(file, "~#{CDoom::DEVMAPS}cdata/map0")
           CDoom.doom_concat(file, CDoom.doom_itoa(p, 10))
@@ -2000,7 +1949,7 @@ module LibDoom
 
     CDoom.m_check_parm("-timer")
     if p != 0 && p < CDoom.myargc - 1 && CDoom.deathmatch != 0
-      time = CDoom.doom_atoi(CDoom.myargv[p + 1])
+      time = ARGV[p + 1].to_i
       puts "Levels will end after #{time} minute" + (time > 1 ? "s" : "") + "."
     end
 
@@ -2012,7 +1961,7 @@ module LibDoom
     p = CDoom.m_check_parm("-warp")
     if p != 0
       if p < CDoom.myargc - 1 && CDoom.gamemode == CDoom::GameMode::Commercial
-        CDoom.startmap = CDoom.doom_atoi(CDoom.myargv[p + 1])
+        CDoom.startmap = ARGV[p + 1].to_i
       elsif p < CDoom.myargc - 2
         CDoom.startepisode = CDoom.myargv[p + 1][0] - '0'.ord
         CDoom.startmap = CDoom.myargv[p + 2][0] - '0'.ord
@@ -2079,7 +2028,7 @@ module LibDoom
     puts "Doo-cr is free software, and you are welcome to redistribute it".center(77)
     puts "".ljust(77, '=')
 
-    Raylib.set_trace_log_level(Raylib::TraceLogLevel::Warning)
+    Raylib.set_trace_log_level(Raylib::TraceLogLevel::Error)
 
     puts "m_init: Init miscellaneous info."
     CDoom.m_init
@@ -2172,7 +2121,7 @@ module LibDoom
       CDoom.doom_concat(filename, CDoom.doom_itoa(CDoom.consoleplayer, 10))
       CDoom.doom_concat(filename, ".txt")
       puts "debug output to: #{String.new(filename.to_unsafe)}"
-      CDoom.debugfile = CDoom.doom_open.call(filename.to_unsafe, "w".to_unsafe)
+      CDoom.debugfile = doom_open(filename.to_unsafe, "w".to_unsafe)
     end
 
     CDoom.d_doom_loop # never returns [ddos] Called by app
@@ -2456,9 +2405,18 @@ module LibDoom
       # build new ticcmds for console player
       gameticdiv = CDoom.gametic // CDoom.ticdup
       newtics.times do |i|
-        CDoom.i_start_tic
-        CDoom.d_process_events
+        remaining = newtics - i
         break if CDoom.maketic - gameticdiv >= CDoom::BACKUPTICS // 2 - 1 # can't hold any more
+
+        mouse_step = Raylib::Vector2.new(
+          x: @@mouse_queued.x // remaining,
+          y: @@mouse_queued.y // remaining)
+        @@mouse_queued = Raylib::Vector2.new(
+          x: @@mouse_queued.x - mouse_step.x,
+          y: @@mouse_queued.y - mouse_step.y)
+
+        i_start_tic(mouse_step)
+        CDoom.d_process_events
 
         CDoom.g_build_ticcmd(CDoom.localcmds.to_unsafe + CDoom.maketic % CDoom::BACKUPTICS)
         CDoom.maketic += 1
@@ -2504,10 +2462,10 @@ module LibDoom
   def self.check_abort
     stoptic = CDoom.i_get_time + 2
     while CDoom.i_get_time < stoptic
-      CDoom.i_start_tic
+      i_start_tic
     end
 
-    CDoom.i_start_tic
+    i_start_tic
     while CDoom.eventtail != CDoom.eventhead
       ev = CDoom.events.to_unsafe + CDoom.eventtail
       if ev.value.type == CDoom::Evtype::Keydown && ev.value.data1 == CDoom::KEY_ESCAPE
@@ -2738,7 +2696,7 @@ module LibDoom
   # without hanging the other players
   #
   def self.d_quit_net_game
-    CDoom.doom_close.call(CDoom.debugfile) if !CDoom.debugfile.null?
+    doom_close(CDoom.debugfile) if !CDoom.debugfile.null?
 
     return if CDoom.netgame == 0 || CDoom.usergame == 0 || CDoom.consoleplayer == -1 || CDoom.demoplayback == 1
 
@@ -2822,6 +2780,7 @@ module LibDoom
 
     # wait for new tics if needed
     while lowtic < CDoom.gametic // CDoom.ticdup + counts
+      i_poll_mouse
       CDoom.net_update
       lowtic = Int32::MAX
 
@@ -3524,140 +3483,142 @@ module LibDoom
     cmd.value.consistancy =
       CDoom.consistancy[CDoom.consoleplayer][CDoom.maketic % CDoom::BACKUPTICS]
 
-    strafe = (CDoom.gamekeydown[CDoom.key_strafe] != 0 || CDoom.mousebuttons[CDoom.mousebstrafe] != 0 ||
-              CDoom.joybuttons[CDoom.joybstrafe] != 0).to_unsafe
+    unless CDoom.menuactive != 0
+      strafe = (CDoom.gamekeydown[CDoom.key_strafe] != 0 || CDoom.mousebuttons[CDoom.mousebstrafe] != 0 ||
+                CDoom.joybuttons[CDoom.joybstrafe] != 0).to_unsafe
 
-    running = CDoom.always_run != 0 ? (CDoom.gamekeydown[CDoom.key_speed] != 0 ? false : true) : (CDoom.gamekeydown[CDoom.key_speed] != 0 ? true : false)
-    speed = (running || CDoom.joybuttons[CDoom.joybspeed] != 0).to_unsafe
+      running = CDoom.always_run != 0 ? (CDoom.gamekeydown[CDoom.key_speed] != 0 ? false : true) : (CDoom.gamekeydown[CDoom.key_speed] != 0 ? true : false)
+      speed = (running || CDoom.joybuttons[CDoom.joybspeed] != 0).to_unsafe
 
-    forward = 0
-    side = 0
+      forward = 0
+      side = 0
 
-    # use two stage accelerative turning
-    # on the keyboard and joystick
-    if CDoom.joyxmove < 0 ||
-       CDoom.joyxmove > 0 ||
-       CDoom.gamekeydown[CDoom.key_right] != 0 ||
-       CDoom.gamekeydown[CDoom.key_left] != 0
-      CDoom.turnheld += CDoom.ticdup
-    else
-      CDoom.turnheld = 0
-    end
-
-    tspeed = speed
-    tspeed = 2 if CDoom.turnheld < CDoom::SLOWTURNTICS # slow turn
-
-    # let movement keys cancel each other out
-    if strafe != 0
-      side += CDoom.sidemove[speed] if CDoom.gamekeydown[CDoom.key_right] != 0
-      side -= CDoom.sidemove[speed] if CDoom.gamekeydown[CDoom.key_left] != 0
-      side += CDoom.sidemove[speed] if CDoom.joyxmove > 0
-      side -= CDoom.sidemove[speed] if CDoom.joyxmove < 0
-    else
-      cmd.value.angleturn = cmd.value.angleturn - CDoom.angleturn[tspeed] if CDoom.gamekeydown[CDoom.key_right] != 0
-      cmd.value.angleturn = cmd.value.angleturn + CDoom.angleturn[tspeed] if CDoom.gamekeydown[CDoom.key_left] != 0
-      cmd.value.angleturn = cmd.value.angleturn - CDoom.angleturn[tspeed] if CDoom.joyxmove > 0
-      cmd.value.angleturn = cmd.value.angleturn + CDoom.angleturn[tspeed] if CDoom.joyxmove < 0
-    end
-
-    forward += CDoom.forwardmove[speed] if CDoom.gamekeydown[CDoom.key_up] != 0
-    forward -= CDoom.forwardmove[speed] if CDoom.gamekeydown[CDoom.key_down] != 0
-    forward += CDoom.forwardmove[speed] if CDoom.joyymove < 0
-    forward -= CDoom.forwardmove[speed] if CDoom.joyymove > 0
-
-    side += CDoom.sidemove[speed] if CDoom.gamekeydown[CDoom.key_straferight] != 0
-    side -= CDoom.sidemove[speed] if CDoom.gamekeydown[CDoom.key_strafeleft] != 0
-
-    # buttons
-    cmd.value.chatchar = CDoom.hu_dequeue_chat_char
-
-    if CDoom.gamekeydown[CDoom.key_fire] != 0 || CDoom.mousebuttons[CDoom.mousebfire] != 0 ||
-       CDoom.joybuttons[CDoom.joybfire] != 0
-      cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_ATTACK.value
-    end
-
-    if CDoom.gamekeydown[CDoom.key_use] != 0 || CDoom.joybuttons[CDoom.joybuse] != 0
-      cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_USE.value
-      # clear double clicks if hit use button
-      CDoom.dclicks = 0
-    end
-
-    # chainsaw overrides
-    (CDoom::Weapontype::NUMWEAPONS.value - 1).times do |i|
-      if CDoom.gamekeydown['1'.ord + i] != 0
-        cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_CHANGE.value
-        cmd.value.buttons = cmd.value.buttons | i << CDoom::Buttoncode::BT_WEAPONSHIFT.value
-        break
-      end
-    end
-
-    # mouse
-    forward += CDoom.forwardmove[speed] if CDoom.mousebuttons[CDoom.mousebforward] != 0
-
-    # forward double click
-    if CDoom.mousebuttons[CDoom.mousebforward] != CDoom.dclickstate && CDoom.dclicktime > 1
-      CDoom.dclickstate = CDoom.mousebuttons[CDoom.mousebforward]
-      CDoom.dclicks += 1 if CDoom.dclickstate != 0
-      if CDoom.dclicks == 2
-        cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_USE.value
-        CDoom.dclicks = 0
+      # use two stage accelerative turning
+      # on the keyboard and joystick
+      if CDoom.joyxmove < 0 ||
+         CDoom.joyxmove > 0 ||
+         CDoom.gamekeydown[CDoom.key_right] != 0 ||
+         CDoom.gamekeydown[CDoom.key_left] != 0
+        CDoom.turnheld += CDoom.ticdup
       else
-        CDoom.dclicktime = 0
+        CDoom.turnheld = 0
       end
-    else
-      CDoom.dclicktime += CDoom.ticdup
-      if CDoom.dclicktime > 20
-        CDoom.dclicks = 0
-        CDoom.dclickstate = 0
-      end
-    end
 
-    # strafe double click
-    bstrafe =
-      (CDoom.mousebuttons[CDoom.mousebstrafe] != 0 ||
-        CDoom.joybuttons[CDoom.joybstrafe] != 0).to_unsafe
-    if bstrafe != CDoom.dclickstate2 && CDoom.dclicktime2 > 1
-      CDoom.dclickstate2 = bstrafe
-      CDoom.dclicks2 += 1 if CDoom.dclickstate2 != 0
-      if CDoom.dclicks2 == 2
-        cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_USE.value
-        CDoom.dclicks2 = 0
+      tspeed = speed
+      tspeed = 2 if CDoom.turnheld < CDoom::SLOWTURNTICS # slow turn
+
+      # let movement keys cancel each other out
+      if strafe != 0
+        side += CDoom.sidemove[speed] if CDoom.gamekeydown[CDoom.key_right] != 0
+        side -= CDoom.sidemove[speed] if CDoom.gamekeydown[CDoom.key_left] != 0
+        side += CDoom.sidemove[speed] if CDoom.joyxmove > 0
+        side -= CDoom.sidemove[speed] if CDoom.joyxmove < 0
       else
-        CDoom.dclicktime2 = 0
+        cmd.value.angleturn = cmd.value.angleturn - CDoom.angleturn[tspeed] if CDoom.gamekeydown[CDoom.key_right] != 0
+        cmd.value.angleturn = cmd.value.angleturn + CDoom.angleturn[tspeed] if CDoom.gamekeydown[CDoom.key_left] != 0
+        cmd.value.angleturn = cmd.value.angleturn - CDoom.angleturn[tspeed] if CDoom.joyxmove > 0
+        cmd.value.angleturn = cmd.value.angleturn + CDoom.angleturn[tspeed] if CDoom.joyxmove < 0
       end
-    else
-      CDoom.dclicktime2 += CDoom.ticdup
-      if CDoom.dclicktime2 > 20
-        CDoom.dclicks2 = 0
-        CDoom.dclickstate2 = 0
+
+      forward += CDoom.forwardmove[speed] if CDoom.gamekeydown[CDoom.key_up] != 0
+      forward -= CDoom.forwardmove[speed] if CDoom.gamekeydown[CDoom.key_down] != 0
+      forward += CDoom.forwardmove[speed] if CDoom.joyymove < 0
+      forward -= CDoom.forwardmove[speed] if CDoom.joyymove > 0
+
+      side += CDoom.sidemove[speed] if CDoom.gamekeydown[CDoom.key_straferight] != 0
+      side -= CDoom.sidemove[speed] if CDoom.gamekeydown[CDoom.key_strafeleft] != 0
+
+      # buttons
+      cmd.value.chatchar = CDoom.hu_dequeue_chat_char
+
+      if CDoom.gamekeydown[CDoom.key_fire] != 0 || CDoom.mousebuttons[CDoom.mousebfire] != 0 ||
+         CDoom.joybuttons[CDoom.joybfire] != 0
+        cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_ATTACK.value
       end
+
+      if CDoom.gamekeydown[CDoom.key_use] != 0 || CDoom.joybuttons[CDoom.joybuse] != 0
+        cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_USE.value
+        # clear double clicks if hit use button
+        CDoom.dclicks = 0
+      end
+
+      # chainsaw overrides
+      (CDoom::Weapontype::NUMWEAPONS.value - 1).times do |i|
+        if CDoom.gamekeydown['1'.ord + i] != 0
+          cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_CHANGE.value
+          cmd.value.buttons = cmd.value.buttons | i << CDoom::Buttoncode::BT_WEAPONSHIFT.value
+          break
+        end
+      end
+
+      # mouse
+      forward += CDoom.forwardmove[speed] if CDoom.mousebuttons[CDoom.mousebforward] != 0
+
+      # forward double click
+      if CDoom.mousebuttons[CDoom.mousebforward] != CDoom.dclickstate && CDoom.dclicktime > 1
+        CDoom.dclickstate = CDoom.mousebuttons[CDoom.mousebforward]
+        CDoom.dclicks += 1 if CDoom.dclickstate != 0
+        if CDoom.dclicks == 2
+          cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_USE.value
+          CDoom.dclicks = 0
+        else
+          CDoom.dclicktime = 0
+        end
+      else
+        CDoom.dclicktime += CDoom.ticdup
+        if CDoom.dclicktime > 20
+          CDoom.dclicks = 0
+          CDoom.dclickstate = 0
+        end
+      end
+
+      # strafe double click
+      bstrafe =
+        (CDoom.mousebuttons[CDoom.mousebstrafe] != 0 ||
+          CDoom.joybuttons[CDoom.joybstrafe] != 0).to_unsafe
+      if bstrafe != CDoom.dclickstate2 && CDoom.dclicktime2 > 1
+        CDoom.dclickstate2 = bstrafe
+        CDoom.dclicks2 += 1 if CDoom.dclickstate2 != 0
+        if CDoom.dclicks2 == 2
+          cmd.value.buttons = cmd.value.buttons | CDoom::Buttoncode::BT_USE.value
+          CDoom.dclicks2 = 0
+        else
+          CDoom.dclicktime2 = 0
+        end
+      else
+        CDoom.dclicktime2 += CDoom.ticdup
+        if CDoom.dclicktime2 > 20
+          CDoom.dclicks2 = 0
+          CDoom.dclickstate2 = 0
+        end
+      end
+
+      forward += @@mousey if CDoom.mousemove != 0
+      if strafe != 0
+        side += @@mousex * 2
+      else
+        cmd.value.angleturn = cmd.value.angleturn &- @@mousex * 0x8
+      end
+
+      @@mousex = 0
+      @@mousey = 0
+
+      maxplmove = CDoom.forwardmove[1]
+
+      if forward > maxplmove
+        forward = maxplmove
+      elsif forward < -maxplmove
+        forward = -maxplmove
+      end
+      if side > maxplmove
+        side = maxplmove
+      elsif side < -maxplmove
+        side = -maxplmove
+      end
+
+      cmd.value.forwardmove = cmd.value.forwardmove &+ forward
+      cmd.value.sidemove = cmd.value.sidemove &+ side
     end
-
-    forward += @@mousey if CDoom.mousemove != 0
-    if strafe != 0
-      side += @@mousex * 2
-    else
-      cmd.value.angleturn = cmd.value.angleturn &- @@mousex * 0x8
-    end
-
-    @@mousex = 0
-    @@mousey = 0
-
-    maxplmove = CDoom.forwardmove[1]
-
-    if forward > maxplmove
-      forward = maxplmove
-    elsif forward < -maxplmove
-      forward = -maxplmove
-    end
-    if side > maxplmove
-      side = maxplmove
-    elsif side < -maxplmove
-      side = -maxplmove
-    end
-
-    cmd.value.forwardmove = cmd.value.forwardmove &+ forward
-    cmd.value.sidemove = cmd.value.sidemove &+ side
 
     # special buttons
     if CDoom.sendpause != 0
@@ -3727,6 +3688,9 @@ module LibDoom
     CDoom.doom_memset(CDoom.joybuttons, 0, sizeof(typeof(CDoom.joybuttons.value)) * 3)
   end
 
+  @@mouse_scale_remx = 0
+  @@mouse_scale_remy = 0
+
   def self.g_responder(ev : CDoom::Event*) : CDoom::DoomBool
     # allow spy mode changes even during the demo
     if CDoom.gamestate == CDoom::Gamestate::Level && ev.value.type == CDoom::Evtype::Keydown &&
@@ -3784,8 +3748,12 @@ module LibDoom
       CDoom.mousebuttons[0] = ev.value.data1 & 1
       CDoom.mousebuttons[1] = ev.value.data1 & 2
       CDoom.mousebuttons[2] = ev.value.data1 & 4
-      @@mousex = ev.value.data2 * (CDoom.mouse_sensitivity + 5) // 10
-      @@mousey = ev.value.data3 * (CDoom.mouse_sensitivity + 5) // 10
+      scaled_x = ev.value.data2 * (CDoom.mouse_sensitivity + 5) + @@mouse_scale_remx
+      scaled_y = ev.value.data3 * (CDoom.mouse_sensitivity + 5) + @@mouse_scale_remy
+      @@mousex = scaled_x // 10
+      @@mousey = scaled_y // 10
+      @@mouse_scale_remx = scaled_x % 10
+      @@mouse_scale_remy = scaled_y % 10
       return 1 # eat events
     when CDoom::Evtype::Joystick
       CDoom.joybuttons[0] = ev.value.data1 & 1
@@ -4499,7 +4467,7 @@ module LibDoom
     CDoom.doom_concat(CDoom.demoname, ".lmp")
     maxsize = 0x20000
     i = CDoom.m_check_parm("-maxdemo")
-    maxsize = CDoom.doom_atoi(CDoom.myargv[i + 1]) * 1024 if i != 0 && i < CDoom.myargc - 1
+    maxsize = ARGV[i + 1].to_i * 1024 if i != 0 && i < CDoom.myargc - 1
     CDoom.demobuffer = CDoom.z_malloc(maxsize, CDoom::PU_STATIC, Pointer(Void).null).as(UInt8*)
     CDoom.demoend = CDoom.demobuffer + maxsize
 
@@ -5318,8 +5286,7 @@ module LibDoom
     ARGV.index("-extratic").try do |p|
       if p = ARGV[p + 1]?
         CDoom.doomcom.value.extratics = p.to_i.to_u8!
-        CDoom.doomcom.value.extratics = 4 if 
-        CDoom.doomcom.value.extratics > 4
+        CDoom.doomcom.value.extratics = 4 if CDoom.doomcom.value.extratics > 4
       else
         # Set to one if no number is provided
         CDoom.doomcom.value.extratics = 1
@@ -5328,7 +5295,7 @@ module LibDoom
 
     p = CDoom.m_check_parm("-port")
     if p != 0 && p < CDoom.myargc - 1
-      @@doomport = CDoom.doom_atoi(CDoom.myargv[p + 1])
+      @@doomport = ARGV[p + 1].to_i
       puts "using alternate port #{@@doomport}"
     end
 
@@ -5812,13 +5779,34 @@ module LibDoom
     #   end
     # end
 
-    @@audio_stream.try { |a| RAudio.unload_audio_stream(a) }
-
     # Done.
     return
   end
 
   def self.update_audio
+RAudio.init_audio_device
+    RAudio.set_master_volume(10.0)
+    RAudio.set_audio_stream_buffer_size_default(512)
+    @@audio_stream = RAudio.load_audio_stream(CDoom::DOOM_SAMPLERATE, 16, 2)
+    RAudio.set_audio_stream_volume(@@audio_stream.not_nil!, 1.0)
+    RAudio.play_audio_stream(@@audio_stream.not_nil!)
+
+    @@adl_player = ADLMIDI.adl_init(MIDI_SAMPLE_RATE)
+    ADLMIDI.adl_setNumChips(@@adl_player.not_nil!, 4)
+    ADLMIDI.adl_setBank(@@adl_player.not_nil!, @@midibank)
+
+
+    ADLMIDI.adl_setSoftPanEnabled(@@adl_player.not_nil!, @@midismoothpan)
+
+    RAudio.set_audio_stream_buffer_size_default(MIDI_BUFFER_SIZE // 2)
+    @@music_stream = RAudio.load_audio_stream(MIDI_SAMPLE_RATE, 16, 2)
+    RAudio.set_audio_stream_volume(@@music_stream.not_nil!, 1.0)
+    RAudio.play_audio_stream(@@music_stream.not_nil!)
+    @@music_buffer = Pointer(Int16).malloc(MIDI_BUFFER_SIZE)
+    @@midi_tick_accumulator = 0.0
+
+    @@last_time = Raylib.get_time
+
     loop do
       next unless Raylib.window_ready? && RAudio.audio_device_ready? &&
                   @@audio_stream && @@adl_player
@@ -5887,6 +5875,14 @@ module LibDoom
         end
       end
     end
+
+    @@audio_stream.try { |a| RAudio.unload_audio_stream(a) }
+
+sleep 1.millisecond # Let music stop
+    @@music_stream.try { |m| RAudio.unload_audio_stream(m) }
+    @@adl_player.try { |ap| ADLMIDI.adl_close(ap) }
+
+    RAudio.close_audio_device
   end
 
   def self.i_init_sound
@@ -5912,14 +5908,7 @@ module LibDoom
 
     # Now initialize mixbuffer with zero.
     CDoom::MIXBUFFERSIZE.times { |i| CDoom.mixbuffer[i] = 0 }
-
-    RAudio.init_audio_device
-    RAudio.set_master_volume(10.0)
-    RAudio.set_audio_stream_buffer_size_default(512)
-    @@audio_stream = RAudio.load_audio_stream(CDoom::DOOM_SAMPLERATE, 16, 2)
-    RAudio.set_audio_stream_volume(@@audio_stream.not_nil!, 1.0)
-    RAudio.play_audio_stream(@@audio_stream.not_nil!)
-
+    
     # Finished initialization.
     puts "sound module ready"
   end
@@ -5928,25 +5917,11 @@ module LibDoom
   # MUSIC API.
   #
   def self.i_init_music
-    @@adl_player = ADLMIDI.adl_init(MIDI_SAMPLE_RATE)
-    ADLMIDI.adl_setNumChips(@@adl_player.not_nil!, 4)
-    ADLMIDI.adl_setBank(@@adl_player.not_nil!, MIDI_BANK)
-
-    ADLMIDI.adl_setSoftPanEnabled(@@adl_player.not_nil!, @@midismoothpan)
-
-    RAudio.set_audio_stream_buffer_size_default(MIDI_BUFFER_SIZE // 2)
-    @@music_stream = RAudio.load_audio_stream(MIDI_SAMPLE_RATE, 16, 2)
-    RAudio.set_audio_stream_volume(@@music_stream.not_nil!, 1.0)
-    RAudio.play_audio_stream(@@music_stream.not_nil!)
-    @@music_buffer = Pointer(Int16).malloc(MIDI_BUFFER_SIZE)
-    @@midi_tick_accumulator = 0.0
-
-    @@last_time = Raylib.get_time
+    
   end
 
   def self.i_shutdown_music
-    @@music_stream.try { |m| RAudio.unload_audio_stream(m) }
-    @@adl_player.try { |ap| ADLMIDI.adl_close(ap) }
+    
   end
 
   def self.i_play_song(handle : Int32, looping : Int32)
@@ -6169,9 +6144,9 @@ module LibDoom
   # returns time in 1/70th second tics
   #
   def self.i_get_time : LibC::Int
-    sec = 0
-    usec = 0
-    CDoom.doom_gettime.call(pointerof(sec), pointerof(usec))
+    now = Time.local
+    sec = now.to_unix.to_i32
+    usec = (now.nanosecond // 1_000).to_i32
     @@basetime = sec if @@basetime == 0
     newtics = (sec - @@basetime) * CDoom::TICRATE + usec * CDoom::TICRATE // 1000000
     return newtics
@@ -6195,10 +6170,10 @@ module LibDoom
     CDoom.s_stop_music
     CDoom.i_shutdown_sound
     CDoom.i_shutdown_music
-    RAudio.close_audio_device
     CDoom.m_save_defaults
     CDoom.i_shutdown_graphics
-    CDoom.doom_exit.call(0)
+    sleep 2.millisecond # give audio time to shutdown
+    exit(0)
   end
 
   def self.i_wait_vbl(count : LibC::Int)
@@ -6231,7 +6206,7 @@ module LibDoom
     CDoom.i_shutdown_music
     CDoom.i_shutdown_graphics
 
-    CDoom.doom_exit.call(-1)
+    exit(-1)
   end
 
   def self.i_shutdown_graphics
@@ -6242,13 +6217,27 @@ module LibDoom
     Raylib.close_window if Raylib.window_ready?
   end
 
-  def self.i_start_frame
-    @@mousedelta = Raylib.get_mouse_delta * 2
+  @@mouse_queued = Raylib::Vector2.new
+
+  def self.i_poll_mouse
+    Raylib.poll_input_events
+    delta = Raylib.get_mouse_delta * 2 # Rough sensitivity increase
+    @@mouse_queued = Raylib::Vector2.new(
+      x: @@mouse_queued.x + delta.x,
+      y: @@mouse_queued.y + delta.y
+    )
   end
 
-  def self.i_start_tic
-    LibDoom.doom_mouse_move(@@mousedelta.x.to_i32, @@mousedelta.y.to_i32)
-    @@mousedelta = Raylib::Vector2.new
+  def self.i_start_frame
+    i_poll_mouse
+  end
+
+  def self.i_start_tic(in_delta : Raylib::Vector2? = nil)
+    mousedelta = in_delta || @@mouse_queued
+    LibDoom.doom_mouse_move(mousedelta.x.to_i32!, mousedelta.y.to_i32)
+    if in_delta.nil?
+      @@mouse_queued = Raylib::Vector2.new
+    end
 
     poll_key(TAB, Tab)
     poll_key(ENTER, Enter)
@@ -6568,15 +6557,15 @@ module LibDoom
       CDoom.doom_concat(name, CDoom.doom_itoa(i, 10))
       CDoom.doom_concat(name, ".dsg")
 
-      handle = CDoom.doom_open.call(name.to_unsafe, "r".to_unsafe)
+      handle = doom_open(name.to_unsafe, "r".to_unsafe)
       if handle.null?
         CDoom.doom_strcpy((CDoom.savegamestrings.to_unsafe + i).value.to_unsafe, CDoom::EMPTYSTRING)
-        (CDoom.loadmenu.to_unsafe + i).value.status = 0
+        (@@loadmenu.to_unsafe + i).value.status = 0
         next
       end
-      count = CDoom.doom_read.call(handle, (CDoom.savegamestrings.to_unsafe + i).as(Void*), CDoom::SAVESTRINGSIZE)
-      CDoom.doom_close.call(handle)
-      (CDoom.loadmenu.to_unsafe + i).value.status = 1
+      count = doom_read(handle, (CDoom.savegamestrings.to_unsafe + i).as(Void*), CDoom::SAVESTRINGSIZE)
+      doom_close(handle)
+      (@@loadmenu.to_unsafe + i).value.status = 1
     end
   end
 
@@ -6584,8 +6573,8 @@ module LibDoom
   def self.m_draw_load
     CDoom.v_draw_patch_direct(72, 28, 0, CDoom.w_cache_lump_name("M_LOADG", CDoom::PU_CACHE).as(CDoom::Patch*))
     CDoom::Loadenum::LoadEnd.value.times do |i|
-      CDoom.m_draw_save_load_border(CDoom.loaddef.x, CDoom.loaddef.y + CDoom::LINEHEIGHT * i)
-      CDoom.m_write_text(CDoom.loaddef.x, CDoom.loaddef.y + CDoom::LINEHEIGHT * i, CDoom.savegamestrings[i])
+      CDoom.m_draw_save_load_border(@@loaddef.x, @@loaddef.y + CDoom::LINEHEIGHT * i)
+      CDoom.m_write_text(@@loaddef.x, @@loaddef.y + CDoom::LINEHEIGHT * i, CDoom.savegamestrings[i])
     end
   end
 
@@ -6629,7 +6618,7 @@ module LibDoom
       return
     end
 
-    CDoom.m_setup_next_menu(pointerof(CDoom.loaddef))
+    CDoom.m_setup_next_menu(pointerof(@@loaddef))
     CDoom.m_read_save_strings
   end
 
@@ -6639,13 +6628,13 @@ module LibDoom
   def self.m_draw_save
     CDoom.v_draw_patch_direct(72, 28, 0, CDoom.w_cache_lump_name("M_SAVEG", CDoom::PU_CACHE).as(CDoom::Patch*))
     CDoom::Loadenum::LoadEnd.value.times do |i|
-      CDoom.m_draw_save_load_border(CDoom.loaddef.x, CDoom.loaddef.y + CDoom::LINEHEIGHT * i)
-      CDoom.m_write_text(CDoom.loaddef.x, CDoom.loaddef.y + CDoom::LINEHEIGHT * i, CDoom.savegamestrings[i])
+      CDoom.m_draw_save_load_border(@@loaddef.x, @@loaddef.y + CDoom::LINEHEIGHT * i)
+      CDoom.m_write_text(@@loaddef.x, @@loaddef.y + CDoom::LINEHEIGHT * i, CDoom.savegamestrings[i])
     end
 
     if CDoom.save_string_enter != 0
       i = CDoom.m_string_width(CDoom.savegamestrings[CDoom.save_slot])
-      CDoom.m_write_text(CDoom.loaddef.x + i, CDoom.loaddef.y + CDoom::LINEHEIGHT * CDoom.save_slot, "_")
+      CDoom.m_write_text(@@loaddef.x + i, @@loaddef.y + CDoom::LINEHEIGHT * CDoom.save_slot, "_")
     end
   end
 
@@ -6686,7 +6675,7 @@ module LibDoom
 
     return if CDoom.gamestate != CDoom::Gamestate::Level
 
-    CDoom.m_setup_next_menu(pointerof(CDoom.savedef))
+    CDoom.m_setup_next_menu(pointerof(@@savedef))
     CDoom.m_read_save_strings
   end
 
@@ -6711,7 +6700,7 @@ module LibDoom
     if CDoom.quick_save_slot < 0
       CDoom.m_start_control_panel
       CDoom.m_read_save_strings
-      CDoom.m_setup_next_menu(pointerof(CDoom.savedef))
+      CDoom.m_setup_next_menu(pointerof(@@savedef))
       CDoom.quick_save_slot = -2 # means to pick a slot now
       return
     end
@@ -6771,15 +6760,15 @@ module LibDoom
   def self.m_draw_sound
     CDoom.v_draw_patch_direct(60, 38, 0, CDoom.w_cache_lump_name("M_SVOL", CDoom::PU_CACHE).as(CDoom::Patch*))
 
-    CDoom.m_draw_thermo(CDoom.sounddef.x, CDoom.sounddef.y + CDoom::LINEHEIGHT * (CDoom::Soundenum::Sfxvol.value + 1),
+    CDoom.m_draw_thermo(@@sounddef.x, @@sounddef.y + CDoom::LINEHEIGHT * (CDoom::Soundenum::Sfxvol.value + 1),
       16, CDoom.snd_sfx_volume)
 
-    CDoom.m_draw_thermo(CDoom.sounddef.x, CDoom.sounddef.y + CDoom::LINEHEIGHT * (CDoom::Soundenum::Musicvol.value + 1),
+    CDoom.m_draw_thermo(@@sounddef.x, @@sounddef.y + CDoom::LINEHEIGHT * (CDoom::Soundenum::Musicvol.value + 1),
       16, CDoom.snd_music_volume)
   end
 
   def self.m_sound(choice : Int32)
-    CDoom.m_setup_next_menu(pointerof(CDoom.sounddef))
+    CDoom.m_setup_next_menu(pointerof(@@sounddef))
   end
 
   def self.m_sfxvol(choice : Int32)
@@ -6826,9 +6815,9 @@ module LibDoom
     end
 
     if CDoom.gamemode == CDoom::GameMode::Commercial
-      CDoom.m_setup_next_menu(pointerof(CDoom.newdef))
+      CDoom.m_setup_next_menu(pointerof(@@newdef))
     else
-      CDoom.m_setup_next_menu(pointerof(CDoom.epidef))
+      CDoom.m_setup_next_menu(pointerof(@@epidef))
     end
   end
 
@@ -6859,7 +6848,7 @@ module LibDoom
   def self.m_episode(choice : Int32)
     if CDoom.gamemode == CDoom::GameMode::Shareware && choice != 0
       CDoom.m_start_message(CDoom::SWSTRING, NULL_PROCP1, 0)
-      CDoom.m_setup_next_menu(pointerof(CDoom.readdef1))
+      CDoom.m_setup_next_menu(pointerof(@@readdef1))
       return
     end
 
@@ -6870,7 +6859,7 @@ module LibDoom
     end
 
     CDoom.epi = choice
-    CDoom.m_setup_next_menu(pointerof(CDoom.newdef))
+    CDoom.m_setup_next_menu(pointerof(@@newdef))
   end
 
   #
@@ -6879,21 +6868,21 @@ module LibDoom
   def self.m_draw_options
     CDoom.v_draw_patch_direct(108, 15, 0, CDoom.w_cache_lump_name("M_OPTTTL", CDoom::PU_CACHE).as(CDoom::Patch*))
 
-    CDoom.v_draw_patch_direct(CDoom.optionsdef.x + 120, CDoom.optionsdef.y + CDoom::LINEHEIGHT * CDoom::OptionsEnum::Messages.value, 0, CDoom.w_cache_lump_name(CDoom.msg_names[CDoom.show_messages], CDoom::PU_CACHE).as(CDoom::Patch*))
+    CDoom.v_draw_patch_direct(@@optionsdef.x + 120, @@optionsdef.y + CDoom::LINEHEIGHT * CDoom::OptionsEnum::Messages.value, 0, CDoom.w_cache_lump_name(CDoom.msg_names[CDoom.show_messages], CDoom::PU_CACHE).as(CDoom::Patch*))
 
-    CDoom.m_draw_thermo(CDoom.optionsdef.x, CDoom.optionsdef.y + CDoom::LINEHEIGHT * (CDoom::OptionsEnum::Scrnsize.value + 1),
+    CDoom.m_draw_thermo(@@optionsdef.x, @@optionsdef.y + CDoom::LINEHEIGHT * (CDoom::OptionsEnum::Scrnsize.value + 1),
       9, CDoom.screen_size)
 
-    CDoom.m_draw_thermo(CDoom.optionsdef.x, CDoom.optionsdef.y + CDoom::LINEHEIGHT * (CDoom::OptionsEnum::Mousesensitivity.value + 1),
+    CDoom.m_draw_thermo(@@optionsdef.x, @@optionsdef.y + CDoom::LINEHEIGHT * (CDoom::OptionsEnum::Mousesensitivity.value + 1),
       10, CDoom.mouse_sensitivity)
 
-    CDoom.m_write_text(CDoom.optionsdef.x, CDoom.optionsdef.y +
+    CDoom.m_write_text(@@optionsdef.x, @@optionsdef.y +
                                            CDoom::LINEHEIGHT * CDoom::OptionsEnum::More.value + CDoom.hu_font[0].value.height // 2,
       "more options")
   end
 
   def self.m_options(choice : Int32)
-    CDoom.m_setup_next_menu(pointerof(CDoom.optionsdef))
+    CDoom.m_setup_next_menu(pointerof(@@optionsdef))
   end
 
   #
@@ -6920,41 +6909,27 @@ module LibDoom
   def self.m_draw_moreoptions
     CDoom.v_draw_patch_direct(108, 8, 0, CDoom.w_cache_lump_name("M_OPTTTL", CDoom::PU_CACHE).as(CDoom::Patch*))
 
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::EditControls.value + CDoom.hu_font[0].value.height // 2,
-      "Edit controls ->")
+    @@moreoptions_menus[@@current_options_menu].each_with_index do |item, i|
+      CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
+                                            CDoom::LINEHEIGHT * i + CDoom.hu_font[0].value.height // 2,
+      String.new(item.text) + (
+        (item.bool.null? ? "" : (item.bool.value != 0 ? "on" : "off")) +
+        (item.num.null? ? "" : "#{item.num.value + 1}")
+        ))
+    end
+  end
 
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::Alwaysrun.value + CDoom.hu_font[0].value.height // 2,
-      "always run: " + (CDoom.always_run != 0 ? "on" : "off"))
+  def self.m_change_options_menu(choice : Int32)
+    @@current_options_menu -= 1 if choice == 0 && @@current_options_menu > 0
+    @@current_options_menu += 1 if choice == 1 && @@current_options_menu < @@moreoptions_menus.size - 1
+    @@moreoptions_def.menuitems = (@@moreoptions_menus.to_unsafe + @@current_options_menu).value.to_unsafe
+    @@moreoptions_def.numitems = @@moreoptions_menus[@@current_options_menu].size
+  end
 
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::Crosshair.value + CDoom.hu_font[0].value.height // 2,
-      "crosshair: " + (CDoom.crosshair != 0 ? "on" : "off"))
-
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::Fullscreen.value + CDoom.hu_font[0].value.height // 2,
-      "toggle fullscreen")
-
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::SmoothPan.value + CDoom.hu_font[0].value.height // 2,
-      "smooth midi panning: " + (@@midismoothpan != 0 ? "on" : "off"))
-
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::Pitching.value + CDoom.hu_font[0].value.height // 2,
-      "random audio pitch: " + (@@randompitch != 0 ? "on" : "off"))
-
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::AmActive.value + CDoom.hu_font[0].value.height // 2,
-      "active automap drawing: " + (@@amactivedraw != 0 ? "on" : "off"))
-
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::WepFCent.value + CDoom.hu_font[0].value.height // 2,
-      "Fire weapon centered: " + (@@weaponfirecentered != 0 ? "on" : "off"))
-
-    CDoom.m_write_text(@@moreoptions_def.x, @@moreoptions_def.y +
-                                            CDoom::LINEHEIGHT * MoreoptionsEnum::MosMove.value + CDoom.hu_font[0].value.height // 2,
-      "Mouse Y movement: " + (CDoom.mousemove != 0 ? "on" : "off"))
+  def self.m_change_midibank(choice : Int32)
+    @@midibank -= 1 if choice == 0 && @@midibank > 0
+    @@midibank += 1 if choice == 1 && @@midibank < 78
+    ADLMIDI.adl_setBank(@@adl_player.not_nil!, @@midibank)
   end
 
   def self.m_edit_controls(choice : Int32)
@@ -6983,7 +6958,7 @@ module LibDoom
                    dch == 0x57 ||
                    dch == 0x58
 
-    CDoom::DoomKey.from_value(dch).try do |dkey|
+    CDoom::DoomKey.from_value?(dch).try do |dkey|
       case dkey
       when CDoom::DoomKey::UNKNOWN
       when CDoom::DoomKey::TAB
@@ -7050,41 +7025,11 @@ module LibDoom
                                                                                         -CDoom::LINEHEIGHT + CDoom.hu_font[0].value.height // 2,
       "Controls")
 
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::Forward.value + CDoom.hu_font[0].value.height // 2,
-      "Forward =" + m_draw_key(pointerof(CDoom.key_up)))
-
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::Back.value + CDoom.hu_font[0].value.height // 2,
-      "Backward =" + m_draw_key(pointerof(CDoom.key_down)))
-
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::TLeft.value + CDoom.hu_font[0].value.height // 2,
-      "Turn Left =" + m_draw_key(pointerof(CDoom.key_left)))
-
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::TRight.value + CDoom.hu_font[0].value.height // 2,
-      "Turn Right =" + m_draw_key(pointerof(CDoom.key_right)))
-
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::SLeft.value + CDoom.hu_font[0].value.height // 2,
-      "Strafe Left =" + m_draw_key(pointerof(CDoom.key_strafeleft)))
-
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::SRight.value + CDoom.hu_font[0].value.height // 2,
-      "Strafe Right =" + m_draw_key(pointerof(CDoom.key_straferight)))
-
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::Sprint.value + CDoom.hu_font[0].value.height // 2,
-      "Sprint =" + m_draw_key(pointerof(CDoom.key_speed)))
-
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::Shoot.value + CDoom.hu_font[0].value.height // 2,
-      "Shoot =" + m_draw_key(pointerof(CDoom.key_fire)))
-
-    CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
-                                             CDoom::LINEHEIGHT * Editcontrolenum::Use.value + CDoom.hu_font[0].value.height // 2,
-      "Use =" + m_draw_key(pointerof(CDoom.key_use)))
+      @@editcontrols_menu.each_with_index do |item, i|
+      CDoom.m_write_text(@@editcontrols_def.x, @@editcontrols_def.y +
+                                            CDoom::LINEHEIGHT * i + CDoom.hu_font[0].value.height // 2,
+      String.new(item.text) + (item.num.null? ? "" : m_draw_key(item.num)))
+      end
   end
 
   def self.m_edit_forward(choice : Int32)
@@ -7194,17 +7139,17 @@ module LibDoom
   #
   def self.m_readthis(choice : Int32)
     choice = 0
-    CDoom.m_setup_next_menu(pointerof(CDoom.readdef1))
+    CDoom.m_setup_next_menu(pointerof(@@readdef1))
   end
 
   def self.m_readthis2(choice : Int32)
     choice = 0
-    CDoom.m_setup_next_menu(pointerof(CDoom.readdef2))
+    CDoom.m_setup_next_menu(pointerof(@@readdef2))
   end
 
   def self.m_finish_readthis(choice : Int32)
     choice = 0
-    CDoom.m_setup_next_menu(pointerof(CDoom.maindef))
+    CDoom.m_setup_next_menu(pointerof(@@maindef))
   end
 
   #
@@ -7549,7 +7494,7 @@ module LibDoom
       when CDoom::KEY_F1 # Help key
         CDoom.m_start_control_panel
 
-        CDoom.current_menu = pointerof(CDoom.readdef1)
+        CDoom.current_menu = pointerof(@@readdef1)
 
         CDoom.item_on = 0
         CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_swtchn)
@@ -7566,7 +7511,7 @@ module LibDoom
         return 1
       when CDoom::KEY_F4 # Sound Volume
         CDoom.m_start_control_panel
-        CDoom.current_menu = pointerof(CDoom.sounddef)
+        CDoom.current_menu = pointerof(@@sounddef)
         CDoom.item_on = CDoom::Soundenum::Sfxvol
         CDoom.s_start_sound(Pointer(Void).null, CDoom::Sfxenum::SFX_swtchn)
         return 1
@@ -7697,7 +7642,7 @@ module LibDoom
     return if CDoom.menuactive != 0
 
     CDoom.menuactive = 1
-    CDoom.current_menu = pointerof(CDoom.maindef)    # JDC
+    CDoom.current_menu = pointerof(@@maindef)    # JDC
     CDoom.item_on = CDoom.current_menu.value.last_on # JDC
   end
 
@@ -7750,10 +7695,10 @@ module LibDoom
     @@x = CDoom.current_menu.value.x.to_i32
     @@y = CDoom.current_menu.value.y.to_i32
     max = CDoom.current_menu.value.numitems
-
     max.times do |i|
       menuitem = (CDoom.current_menu.value.menuitems + i)
-      if menuitem.value.name[0] != 0
+
+      if !menuitem.value.name.null? && menuitem.value.name[0] != 0
         CDoom.v_draw_patch_direct(@@x, @@y, 0, CDoom.w_cache_lump_name(menuitem.value.name, CDoom::PU_CACHE).as(CDoom::Patch*))
       end
       @@y += CDoom::LINEHEIGHT
@@ -7782,7 +7727,7 @@ module LibDoom
   end
 
   def self.m_init
-    CDoom.current_menu = pointerof(CDoom.maindef)
+    CDoom.current_menu = pointerof(@@maindef)
     CDoom.menuactive = 0
     CDoom.item_on = CDoom.current_menu.value.last_on
     CDoom.which_skull = 0
@@ -7799,23 +7744,23 @@ module LibDoom
     case CDoom.gamemode
     when CDoom::GameMode::Commercial
       # Setup read menu for Doom II
-      (CDoom.mainmenu.to_unsafe + CDoom::Mainenum::Readthis.value).value = CDoom.mainmenu[CDoom::Mainenum::Quitdoom.value]
-      CDoom.maindef.numitems = CDoom.maindef.numitems - 1
-      CDoom.maindef.y = CDoom.maindef.y + 8
-      CDoom.newdef.prev_menu = pointerof(CDoom.maindef)
-      CDoom.readdef1.routine = ->m_draw_commercial
-      CDoom.readdef1.x = 330
-      CDoom.readdef1.y = 165
-      CDoom.readmenu1.to_unsafe.value.routine = ->CDoom.m_finish_readthis(Int32)
+      (@@mainmenu.to_unsafe + CDoom::Mainenum::Readthis.value).value = @@mainmenu[CDoom::Mainenum::Quitdoom.value]
+      @@maindef.numitems = @@maindef.numitems - 1
+      @@maindef.y = @@maindef.y + 8
+      @@newdef.prev_menu = pointerof(@@maindef)
+      @@readdef1.routine = ->m_draw_commercial
+      @@readdef1.x = 330
+      @@readdef1.y = 165
+      @@readmenu1.to_unsafe.value.routine = ->CDoom.m_finish_readthis(Int32)
     when CDoom::GameMode::Retail
       # Skip first menu on Ultimate Doom
-      pointerof(CDoom.readdef1).value = CDoom.readdef2
+      pointerof(@@readdef1).value = @@readdef2
     when CDoom::GameMode::Shareware, CDoom::GameMode::Registered
       # Episode 2 and 3 are handled,
       #  branching to an ad screen.
       #
       # We need to remove the fourth episode.
-      CDoom.epidef.numitems = CDoom.epidef.numitems - 1
+      @@epidef.numitems = @@epidef.numitems - 1
     end
   end
 
@@ -7842,12 +7787,12 @@ module LibDoom
   end
 
   def self.m_write_file(name : LibC::Char*, source : Void*, length : LibC::Int) : CDoom::DoomBool
-    handle = CDoom.doom_open.call(name, "wb".to_unsafe)
+    handle = doom_open(name, "wb".to_unsafe)
 
     return 0 if handle.null?
 
-    count = CDoom.doom_write.call(handle, source, length)
-    CDoom.doom_close.call(handle)
+    count = doom_write(handle, source, length)
+    doom_close(handle)
 
     return 0 if count < length
 
@@ -7855,16 +7800,16 @@ module LibDoom
   end
 
   def self.m_read_file(name : LibC::Char*, buffer : CDoom::Byte**) : LibC::Int
-    handle = CDoom.doom_open.call(name, "rb".to_unsafe)
+    handle = doom_open(name, "rb".to_unsafe)
     if handle.null?
       CDoom.i_error("Error: Couldn't read file #{name}")
     end
-    CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
-    length = CDoom.doom_tell.call(handle)
-    CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_SET)
+    doom_seek(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
+    length = doom_tell(handle)
+    doom_seek(handle, 0, CDoom::DoomSeek::DOOM_SEEK_SET)
     buf = CDoom.z_malloc(length, CDoom::PU_STATIC, Pointer(Void).null)
-    count = CDoom.doom_read.call(handle, buf, length)
-    CDoom.doom_close.call(handle)
+    count = doom_read(handle, buf, length)
+    doom_close(handle)
 
     if count < length
       CDoom.i_error("Error: Couldn't read file #{name}")
@@ -7875,7 +7820,7 @@ module LibDoom
   end
 
   def self.m_save_defaults
-    f = CDoom.doom_open.call(CDoom.defaultfile, "w".to_unsafe)
+    f = doom_open(CDoom.defaultfile, "w".to_unsafe)
     return if f.null? # can't write the file, but don't complain
 
     @@defaults.size.times do |i|
@@ -7894,7 +7839,7 @@ module LibDoom
       end
     end
 
-    CDoom.doom_close.call(f)
+    doom_close(f)
   end
 
   def self.m_load_defaults
@@ -7919,14 +7864,14 @@ module LibDoom
     end
 
     # read the file in, overriding any set defaults
-    f = CDoom.doom_open.call(CDoom.defaultfile, "r".to_unsafe)
+    f = doom_open(CDoom.defaultfile, "r".to_unsafe)
     unless f.null?
-      while CDoom.doom_eof.call(f) == 0
+      while doom_eof(f) == 0
         arg_read = 0
         c = 0_u8
         i = 0
         while i < 79
-          CDoom.doom_read.call(f, pointerof(c).as(Void*), 1)
+          doom_read(f, pointerof(c).as(Void*), 1)
           if c == ' '.ord || c == '\n'.ord || c == '\t'.ord
             arg_read += 1 if i > 0
             break
@@ -7939,7 +7884,7 @@ module LibDoom
         # Ignore spaces
         if c != '\n'.ord
           loop do
-            CDoom.doom_read.call(f, pointerof(c).as(Void*), 1)
+            doom_read(f, pointerof(c).as(Void*), 1)
             break if c != ' '.ord && c != '\t'.ord
           end
 
@@ -7949,7 +7894,7 @@ module LibDoom
             while i < 260
               strparm[i] = c
               i += 1
-              CDoom.doom_read.call(f, pointerof(c).as(Void*), 1)
+              doom_read(f, pointerof(c).as(Void*), 1)
               if c == '\n'.ord
                 arg_read += 1 if i > 0
                 break
@@ -7989,7 +7934,7 @@ module LibDoom
         end
       end
 
-      CDoom.doom_close.call(f)
+      doom_close(f)
     end
   end
 
@@ -8058,10 +8003,10 @@ module LibDoom
     while i < 99
       lbmname[4] = (i // 10 + '0'.ord).to_u8!
       lbmname[5] = (i % 10 + '0'.ord).to_u8!
-      if (f = CDoom.doom_open.call(lbmname.to_unsafe, "r".to_unsafe)).null?
+      if (f = doom_open(lbmname.to_unsafe, "r".to_unsafe)).null?
         break # file doesn't exist
       end
-      CDoom.doom_close.call(f)
+      doom_close(f)
       i += 1
     end
     CDoom.i_error("Error: m_screenshot: Couldn't create a PCX") if i == 100
@@ -11377,10 +11322,10 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
     CDoom.tmx = x
     CDoom.tmy = y
 
-    CDoom.tmbbox[CDoom::BOXTOP] = y + CDoom.tmthing.value.radius
-    CDoom.tmbbox[CDoom::BOXBOTTOM] = y - CDoom.tmthing.value.radius
-    CDoom.tmbbox[CDoom::BOXRIGHT] = x + CDoom.tmthing.value.radius
-    CDoom.tmbbox[CDoom::BOXLEFT] = x - CDoom.tmthing.value.radius
+    CDoom.tmbbox[CDoom::BOXTOP] = y &+ CDoom.tmthing.value.radius
+    CDoom.tmbbox[CDoom::BOXBOTTOM] = y &- CDoom.tmthing.value.radius
+    CDoom.tmbbox[CDoom::BOXRIGHT] = x &+ CDoom.tmthing.value.radius
+    CDoom.tmbbox[CDoom::BOXLEFT] = x &- CDoom.tmthing.value.radius
 
     newsubsec = CDoom.r_point_in_subsector(x, y)
     CDoom.ceilingline = Pointer(CDoom::Line).null
@@ -11403,10 +11348,10 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
     # because mobj_ts are grouped into mapblocks
     # based on their origin point, and can overlap
     # into adjacent blocks by up to MAXRADIUS units.
-    xl = (CDoom.tmbbox[CDoom::BOXLEFT] - CDoom.bmaporgx - CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
-    xh = (CDoom.tmbbox[CDoom::BOXRIGHT] - CDoom.bmaporgx + CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
-    yl = (CDoom.tmbbox[CDoom::BOXBOTTOM] - CDoom.bmaporgy - CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
-    yh = (CDoom.tmbbox[CDoom::BOXTOP] - CDoom.bmaporgy + CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+    xl = (CDoom.tmbbox[CDoom::BOXLEFT] &- CDoom.bmaporgx &- CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+    xh = (CDoom.tmbbox[CDoom::BOXRIGHT] &- CDoom.bmaporgx &+ CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+    yl = (CDoom.tmbbox[CDoom::BOXBOTTOM] &- CDoom.bmaporgy &- CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+    yh = (CDoom.tmbbox[CDoom::BOXTOP] &- CDoom.bmaporgy &+ CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
 
     bx = xl
     while bx <= xh
@@ -11419,10 +11364,10 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
     end
 
     # check lines
-    xl = (CDoom.tmbbox[CDoom::BOXLEFT] - CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
-    xh = (CDoom.tmbbox[CDoom::BOXRIGHT] - CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
-    yl = (CDoom.tmbbox[CDoom::BOXBOTTOM] - CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
-    yh = (CDoom.tmbbox[CDoom::BOXTOP] - CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
+    xl = (CDoom.tmbbox[CDoom::BOXLEFT] &- CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
+    xh = (CDoom.tmbbox[CDoom::BOXRIGHT] &- CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
+    yl = (CDoom.tmbbox[CDoom::BOXBOTTOM] &- CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
+    yh = (CDoom.tmbbox[CDoom::BOXTOP] &- CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
 
     bx = xl
     while bx <= xh
@@ -12638,13 +12583,13 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
 
     loop do
       if xmove > CDoom::MAXMOVE // 2 || ymove > CDoom::MAXMOVE // 2
-        ptryx = mo.value.x + xmove.tdiv(2)
-        ptryy = mo.value.y + ymove.tdiv(2)
+        ptryx = mo.value.x &+ xmove.tdiv(2)
+        ptryy = mo.value.y &+ ymove.tdiv(2)
         xmove >>= 1
         ymove >>= 1
       else
-        ptryx = mo.value.x + xmove
-        ptryy = mo.value.y + ymove
+        ptryx = mo.value.x &+ xmove
+        ptryy = mo.value.y &+ ymove
         xmove = 0
         ymove = 0
       end
@@ -15928,12 +15873,14 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
         index += 1
       end
     end
+
+    CDoom.numswitches.times { |i| @@switch_origins << CDoom::Degenmobj.new }
   end
 
   #
   # Start a button counting down till it turns off.
   #
-  def self.p_start_button(line : CDoom::Line*, w : CDoom::Bwhere, texture : LibC::Int, time : LibC::Int)
+  def self.p_start_button(line : CDoom::Line*, w : CDoom::Bwhere, origin : CDoom::Degenmobj*, texture : LibC::Int, time : LibC::Int)
     # See if button is already pressed
     CDoom::MAXBUTTONS.times do |i|
       return if CDoom.buttonlist[i].btimer != 0 &&
@@ -15946,7 +15893,7 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
         (CDoom.buttonlist.to_unsafe + i).value.where = w
         (CDoom.buttonlist.to_unsafe + i).value.btexture = texture
         (CDoom.buttonlist.to_unsafe + i).value.btimer = time
-        (CDoom.buttonlist.to_unsafe + i).value.soundorg = ((line.value.frontsector).as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*)
+        (CDoom.buttonlist.to_unsafe + i).value.soundorg = origin.as(CDoom::Mobj*)
 
         return
       end
@@ -15974,24 +15921,36 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
 
     (CDoom.numswitches * 2).times do |i|
       if CDoom.switchlist[i] == tex_top
-        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
+        origin = (@@switch_origins.to_unsafe + (i // 2))
+        origin.value.x = (line.value.v1.value.x &+ line.value.v2.value.x) // 2
+        origin.value.y = (line.value.v1.value.y &+ line.value.v2.value.y) // 2
+
+        CDoom.s_start_sound(origin.as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.toptexture = CDoom.switchlist[i ^ 1]
 
-        CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
+        p_start_button(line, CDoom::Bwhere::Top, origin, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
 
         return
       elsif CDoom.switchlist[i] == tex_mid
-        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
+        origin = (@@switch_origins.to_unsafe + (i // 2))
+        origin.value.x = (line.value.v1.value.x &+ line.value.v2.value.x) // 2
+        origin.value.y = (line.value.v1.value.y &+ line.value.v2.value.y) // 2
+
+        CDoom.s_start_sound(origin.as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.midtexture = CDoom.switchlist[i ^ 1]
 
-        CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
+        p_start_button(line, CDoom::Bwhere::Middle, origin, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
 
         return
       elsif CDoom.switchlist[i] == tex_bot
-        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
+        origin = (@@switch_origins.to_unsafe + (i // 2))
+        origin.value.x = (line.value.v1.value.x &+ line.value.v2.value.x) // 2
+        origin.value.y = (line.value.v1.value.y &+ line.value.v2.value.y) // 2
+
+        CDoom.s_start_sound(origin.as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.bottomtexture = CDoom.switchlist[i ^ 1]
 
-        CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
+        p_start_button(line, CDoom::Bwhere::Bottom, origin, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
 
         return
       end
@@ -16194,6 +16153,11 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
     when 43
       # Lower Ceiling to Floor
       if CDoom.ev_do_ceiling(line, CDoom::Ceilingenum::LowerToFloor) != 0
+        CDoom.p_change_switch_texture(line, 1)
+      end
+    when 45
+      # Lower Floor to Surrounding floor height
+      if CDoom.ev_do_floor(line, CDoom::Floorenum::LowerFloor) != 0
         CDoom.p_change_switch_texture(line, 1)
       end
     when 60
@@ -21741,7 +21705,7 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
       CDoom.reloadlump = CDoom.numlumps
     end
 
-    if (handle = CDoom.doom_open.call(filename, "rb".to_unsafe)).null?
+    if (handle = doom_open(filename, "rb".to_unsafe)).null?
       puts " couldn't open #{String.new(filename)}"
       return
     end
@@ -21756,14 +21720,14 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
       # single lump file
       fileinfo = pointerof(singleinfo)
       singleinfo.filepos = 0
-      CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
-      singleinfo.size = CDoom.doom_tell.call(handle)
-      CDoom.doom_seek.call(handle, 0, CDoom::DoomSeek::DOOM_SEEK_SET)
+      doom_seek(handle, 0, CDoom::DoomSeek::DOOM_SEEK_END)
+      singleinfo.size = doom_tell(handle)
+      doom_seek(handle, 0, CDoom::DoomSeek::DOOM_SEEK_SET)
       CDoom.extract_file_base(filename, singleinfo.name)
       CDoom.numlumps += 1
     else
       # WAD file
-      CDoom.doom_read.call(handle, pointerof(header).as(Void*), sizeof(typeof(header)))
+      doom_read(handle, pointerof(header).as(Void*), sizeof(typeof(header)))
       if CDoom.doom_strncmp(header.identification, "IWAD", 4) != 0
         # Homebrew levels?
         if CDoom.doom_strncmp(header.identification, "PWAD", 4) != 0
@@ -21777,8 +21741,8 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
       length = header.numlumps * sizeof(CDoom::Filelump)
       fileinfo = GC.malloc(length).as(CDoom::Filelump*)
       allocated = fileinfo
-      CDoom.doom_seek.call(handle, header.infotableofs, CDoom::DoomSeek::DOOM_SEEK_SET)
-      CDoom.doom_read.call(handle, fileinfo.as(Void*), length)
+      doom_seek(handle, header.infotableofs, CDoom::DoomSeek::DOOM_SEEK_SET)
+      doom_read(handle, fileinfo.as(Void*), length)
       CDoom.numlumps += header.numlumps
     end
 
@@ -21806,7 +21770,7 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
       fileinfo += 1
     end
 
-    CDoom.doom_close.call(handle) if !CDoom.reloadname.null?
+    doom_close(handle) if !CDoom.reloadname.null?
 
     GC.free(allocated.as(Void*)) unless allocated.null?
   end
@@ -21927,19 +21891,19 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
   def self.w_reload
     return if CDoom.reloadname.null?
 
-    if (handle = CDoom.doom_open.call(CDoom.reloadname, "rb".to_unsafe)) == 0
+    if (handle = doom_open(CDoom.reloadname, "rb".to_unsafe)) == 0
       CDoom.i_error("Error: w_reload: couldn't open #{CDoom.reloadname}")
     end
 
     header = CDoom::Wadinfo.new
 
-    CDoom.doom_read.call(handle, pointerof(header).as(Void*), sizeof(typeof(header)))
+    doom_read(handle, pointerof(header).as(Void*), sizeof(typeof(header)))
     lumpcount = header.numlumps
     header.infotableofs = header.infotableofs
     length = lumpcount * sizeof(CDoom::Filelump)
     fileinfo = GC.malloc(length).as(CDoom::Filelump*)
-    CDoom.doom_seek.call(handle, header.infotableofs, CDoom::DoomSeek::DOOM_SEEK_SET)
-    CDoom.doom_read.call(handle, fileinfo.as(Void*), length)
+    doom_seek(handle, header.infotableofs, CDoom::DoomSeek::DOOM_SEEK_SET)
+    doom_read(handle, fileinfo.as(Void*), length)
 
     # Fill in lumpinfo
     lump_p = CDoom.lumpinfo + CDoom.reloadlump
@@ -21956,7 +21920,7 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
       fileinfo += 1
     end
 
-    CDoom.doom_close.call(handle)
+    doom_close(handle)
 
     GC.free(fileinfo.as(Void*))
   end
@@ -22098,21 +22062,21 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
 
     if l.value.handle.null?
       # reloadable file, so use open / read / close
-      if (handle = CDoom.doom_open.call(CDoom.reloadname, "rb".to_unsafe)) == 0
+      if (handle = doom_open(CDoom.reloadname, "rb".to_unsafe)) == 0
         CDoom.i_error("Error: w_read_lump: couldn't open #{CDoom.reloadname}")
       end
     else
       handle = l.value.handle
     end
 
-    CDoom.doom_seek.call(handle, l.value.position, CDoom::DoomSeek::DOOM_SEEK_SET)
-    c = CDoom.doom_read.call(handle, dest, l.value.size)
+    doom_seek(handle, l.value.position, CDoom::DoomSeek::DOOM_SEEK_SET)
+    c = doom_read(handle, dest, l.value.size)
 
     if c < l.value.size
       CDoom.i_error("Error: w_read_lump: only read #{c} of #{l.value.size} on lump #{lump}")
     end
 
-    CDoom.doom_close.call(handle) if l.value.handle.null?
+    doom_close(handle) if l.value.handle.null?
   end
 
   def self.w_cache_lump_num(lump : LibC::Int, tag : LibC::Int) : Void*

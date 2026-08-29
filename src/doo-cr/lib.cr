@@ -6999,6 +6999,9 @@ lib CDoom
     status : LibC::Short
 
     name : LibC::Char*
+    text : LibC::Char*
+    bool : Int32*
+    num : Int32*
 
     # choice = menu item #.
     # if status = 2,
