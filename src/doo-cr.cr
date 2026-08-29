@@ -27,7 +27,7 @@ require "raylib-cr/audio.cr"
 require "./adlmidi.cr"
 
 module LibDoom
-  VERSION_STR = "1.2" # Used for displaying
+  VERSION_STR = "1.3" # Used for displaying
   DEMOVERSION = 110
   SAVEVERSION =  10
   NETVERSION  =  12

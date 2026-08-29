@@ -245,8 +245,9 @@ module LibDoom
     end
     Raylib.update_texture(vt.texture, @@raylibbuffer.to_unsafe)
 
-    # Raylib.begin_texture_mode(vt) # TODO: Render GL player view
-    # Raylib.end_texture_mode
+    Raylib.begin_texture_mode(vt) # TODO: Render GL player view
+    #  Raylib.draw_text("Hello World!", 100, 100, 4, Raylib::BLUE)
+    Raylib.end_texture_mode
   end
 
   def self.doom_draw
@@ -1359,6 +1360,7 @@ module LibDoom
 
     # see if the border needs to be updated to the screen
     if CDoom.gamestate == CDoom::Gamestate::Level && CDoom.automapactive == 0 && CDoom.scaledviewwidth != 320
+      CDoom.r_draw_view_border unless @@software_rendering
       @@borderdrawcount = 3 if CDoom.menuactive != 0 || @@menuactivestate || !@@viewactivestate
       if @@borderdrawcount != 0
         CDoom.r_draw_view_border # erase old menu stuff
@@ -5318,8 +5320,7 @@ module LibDoom
     ARGV.index("-extratic").try do |p|
       if p = ARGV[p + 1]?
         CDoom.doomcom.value.extratics = p.to_i.to_u8!
-        CDoom.doomcom.value.extratics = 4 if 
-        CDoom.doomcom.value.extratics > 4
+        CDoom.doomcom.value.extratics = 4 if CDoom.doomcom.value.extratics > 4
       else
         # Set to one if no number is provided
         CDoom.doomcom.value.extratics = 1
@@ -11377,10 +11378,10 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
     CDoom.tmx = x
     CDoom.tmy = y
 
-    CDoom.tmbbox[CDoom::BOXTOP] = y + CDoom.tmthing.value.radius
-    CDoom.tmbbox[CDoom::BOXBOTTOM] = y - CDoom.tmthing.value.radius
-    CDoom.tmbbox[CDoom::BOXRIGHT] = x + CDoom.tmthing.value.radius
-    CDoom.tmbbox[CDoom::BOXLEFT] = x - CDoom.tmthing.value.radius
+    CDoom.tmbbox[CDoom::BOXTOP] = y &+ CDoom.tmthing.value.radius
+    CDoom.tmbbox[CDoom::BOXBOTTOM] = y &- CDoom.tmthing.value.radius
+    CDoom.tmbbox[CDoom::BOXRIGHT] = x &+ CDoom.tmthing.value.radius
+    CDoom.tmbbox[CDoom::BOXLEFT] = x &- CDoom.tmthing.value.radius
 
     newsubsec = CDoom.r_point_in_subsector(x, y)
     CDoom.ceilingline = Pointer(CDoom::Line).null
@@ -11403,10 +11404,10 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
     # because mobj_ts are grouped into mapblocks
     # based on their origin point, and can overlap
     # into adjacent blocks by up to MAXRADIUS units.
-    xl = (CDoom.tmbbox[CDoom::BOXLEFT] - CDoom.bmaporgx - CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
-    xh = (CDoom.tmbbox[CDoom::BOXRIGHT] - CDoom.bmaporgx + CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
-    yl = (CDoom.tmbbox[CDoom::BOXBOTTOM] - CDoom.bmaporgy - CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
-    yh = (CDoom.tmbbox[CDoom::BOXTOP] - CDoom.bmaporgy + CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+    xl = (CDoom.tmbbox[CDoom::BOXLEFT] &- CDoom.bmaporgx &- CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+    xh = (CDoom.tmbbox[CDoom::BOXRIGHT] &- CDoom.bmaporgx &+ CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+    yl = (CDoom.tmbbox[CDoom::BOXBOTTOM] &- CDoom.bmaporgy &- CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
+    yh = (CDoom.tmbbox[CDoom::BOXTOP] &- CDoom.bmaporgy &+ CDoom::MAXRADIUS) >> CDoom::MAPBLOCKSHIFT
 
     bx = xl
     while bx <= xh
@@ -11419,10 +11420,10 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
     end
 
     # check lines
-    xl = (CDoom.tmbbox[CDoom::BOXLEFT] - CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
-    xh = (CDoom.tmbbox[CDoom::BOXRIGHT] - CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
-    yl = (CDoom.tmbbox[CDoom::BOXBOTTOM] - CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
-    yh = (CDoom.tmbbox[CDoom::BOXTOP] - CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
+    xl = (CDoom.tmbbox[CDoom::BOXLEFT] &- CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
+    xh = (CDoom.tmbbox[CDoom::BOXRIGHT] &- CDoom.bmaporgx) >> CDoom::MAPBLOCKSHIFT
+    yl = (CDoom.tmbbox[CDoom::BOXBOTTOM] &- CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
+    yh = (CDoom.tmbbox[CDoom::BOXTOP] &- CDoom.bmaporgy) >> CDoom::MAPBLOCKSHIFT
 
     bx = xl
     while bx <= xh
@@ -12638,13 +12639,13 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
 
     loop do
       if xmove > CDoom::MAXMOVE // 2 || ymove > CDoom::MAXMOVE // 2
-        ptryx = mo.value.x + xmove.tdiv(2)
-        ptryy = mo.value.y + ymove.tdiv(2)
+        ptryx = mo.value.x &+ xmove.tdiv(2)
+        ptryy = mo.value.y &+ ymove.tdiv(2)
         xmove >>= 1
         ymove >>= 1
       else
-        ptryx = mo.value.x + xmove
-        ptryy = mo.value.y + ymove
+        ptryx = mo.value.x &+ xmove
+        ptryy = mo.value.y &+ ymove
         xmove = 0
         ymove = 0
       end
@@ -15928,12 +15929,14 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
         index += 1
       end
     end
+
+    CDoom.numswitches.times { |i| @@switch_origins << CDoom::Degenmobj.new }
   end
 
   #
   # Start a button counting down till it turns off.
   #
-  def self.p_start_button(line : CDoom::Line*, w : CDoom::Bwhere, texture : LibC::Int, time : LibC::Int)
+  def self.p_start_button(line : CDoom::Line*, w : CDoom::Bwhere, origin : CDoom::Degenmobj*, texture : LibC::Int, time : LibC::Int)
     # See if button is already pressed
     CDoom::MAXBUTTONS.times do |i|
       return if CDoom.buttonlist[i].btimer != 0 &&
@@ -15946,7 +15949,7 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
         (CDoom.buttonlist.to_unsafe + i).value.where = w
         (CDoom.buttonlist.to_unsafe + i).value.btexture = texture
         (CDoom.buttonlist.to_unsafe + i).value.btimer = time
-        (CDoom.buttonlist.to_unsafe + i).value.soundorg = ((line.value.frontsector).as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*)
+        (CDoom.buttonlist.to_unsafe + i).value.soundorg = origin.as(CDoom::Mobj*)
 
         return
       end
@@ -15974,24 +15977,36 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
 
     (CDoom.numswitches * 2).times do |i|
       if CDoom.switchlist[i] == tex_top
-        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
+        origin = (@@switch_origins.to_unsafe + (i // 2))
+        origin.value.x = (line.value.v1.value.x &+ line.value.v2.value.x) // 2
+        origin.value.y = (line.value.v1.value.y &+ line.value.v2.value.y) // 2
+
+        CDoom.s_start_sound(origin.as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.toptexture = CDoom.switchlist[i ^ 1]
 
-        CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
+        p_start_button(line, CDoom::Bwhere::Top, origin, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
 
         return
       elsif CDoom.switchlist[i] == tex_mid
-        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
+        origin = (@@switch_origins.to_unsafe + (i // 2))
+        origin.value.x = (line.value.v1.value.x &+ line.value.v2.value.x) // 2
+        origin.value.y = (line.value.v1.value.y &+ line.value.v2.value.y) // 2
+
+        CDoom.s_start_sound(origin.as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.midtexture = CDoom.switchlist[i ^ 1]
 
-        CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
+        p_start_button(line, CDoom::Bwhere::Middle, origin, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
 
         return
       elsif CDoom.switchlist[i] == tex_bot
-        CDoom.s_start_sound((line.value.frontsector.as(UInt8*) + offsetof(CDoom::Sector, @soundorg)).as(CDoom::Mobj*), sound)
+        origin = (@@switch_origins.to_unsafe + (i // 2))
+        origin.value.x = (line.value.v1.value.x &+ line.value.v2.value.x) // 2
+        origin.value.y = (line.value.v1.value.y &+ line.value.v2.value.y) // 2
+
+        CDoom.s_start_sound(origin.as(CDoom::Mobj*), sound)
         (CDoom.sides + line.value.sidenum[0]).value.bottomtexture = CDoom.switchlist[i ^ 1]
 
-        CDoom.p_start_button(line, CDoom::Bwhere::Top, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
+        p_start_button(line, CDoom::Bwhere::Bottom, origin, CDoom.switchlist[i], CDoom::BUTTONTIME) if use_again != 0
 
         return
       end
@@ -16194,6 +16209,11 @@ CDoom.consoleplayer == srcplr ? @@death_kill_strings : (
     when 43
       # Lower Ceiling to Floor
       if CDoom.ev_do_ceiling(line, CDoom::Ceilingenum::LowerToFloor) != 0
+        CDoom.p_change_switch_texture(line, 1)
+      end
+    when 45
+      # Lower Floor to Surrounding floor height
+      if CDoom.ev_do_floor(line, CDoom::Floorenum::LowerFloor) != 0
         CDoom.p_change_switch_texture(line, 1)
       end
     when 60

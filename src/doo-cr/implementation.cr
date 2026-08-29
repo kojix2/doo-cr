@@ -2143,10 +2143,6 @@ fun p_init_switch_list = P_InitSwitchList
   LibDoom.p_init_switch_list
 end
 
-fun p_start_button = P_StartButton(line : CDoom::Line*, w : CDoom::Bwhere, texture : LibC::Int, time : LibC::Int)
-  LibDoom.p_start_button(line, w, texture, time)
-end
-
 fun p_change_switch_texture = P_ChangeSwitchTexture(line : CDoom::Line*, use_again : LibC::Int)
   LibDoom.p_change_switch_texture(line, use_again)
 end

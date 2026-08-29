@@ -69,8 +69,8 @@ module LibDoom
   NCMD_CHECKSUM   = 0x03ffffff
 
   RESENDCOUNT =   10
-  PL_DRONE    = 0x80             # bit flag in doomdata->player
-  @@doomport : Int32 = 5029      # CDoom::IPPORT_USERRESERVED + 0x1d
+  PL_DRONE    = 0x80        # bit flag in doomdata->player
+  @@doomport : Int32 = 5029 # CDoom::IPPORT_USERRESERVED + 0x1d
 
   @@insocket : UDPSocket? = nil
   @@sendsocket : UDPSocket? = nil
@@ -96,6 +96,8 @@ module LibDoom
   @@last_time = 0
   @@music_buffer = Pointer(Int16).null
   @@midi_tick_accumulator = 0.0
+
+  @@switch_origins : Array(CDoom::Degenmobj) = [] of CDoom::Degenmobj
 
   CDoom.screen_buffer = Pointer(UInt8).null
   CDoom.final_screen_buffer = Pointer(UInt8).null
