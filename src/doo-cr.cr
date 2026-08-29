@@ -30,7 +30,7 @@ module LibDoom
   VERSION_STR = "1.3" # Used for displaying
   DEMOVERSION = 110
   SAVEVERSION =  10
-  NETVERSION  =  12
+  NETVERSION  =  13
 
   # The resolution of the player's viewport for hardware rendering
   # NOTE: the screen wipe is only designed for 320 x 240

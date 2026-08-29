@@ -2459,6 +2459,8 @@ module LibDoom
       gameticdiv = CDoom.gametic // CDoom.ticdup
       newtics.times do |i|
         remaining = newtics - i
+        break if CDoom.maketic - gameticdiv >= CDoom::BACKUPTICS // 2 - 1 # can't hold any more
+
         mouse_step = Raylib::Vector2.new(
           x: @@mouse_queued.x // remaining,
           y: @@mouse_queued.y // remaining)
@@ -2468,7 +2470,6 @@ module LibDoom
 
         i_start_tic(mouse_step)
         CDoom.d_process_events
-        break if CDoom.maketic - gameticdiv >= CDoom::BACKUPTICS // 2 - 1 # can't hold any more
 
         CDoom.g_build_ticcmd(CDoom.localcmds.to_unsafe + CDoom.maketic % CDoom::BACKUPTICS)
         CDoom.maketic += 1
@@ -2832,6 +2833,7 @@ module LibDoom
 
     # wait for new tics if needed
     while lowtic < CDoom.gametic // CDoom.ticdup + counts
+      i_poll_mouse
       CDoom.net_update
       lowtic = Int32::MAX
 
@@ -6253,12 +6255,17 @@ module LibDoom
 
   @@mouse_queued = Raylib::Vector2.new
 
-  def self.i_start_frame
+  def self.i_poll_mouse
+    Raylib.poll_input_events
     delta = Raylib.get_mouse_delta * 2 # Rough sensitivity increase
     @@mouse_queued = Raylib::Vector2.new(
       x: @@mouse_queued.x + delta.x,
       y: @@mouse_queued.y + delta.y
     )
+  end
+
+  def self.i_start_frame
+    i_poll_mouse
   end
 
   def self.i_start_tic(in_delta : Raylib::Vector2? = nil)
