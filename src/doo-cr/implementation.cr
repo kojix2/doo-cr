@@ -16,40 +16,6 @@
 # ==> Old crossover bindings for when I was using a two-way-bindings system
 #      and working with PureDoom. Hope to get rid of this someday.
 
-fun doom_open_impl(filename : UInt8*, mode : UInt8*) : Void*
-  LibDoom.doom_open_impl(filename, mode)
-end
-fun doom_close_impl(handle : Void*)
-  LibDoom.doom_close_impl(handle)
-end
-fun doom_read_impl(handle : Void*, buf : Void*, count : Int32) : Int32
-  LibDoom.doom_read_impl(handle, buf, count)
-end
-fun doom_write_impl(handle : Void*, buf : Void*, count : Int32) : Int32
-  LibDoom.doom_write_impl(handle, buf, count)
-end
-fun doom_seek_impl(handle : Void*, offset : Int32, origin : CDoom::DoomSeek) : Int32
-  LibDoom.doom_seek_impl(handle, offset, origin)
-end
-fun doom_tell_impl(handle : Void*) : Int32
-  LibDoom.doom_tell_impl(handle)
-end
-fun doom_eof_impl(handle : Void*) : Int32
-  LibDoom.doom_eof_impl(handle)
-end
-
-fun doom_gettime_impl(sec : Int32*, usec : Int32*)
-  LibDoom.doom_gettime_impl(sec, usec)
-end
-
-fun doom_exit_impl(code : Int32)
-  LibDoom.doom_exit_impl(code)
-end
-
-fun doom_getenv_impl(var : UInt8*) : UInt8*
-  LibDoom.doom_getenv_impl(var)
-end
-
 fun doom_memset(ptr : Void*, value : Int32, num : Int32)
   LibDoom.doom_memset(ptr, value, num)
 end
@@ -116,34 +82,6 @@ end
 
 fun doom_fprint(handle : Void*, str : UInt8*) : Int32
   LibDoom.doom_fprint(handle, str)
-end
-
-fun doom_set_file_io(open_fn : CDoom::DoomOpenFn,
-                     close_fn : CDoom::DoomCloseFn,
-                     read_fn : CDoom::DoomReadFn,
-                     write_fn : CDoom::DoomWriteFn,
-                     seek_fn : CDoom::DoomSeekFn,
-                     tell_fn : CDoom::DoomTellFn,
-                     eof_fn : CDoom::DoomEofFn)
-  LibDoom.doom_set_file_io(open_fn,
-    close_fn,
-    read_fn,
-    write_fn,
-    seek_fn,
-    tell_fn,
-    eof_fn)
-end
-
-fun doom_set_gettime(gettime_fn : CDoom::DoomGettimeFn)
-  LibDoom.doom_set_gettime(gettime_fn)
-end
-
-fun doom_set_exit(exit_fn : CDoom::DoomExitFn)
-  LibDoom.doom_set_exit(exit_fn)
-end
-
-fun doom_set_getenv(getenv_fn : CDoom::DoomGetenvFn)
-  LibDoom.doom_set_getenv(getenv_fn)
 end
 
 fun doom_init(argc : Int32, argv : UInt8**, flags : Int32)

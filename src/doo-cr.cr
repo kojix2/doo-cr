@@ -42,8 +42,6 @@ module LibDoom
   MIDI_BUFFER_SIZE =  1024
   MIDI_SAMPLE_RATE = 44100
   MIDI_TICK_TIME   = 1.0 / 140.0
-  # TODO: make a setting
-  MIDI_BANK = 16
 
   # -- Macros for quick key polling --
   macro poll_key(doomkey, raylibkey)
